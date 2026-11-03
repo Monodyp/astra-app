@@ -5,6 +5,7 @@ import { RequestStateProvider } from '../forms/RequestState';
 import logo from '../assets/logo-blue.png';
 import whiteLogo from '../assets/logo-white.png';
 import { DiscordIcon, DiscordLink } from './DiscordLink';
+import { FacebookIcon, FacebookLink } from './FacebookLink';
 import { brand, button, container, focus } from '../styles/styles';
 import '../styles/astrascend.css';
 
@@ -239,11 +240,18 @@ export function AstrascendLayout() {
               <p className="text-[15px]">
                 An initiative of ASTRA Developers · AY 2026–2027
               </p>
-              <DiscordLink
-                className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white transition-colors hover:bg-white/10 motion-reduce:transition-none ${focus}`}
-              >
-                <DiscordIcon className="h-6 w-6" />
-              </DiscordLink>
+              <div className="flex items-center gap-2">
+                <FacebookLink
+                  className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white transition-colors hover:bg-white/10 motion-reduce:transition-none ${focus}`}
+                >
+                  <FacebookIcon className="h-6 w-6" />
+                </FacebookLink>
+                <DiscordLink
+                  className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white transition-colors hover:bg-white/10 motion-reduce:transition-none ${focus}`}
+                >
+                  <DiscordIcon className="h-6 w-6" />
+                </DiscordLink>
+              </div>
             </div>
           </footer>
         </div>
