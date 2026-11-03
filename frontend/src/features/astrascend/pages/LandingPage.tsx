@@ -357,12 +357,12 @@ export function LandingPage() {
                         In partnership with
                     </h2>
                     <div
-                        className="mt-8 grid grid-cols-2 gap-4 md:grid-cols-5 md:gap-6 as-compact:gap-[22px]"
+                        className="mt-8 flex flex-wrap items-center gap-4 md:gap-6 as-compact:gap-[22px]"
                         aria-label="Partners"
                     >
                         <div
                             data-as-star-mask="surface"
-                            className="flex min-h-[84px] items-center justify-center rounded-2xl border border-ascend-line px-3 py-4 text-center text-[14px] text-ascend-muted as-compact:min-h-[72px] as-compact:py-3"
+                            className="flex min-h-[84px] min-w-[160px] items-center justify-center rounded-2xl border border-ascend-line px-8 py-4 text-center text-[14px] text-ascend-muted as-compact:min-h-[72px] as-compact:py-3"
                         >
                             <img
                                 src={theme === 'dark' ? nexLogoWhite : nexLogoDark}
@@ -370,15 +370,6 @@ export function LandingPage() {
                                 className="h-11 w-auto max-h-12 object-contain"
                             />
                         </div>
-                        {[2, 3, 4, 5].map((number) => (
-                            <div
-                                data-as-star-mask="surface"
-                                className="flex min-h-[84px] items-center justify-center rounded-2xl border border-ascend-line px-3 py-4 text-center text-[14px] text-ascend-muted as-compact:min-h-[72px] as-compact:py-3"
-                                key={number}
-                            >
-                                Partner {number}
-                            </div>
-                        ))}
                     </div>
                 </div>
             </section>

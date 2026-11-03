@@ -126,7 +126,7 @@ export function ConsentField({
                     {error}
                 </p>
             )}
-            <p className={guidance}>
+            <p className={`${guidance} mb-6`}>
                 Please avoid sharing passwords, private keys, confidential
                 documents, or unnecessary sensitive personal information.
             </p>
