@@ -5,6 +5,8 @@ import darkWave from '../assets/wave-dark.svg';
 import glow from '../assets/glow.svg';
 import logo from '../assets/logo-blue.png';
 import whiteLogo from '../assets/logo-white.png';
+import nexLogoDark from '../../../partners_logo/Nex_logo_dark.png';
+import nexLogoWhite from '../../../partners_logo/Nex_logo_white.png';
 import { DiscordIcon, DiscordLink } from '../components/DiscordLink';
 import { serviceCards } from '../forms/services';
 import { useAstrascendTheme } from '../components/AstrascendLayout';
@@ -352,16 +354,26 @@ export function LandingPage() {
                         className={sectionHeading}
                         id="as-partners-heading"
                     >
-                        Our partners
+                        In partnership with
                     </h2>
                     <div
                         className="mt-8 grid grid-cols-2 gap-4 md:grid-cols-5 md:gap-6 as-compact:gap-[22px]"
-                        aria-label="Partner placeholders"
+                        aria-label="Partners"
                     >
-                        {[1, 2, 3, 4, 5].map((number) => (
+                        <div
+                            data-as-star-mask="surface"
+                            className="flex min-h-[84px] items-center justify-center rounded-2xl border border-ascend-line px-3 py-4 text-center text-[14px] text-ascend-muted as-compact:min-h-[72px] as-compact:py-3"
+                        >
+                            <img
+                                src={theme === 'dark' ? nexLogoWhite : nexLogoDark}
+                                alt="NEX"
+                                className="h-11 w-auto max-h-12 object-contain"
+                            />
+                        </div>
+                        {[2, 3, 4, 5].map((number) => (
                             <div
                                 data-as-star-mask="surface"
-                                className="rounded-2xl border border-ascend-line px-3 py-7 text-center text-[14px] text-ascend-muted as-compact:py-[25px]"
+                                className="flex min-h-[84px] items-center justify-center rounded-2xl border border-ascend-line px-3 py-4 text-center text-[14px] text-ascend-muted as-compact:min-h-[72px] as-compact:py-3"
                                 key={number}
                             >
                                 Partner {number}
