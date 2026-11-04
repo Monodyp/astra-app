@@ -128,6 +128,37 @@ export function LandingPage() {
                             build. Bring your ideas to ASTRA Developers and turn
                             possibility into meaningful impact.
                         </p>
+                        <div
+                            data-as-star-mask="surface"
+                            className="flex w-full max-w-[540px] items-center gap-4 rounded-[24px] border border-[#ffffff40] bg-white/10 p-4 backdrop-blur-sm as-dark:border-[#ffffff26] as-dark:bg-[#ffffff0d] sm:gap-5 sm:p-5 as-compact:max-w-[480px] as-compact:p-4"
+                        >
+                            <div className="flex shrink-0 flex-col items-center rounded-[16px] border border-[#f59e0b]/60 bg-[#f59e0b]/15 px-3.5 py-2.5 as-compact:px-3 as-compact:py-2">
+                                <span className="text-[11px] font-bold tracking-[.14em] text-[#fde68a] as-dark:text-[#fcd34d]">
+                                    NOV
+                                </span>
+                                <span className="text-[30px] font-bold leading-none text-[#f59e0b] as-compact:text-[27px]">
+                                    6
+                                </span>
+                                <span className="text-[11px] font-semibold tracking-[.08em] text-[#fde68a] as-dark:text-[#fcd34d]">
+                                    2026
+                                </span>
+                            </div>
+                            <div className="min-w-0">
+                                <p className="flex items-center gap-2 text-[15px] font-bold tracking-[.01em] as-compact:text-[14px]">
+                                    <span
+                                        aria-hidden="true"
+                                        className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-[#f59e0b] motion-reduce:animate-none"
+                                    />
+                                    Upcoming Briefing
+                                </p>
+                                <p className="mt-0.5 text-[18px] font-bold as-compact:text-[17px]">
+                                    1:00 – 3:00 PM
+                                </p>
+                                <p className="mt-0.5 text-[14px] font-medium text-white/80 as-compact:text-[13px]">
+                                    Stay tuned · details coming soon
+                                </p>
+                            </div>
+                        </div>
                         <div className="flex flex-wrap gap-4">
                             <Link
                                 data-as-star-mask="surface"
