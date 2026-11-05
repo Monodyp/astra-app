@@ -122,7 +122,8 @@ export function AstrascendLayout() {
             Skip to content
           </a>
           <header
-            className="sticky top-0 z-20 border-b border-ascend-line bg-ascend-panel [&_a:focus-visible]:outline-offset-0 as-dark:bg-[#070c1d]"
+            className="as-header sticky top-0 z-20 border-b border-ascend-line bg-ascend-panel [&_a:focus-visible]:outline-offset-0 as-dark:bg-[#070c1d]"
+            data-scrolled={!atTop}
             ref={headerRef}
             onKeyDown={(event) => {
               if (event.key === 'Escape' && menuOpen) {

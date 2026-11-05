@@ -75,7 +75,10 @@ export function LandingPage() {
     return (
         <div data-as-landing className="relative as-dark:[--as-muted:#d5e0fa]">
             {theme === 'dark' && <StarBackground />}
-            <section className="relative overflow-hidden bg-[#2563eb] text-white as-dark:bg-[#070c1d]">
+            <section
+                className="as-hero relative overflow-hidden bg-[#2563eb] text-white as-dark:bg-[#070c1d]"
+                data-as-hero
+            >
                 <img
                     className="pointer-events-none absolute -left-60 -top-60 hidden max-w-none as-dark:block"
                     src={glow}
@@ -178,7 +181,7 @@ export function LandingPage() {
                     </div>
                     <div
                         data-as-star-mask="surface"
-                        className="relative aspect-[500/520] w-full max-w-[500px] justify-self-center overflow-hidden rounded-[32px] as-dark:shadow-[0_0_24px_#1b63eb33,0_24px_48px_-12px_#0006] md:max-w-none md:justify-self-auto"
+                        className="as-hero-art relative aspect-[500/520] w-full max-w-[500px] justify-self-center overflow-hidden rounded-[32px] as-dark:shadow-[0_0_24px_#1b63eb33,0_24px_48px_-12px_#0006] md:max-w-none md:justify-self-auto"
                     >
                         <img
                             className="absolute -left-[193.8%] -top-[13.42%] h-[113.42%] w-[310.08%] max-w-none"
@@ -227,7 +230,7 @@ export function LandingPage() {
                             team.
                         </p>
                     </div>
-                    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 as-compact:gap-[22px]">
+                    <div className="as-service-grid grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 as-compact:gap-[22px]">
                         {serviceCards.map((card) => (
                             <article
                                 data-as-star-mask="surface"
