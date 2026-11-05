@@ -191,22 +191,6 @@ export function LandingPage() {
                     </div>
                 </div>
             </section>
-            <div className="bg-ascend-selected py-7 as-dark:bg-[#0a1126] as-compact:py-[25px]">
-                <div
-                    className={`${container} grid grid-cols-2 items-center justify-between gap-x-6 gap-y-4 text-[14px] font-semibold sm:flex sm:flex-wrap sm:text-[16px]`}
-                >
-                    <strong
-                        data-as-star-mask
-                        className="col-span-full text-[12px]"
-                    >
-                        OPEN TO IDEAS FROM
-                    </strong>
-                    <span data-as-star-mask>Students</span>
-                    <span data-as-star-mask>Campus organizations</span>
-                    <span data-as-star-mask>Community groups</span>
-                    <span data-as-star-mask>Industry partners</span>
-                </div>
-            </div>
             <section
                 className={`${section} as-dark:bg-[#0d1530]`}
                 id="services"
@@ -225,9 +209,7 @@ export function LandingPage() {
                             What we can do for you
                         </h2>
                         <p className={sectionCopy}>
-                            Four services, one request form. Pick the one
-                            closest to your need and we’ll route it to the right
-                            team.
+                            Choose a service and tell us what you need.
                         </p>
                     </div>
                     <div className="as-service-grid grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 as-compact:gap-[22px]">
@@ -262,14 +244,6 @@ export function LandingPage() {
                             </article>
                         ))}
                     </div>
-                    <p
-                        data-as-star-mask
-                        className="mt-8 text-[13px] text-ascend-muted"
-                    >
-                        A request starts a conversation, not a guaranteed
-                        commitment. Services depend on technical readiness,
-                        member availability, resources, and leadership approval.
-                    </p>
                 </div>
             </section>
             <section
@@ -290,9 +264,7 @@ export function LandingPage() {
                             From request to result
                         </h2>
                         <p className={`${sectionCopy} as-dark:mt-3`}>
-                            Every request follows the same six steps. No fixed
-                            response time is promised, and not every request is
-                            accepted.
+                            Six steps from request to handoff.
                         </p>
                     </div>
                     <ol className="grid list-none grid-cols-1 gap-4 px-0 pb-0 pt-6 as-dark:pt-0 sm:grid-cols-3 sm:gap-3 lg:grid-cols-6 lg:pt-16 as-compact:pt-[58px]">

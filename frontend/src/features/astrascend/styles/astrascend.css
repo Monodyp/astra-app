@@ -74,22 +74,6 @@
     }
 }
 
-@keyframes as-nav-swipe {
-    0% {
-        opacity: 0;
-        transform: translateX(-105%);
-    }
-    18%,
-    72% {
-        opacity: 1;
-        transform: translateX(0);
-    }
-    100% {
-        opacity: 0;
-        transform: translateX(105%);
-    }
-}
-
 @keyframes as-section-rule {
     from {
         opacity: 0;
@@ -125,24 +109,6 @@
     background: var(--as-accent);
     content: '';
     animation: as-section-rule 700ms ease both;
-}
-
-.as-nav-swipe {
-    position: fixed;
-    inset: 0;
-    z-index: 50;
-    background: linear-gradient(110deg, transparent 0 12%, rgb(37 99 235 / 94%) 34% 64%, transparent 86%);
-    opacity: 0;
-    pointer-events: none;
-    transform: translateX(-105%);
-}
-
-.as-nav-swipe[data-active='true'] {
-    animation: as-nav-swipe 520ms cubic-bezier(0.76, 0, 0.24, 1) both;
-}
-
-.as-dark .as-nav-swipe {
-    background: linear-gradient(110deg, transparent 0 12%, rgb(10 32 86 / 96%) 34% 64%, transparent 86%);
 }
 
 .as-header {

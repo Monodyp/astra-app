@@ -32,12 +32,6 @@ export function ServiceFields<S extends Service>({
                     />
                 ))}
             </div>
-            {definition.service === 'upshift' && (
-                <p className={guidance}>
-                    Learn &amp; Launch is intended mainly for ASTRA members;
-                    non-members may be referred.
-                </p>
-            )}
             {definition.service === 'reign' && (
                 <p className={guidance} aria-live="polite">
                     Fields adapt to your first answer, so you only see questions

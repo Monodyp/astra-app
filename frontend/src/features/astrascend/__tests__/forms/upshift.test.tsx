@@ -31,7 +31,6 @@ describe('UPSHIFT', () => {
         expect(
             screen.getByRole('option', { name: 'Not sure yet' }),
         ).toBeDefined();
-        expect(screen.getByText(/non-members may be referred/)).toBeDefined();
     });
     it('requires support type, topic and goal without requiring optional experience', () => {
         expect(

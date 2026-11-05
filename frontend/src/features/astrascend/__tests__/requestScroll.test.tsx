@@ -97,7 +97,8 @@ describe('request scroll behavior', () => {
     vi.mocked(window.scrollTo).mockClear();
     act(() => navigator.push('/astrascend/request?service=makeform#as-main'));
     expect(scrollIntoView).toHaveBeenCalledExactlyOnceWith({
-      behavior: 'instant',
+      behavior: 'smooth',
+      block: 'start',
     });
     scrollIntoView.mockClear();
     act(() => navigator.replace('/astrascend/request?service=upshift#as-main'));

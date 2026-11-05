@@ -48,7 +48,6 @@ export function AstrascendLayout() {
   const [appearance, setAppearance] = useState<Appearance>(savedAppearance);
   const [darkSystem, setDarkSystem] = useState(systemDark);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [navSwipe, setNavSwipe] = useState(false);
   const [atTop, setAtTop] = useState(() => window.scrollY <= 24);
   const headerRef = useRef<HTMLElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
@@ -91,7 +90,7 @@ export function AstrascendLayout() {
     if (location.hash)
       document
         .getElementById(location.hash.slice(1))
-        ?.scrollIntoView?.({ behavior: 'instant' });
+        ?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
     else window.scrollTo?.({ top: 0 });
   }, [location]);
   useEffect(() => {
@@ -109,11 +108,6 @@ export function AstrascendLayout() {
       /* Appearance still works when storage is unavailable. */
     }
   };
-  const startNavSwipe = () => {
-    setNavSwipe(false);
-    requestAnimationFrame(() => setNavSwipe(true));
-    window.setTimeout(() => setNavSwipe(false), 560);
-  };
   return (
     <ThemeContext.Provider value={theme}>
       <RequestStateProvider>
@@ -121,11 +115,6 @@ export function AstrascendLayout() {
           className="astrascend isolate min-h-[100dvh] bg-ascend-page font-astrascend text-[16px] leading-[1.5] text-ascend-ink [color-scheme:light] data-[theme=dark]:[color-scheme:dark] [--as-header-height:80px] lg:[--as-header-height:96px] as-compact:[--as-header-height:65px]"
           data-theme={theme}
         >
-          <div
-            className="as-nav-swipe"
-            data-active={navSwipe}
-            aria-hidden="true"
-          />
           <a
             className={`fixed left-4 top-3 z-30 -translate-y-[200%] bg-ascend-panel p-3 focus:translate-y-0 ${focus}`}
             href="#as-main"
@@ -181,7 +170,6 @@ export function AstrascendLayout() {
                   to="/astrascend#services"
                   onClick={() => {
                     setMenuOpen(false);
-                    startNavSwipe();
                   }}
                 >
                   Services
@@ -191,7 +179,6 @@ export function AstrascendLayout() {
                   to="/astrascend#how-it-works"
                   onClick={() => {
                     setMenuOpen(false);
-                    startNavSwipe();
                   }}
                 >
                   How it works
@@ -201,7 +188,6 @@ export function AstrascendLayout() {
                   to="/astrascend#community"
                   onClick={() => {
                     setMenuOpen(false);
-                    startNavSwipe();
                   }}
                 >
                   Community
@@ -211,7 +197,6 @@ export function AstrascendLayout() {
                   to="/astrascend/request"
                   onClick={() => {
                     setMenuOpen(false);
-                    startNavSwipe();
                   }}
                 >
                   <span

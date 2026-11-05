@@ -3,7 +3,12 @@ import type { FieldDefinition } from '../formModel';
 import { fieldError, input } from '../../styles/styles';
 import { SelectField } from './SelectField';
 import { DatePicker } from './DatePicker';
-import { emailError, isValidDate } from '../fieldValidation';
+import {
+    emailError,
+    isValidDate,
+    maxLengthForField,
+    sanitizeFieldValue,
+} from '../fieldValidation';
 
 interface Props {
     field: FieldDefinition;
@@ -29,7 +34,7 @@ export function FieldInput({ field, value, onChange, error, disabled }: Props) {
     const visibleError = error || (touched ? clientError : undefined);
     const change = (next: string) => {
         if (error) setTouched(true);
-        onChange(next);
+        onChange(sanitizeFieldValue(field.name, field.kind, next));
     };
     const common = {
         id,
@@ -37,6 +42,8 @@ export function FieldInput({ field, value, onChange, error, disabled }: Props) {
         value,
         disabled,
         required: field.required,
+        maxLength: field.maxLength ?? maxLengthForField(field.name, field.kind),
+        inputMode: field.kind === 'number' ? ('numeric' as const) : undefined,
         'aria-invalid': visibleError ? (true as const) : undefined,
         'aria-describedby': visibleError ? errorId : undefined,
         onChange: (
@@ -86,7 +93,7 @@ export function FieldInput({ field, value, onChange, error, disabled }: Props) {
                 <input
                     {...common}
                     className={`${input} min-h-[50px]`}
-                    type={field.kind || 'text'}
+                    type={field.kind === 'number' ? 'text' : field.kind || 'text'}
                     placeholder={field.placeholder}
                     autoComplete={
                         field.kind === 'email'
