@@ -1,24 +1,24 @@
 @font-face {
     font-family: 'ASTRAscend Urbanist';
-    src: url('./assets/urbanist-400.ttf') format('truetype');
+    src: url('../assets/urbanist-400.ttf') format('truetype');
     font-weight: 400;
     font-display: swap;
 }
 @font-face {
     font-family: 'ASTRAscend Urbanist';
-    src: url('./assets/urbanist-500.ttf') format('truetype');
+    src: url('../assets/urbanist-500.ttf') format('truetype');
     font-weight: 500;
     font-display: swap;
 }
 @font-face {
     font-family: 'ASTRAscend Urbanist';
-    src: url('./assets/urbanist-600.ttf') format('truetype');
+    src: url('../assets/urbanist-600.ttf') format('truetype');
     font-weight: 600;
     font-display: swap;
 }
 @font-face {
     font-family: 'ASTRAscend Urbanist';
-    src: url('./assets/urbanist-700.ttf') format('truetype');
+    src: url('../assets/urbanist-700.ttf') format('truetype');
     font-weight: 700;
     font-display: swap;
 }
@@ -72,6 +72,77 @@
     50% {
         transform: translateY(-8px) rotate(0.35deg);
     }
+}
+
+@keyframes as-nav-swipe {
+    0% {
+        opacity: 0;
+        transform: translateX(-105%);
+    }
+    18%,
+    72% {
+        opacity: 1;
+        transform: translateX(0);
+    }
+    100% {
+        opacity: 0;
+        transform: translateX(105%);
+    }
+}
+
+@keyframes as-section-rule {
+    from {
+        opacity: 0;
+        transform: scaleX(0);
+        transform-origin: left;
+    }
+    to {
+        opacity: 1;
+        transform: scaleX(1);
+        transform-origin: left;
+    }
+}
+
+.astrascend h1,
+.astrascend h2,
+.astrascend h3 {
+    font-family: 'ASTRAscend Urbanist', sans-serif;
+    text-wrap: balance;
+}
+
+.astrascend [data-as-landing] h2 {
+    position: relative;
+    width: fit-content;
+    padding-bottom: 14px;
+}
+
+.astrascend [data-as-landing] h2::after {
+    display: block;
+    width: 56px;
+    height: 4px;
+    margin-top: 12px;
+    border-radius: 999px;
+    background: var(--as-accent);
+    content: '';
+    animation: as-section-rule 700ms ease both;
+}
+
+.as-nav-swipe {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    background: linear-gradient(110deg, transparent 0 12%, rgb(37 99 235 / 94%) 34% 64%, transparent 86%);
+    opacity: 0;
+    pointer-events: none;
+    transform: translateX(-105%);
+}
+
+.as-nav-swipe[data-active='true'] {
+    animation: as-nav-swipe 520ms cubic-bezier(0.76, 0, 0.24, 1) both;
+}
+
+.as-dark .as-nav-swipe {
+    background: linear-gradient(110deg, transparent 0 12%, rgb(10 32 86 / 96%) 34% 64%, transparent 86%);
 }
 
 .as-header {

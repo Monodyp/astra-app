@@ -48,6 +48,7 @@ export function AstrascendLayout() {
   const [appearance, setAppearance] = useState<Appearance>(savedAppearance);
   const [darkSystem, setDarkSystem] = useState(systemDark);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [navSwipe, setNavSwipe] = useState(false);
   const [atTop, setAtTop] = useState(() => window.scrollY <= 24);
   const headerRef = useRef<HTMLElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
@@ -108,6 +109,11 @@ export function AstrascendLayout() {
       /* Appearance still works when storage is unavailable. */
     }
   };
+  const startNavSwipe = () => {
+    setNavSwipe(false);
+    requestAnimationFrame(() => setNavSwipe(true));
+    window.setTimeout(() => setNavSwipe(false), 560);
+  };
   return (
     <ThemeContext.Provider value={theme}>
       <RequestStateProvider>
@@ -115,6 +121,11 @@ export function AstrascendLayout() {
           className="astrascend isolate min-h-[100dvh] bg-ascend-page font-astrascend text-[16px] leading-[1.5] text-ascend-ink [color-scheme:light] data-[theme=dark]:[color-scheme:dark] [--as-header-height:80px] lg:[--as-header-height:96px] as-compact:[--as-header-height:65px]"
           data-theme={theme}
         >
+          <div
+            className="as-nav-swipe"
+            data-active={navSwipe}
+            aria-hidden="true"
+          />
           <a
             className={`fixed left-4 top-3 z-30 -translate-y-[200%] bg-ascend-panel p-3 focus:translate-y-0 ${focus}`}
             href="#as-main"
@@ -168,28 +179,40 @@ export function AstrascendLayout() {
                 <Link
                   className={navigationLink}
                   to="/astrascend#services"
-                  onClick={() => setMenuOpen(false)}
+                  onClick={() => {
+                    setMenuOpen(false);
+                    startNavSwipe();
+                  }}
                 >
                   Services
                 </Link>
                 <Link
                   className={navigationLink}
                   to="/astrascend#how-it-works"
-                  onClick={() => setMenuOpen(false)}
+                  onClick={() => {
+                    setMenuOpen(false);
+                    startNavSwipe();
+                  }}
                 >
                   How it works
                 </Link>
                 <Link
                   className={navigationLink}
                   to="/astrascend#community"
-                  onClick={() => setMenuOpen(false)}
+                  onClick={() => {
+                    setMenuOpen(false);
+                    startNavSwipe();
+                  }}
                 >
                   Community
                 </Link>
                 <Link
                   className={`group mt-1 inline-flex items-center self-start rounded-full lg:mt-0 lg:h-full lg:self-auto ${focus}`}
                   to="/astrascend/request"
-                  onClick={() => setMenuOpen(false)}
+                  onClick={() => {
+                    setMenuOpen(false);
+                    startNavSwipe();
+                  }}
                 >
                   <span
                     className={`${button('primary', 'nav')} group-hover:bg-[#1d4ed8]`}
