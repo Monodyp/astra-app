@@ -8,7 +8,11 @@ import type {
     Service,
     ServiceRequest,
 } from './types';
-import { emailError, isValidDate } from './fieldValidation';
+import {
+    emailError,
+    fieldFormatError,
+    isValidDate,
+} from './fieldValidation';
 
 export interface Option {
     value: string;
@@ -17,7 +21,15 @@ export interface Option {
 export interface FieldDefinition {
     name: string;
     label: string;
-    kind?: 'text' | 'email' | 'url' | 'date' | 'textarea' | 'select';
+    kind?:
+        | 'text'
+        | 'email'
+        | 'url'
+        | 'date'
+        | 'number'
+        | 'textarea'
+        | 'select';
+    maxLength?: number;
     placeholder?: string;
     required?: boolean;
     options?: readonly Option[];
@@ -50,6 +62,10 @@ export function validateContact(
     const errors: FieldErrors = {};
     if (!contact.fullName.trim())
         errors['requester.fullName'] = 'Enter your full name.';
+    else {
+        const formatError = fieldFormatError('fullName', 'text', contact.fullName);
+        if (formatError) errors['requester.fullName'] = formatError;
+    }
     const invalidEmail = emailError(contact.email);
     if (invalidEmail) errors['requester.email'] = invalidEmail;
     if (!requesterOptions.some((option) => option.value === contact.type))
@@ -105,6 +121,12 @@ export function defineService<S extends Service>(
             if (field.required && !value)
                 errors[key] = `Complete “${field.label}”.`;
             if (!value) continue;
+            const formatError = fieldFormatError(
+                field.name,
+                field.kind,
+                value,
+            );
+            if (formatError) errors[key] = formatError;
             if (
                 field.options &&
                 !field.options.some((option) => option.value === value)

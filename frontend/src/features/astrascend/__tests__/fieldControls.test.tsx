@@ -40,6 +40,34 @@ function Harness({
 }
 
 describe('field validation', () => {
+    it('filters full names to letters and caps repeated-character spam', () => {
+        render(
+            <Harness
+                field={{ name: 'fullName', label: 'Full name', required: true }}
+            />,
+        );
+        fireEvent.change(screen.getByRole('textbox', { name: 'Full name' }), {
+            target: { value: 'jyyyyyyyy123' },
+        });
+        expect(screen.getByRole('status').textContent).toBe('jyy');
+    });
+
+    it('keeps numeric fields limited to digits', () => {
+        render(
+            <Harness
+                field={{
+                    name: 'count',
+                    label: 'Count',
+                    kind: 'number',
+                }}
+            />,
+        );
+        fireEvent.change(screen.getByRole('textbox', { name: 'Count' }), {
+            target: { value: '12abc3' },
+        });
+        expect(screen.getByRole('status').textContent).toBe('123');
+    });
+
     it.each([
         'alex@example.com',
         ' alex+work@mail.example.org ',
