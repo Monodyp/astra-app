@@ -230,7 +230,7 @@ export function LandingPage() {
                                         {card.description}
                                     </p>
                                 </div>
-                                <ul className="grid list-none gap-2 p-0 text-[17px] as-compact:text-[16px]">
+                                <ul className="grid list-disc gap-2 pl-5 text-[17px] marker:text-ascend-accent as-compact:text-[16px]">
                                     {card.benefits.map((benefit) => (
                                         <li key={benefit}>{benefit}</li>
                                     ))}

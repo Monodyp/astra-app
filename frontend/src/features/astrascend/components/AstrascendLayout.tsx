@@ -51,6 +51,7 @@ export function AstrascendLayout() {
   const [atTop, setAtTop] = useState(() => window.scrollY <= 24);
   const headerRef = useRef<HTMLElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const skipNextLocationScroll = useRef(false);
   const location = useLocation();
   const previousLocation = useRef(location);
   const theme =
@@ -91,7 +92,9 @@ export function AstrascendLayout() {
       document
         .getElementById(location.hash.slice(1))
         ?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
-    else window.scrollTo?.({ top: 0 });
+    else if (skipNextLocationScroll.current) {
+      skipNextLocationScroll.current = false;
+    } else window.scrollTo?.({ top: 0 });
   }, [location]);
   useEffect(() => {
     const previousTitle = document.title;
@@ -139,6 +142,11 @@ export function AstrascendLayout() {
                 to="/astrascend"
                 className={`${brand} h-[calc(var(--as-header-height)*.9)] [--as-mark-height:30px] sm:[--as-mark-height:34px] as-tiny:[--as-mark-height:26px] as-compact:[--as-mark-height:31px]`}
                 aria-label="ASTRAscend home"
+                onClick={() => {
+                  setMenuOpen(false);
+                  skipNextLocationScroll.current = true;
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
               >
                 <BrandWordmark inverse={theme === 'dark'} />
                 <small className="hidden border-l border-ascend-line pl-2.5 text-[16px] text-ascend-muted as-label:inline lg:inline as-compact:text-[14px]">

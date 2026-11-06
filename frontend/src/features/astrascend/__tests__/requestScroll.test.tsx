@@ -83,7 +83,10 @@ describe('request scroll behavior', () => {
     expect(window.scrollTo).toHaveBeenCalledExactlyOnceWith({ top: 0 });
     vi.mocked(window.scrollTo).mockClear();
     fireEvent.click(screen.getByRole('link', { name: 'ASTRAscend home' }));
-    expect(window.scrollTo).toHaveBeenCalledExactlyOnceWith({ top: 0 });
+    expect(window.scrollTo).toHaveBeenCalledExactlyOnceWith({
+      top: 0,
+      behavior: 'smooth',
+    });
     vi.mocked(window.scrollTo).mockClear();
     fireEvent.click(screen.getByRole('link', { name: 'Start a request' }));
     expect(window.scrollTo).toHaveBeenCalledExactlyOnceWith({ top: 0 });
