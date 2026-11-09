@@ -120,7 +120,27 @@ for the backend handoff.
 - **Never commit secrets**: Private keys, JWT secrets, service account credentials, and database passwords must never be stored in source code or pushed to Git.
 - **`.env` files are git-ignored**: Only `.env.example` templates with non-sensitive placeholder values are tracked.
 - **Service account JSON**: Any Google Cloud / Firebase Admin service account keys must reside outside tracked directories or be loaded via environment variables such as `GOOGLE_APPLICATION_CREDENTIALS` or `FIREBASE_SERVICE_ACCOUNT_JSON`.
+---
 
+## Database Architecture (Cloud Firestore)
+
+The project utilizes Google Cloud Firestore as its primary NoSQL document store. The core application schema for the **ASTRA Developers App** is structured into the following base collections within the default database instance (`(default)`):
+
+| Collection | Description | Primary Fields |
+| :--- | :--- | :--- |
+| **`members`** | User profiles and account roles | `fullName`, `email`, `role` |
+| **`events`** | Event metadata and reward point configurations | `title`, `location`, `pointsEarned` |
+| **`partners`** | Participating organizations and sponsors | `name`, `category`, `isActive` |
+| **`perks`** | Catalog of redeemable member rewards | `title`, `partnerId`, `stockQuantity` |
+| **`vouchers`** | Generated reward claim tokens | `code`, `memberId`, `perkId`, `isRedeemed` |
+| **`leaderboard`** | Aggregated member point standings | `memberId`, `fullName`, `currentPoints` |
+| **`pointsLedger`** | Immutable point transaction audit log | `entryId`, `amount`, `type`, `referenceId` |
+| **`attendances`** | Event check-in records | `attendanceId`, `eventId`, `memberId`, `pointsEarned` |
+| **`digitalIds`** | Encrypted digital ID token hashes | `memberId`, `tokenHash`, `isRevoked` |
+
+> **Operational Notes**:
+> - **Isolated Legacy Data**: Existing production collections (`serviceRequests`, `counters`) serving the live ASTRAscend site are strictly segregated and maintained without modification.
+> - **Dynamic Initialization**: Auxiliary/secondary schemas (e.g., `perkClaims`, `eventSecrets`, `uniqueStudentIds`, `uniqueEmails`) are managed dynamically at runtime by application services.
 ---
 
 ## Local Development Setup
