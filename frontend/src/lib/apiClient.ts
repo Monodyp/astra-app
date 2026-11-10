@@ -15,8 +15,47 @@ export async function apiClient<T>(
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    throw new Error(
+      errorData.error || `HTTP ${response.status}: ${response.statusText}`
+    );
   }
 
   return response.json();
 }
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function get<T>(endpoint: string): Promise<T> {
+  return apiClient<T>(endpoint, { method: 'GET' });
+}
+
+function post<T>(endpoint: string, body: unknown): Promise<T> {
+  return apiClient<T>(endpoint, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Attendance API
+// ---------------------------------------------------------------------------
+
+export const attendanceApi = {
+  checkIn: (srCode: string, eventId: string) =>
+    post<unknown>('/attendance/checkin', { srCode, eventId }),
+  getEventAttendees: (eventId: string) =>
+    get<unknown>(`/attendance/${eventId}`),
+};
+
+// ---------------------------------------------------------------------------
+// Partner Redemption API
+// ---------------------------------------------------------------------------
+
+export const partnerApi = {
+  validate: (code: string, partner: string) =>
+    post<unknown>('/partner/validate', { code, partner }),
+  apply: (code: string, partner: string) =>
+    post<unknown>('/partner/apply', { code, partner }),
+};

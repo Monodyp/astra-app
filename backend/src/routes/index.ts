@@ -21,8 +21,17 @@ import {
   redeemPerkStub,
   getVouchersMeStub,
   getVoucherByIdStub,
+  validateVoucherHandler,
+  applyVoucherHandler,
 } from '../controllers/perksAndVouchersController.js';
-import { getOpportunitiesStub, submitServiceRequest } from '../controllers/astrascendController.js';
+import {
+  checkInHandler,
+  getAttendanceHandler,
+} from '../controllers/attendanceController.js';
+import {
+  getOpportunitiesStub,
+  submitServiceRequest,
+} from '../controllers/astrascendController.js';
 
 export const router = Router();
 
@@ -40,7 +49,12 @@ router.get('/verify/:token', verifyTokenStub);
 // Points & Ledger routes
 router.get('/points/me', authMiddleware, getPointsMeStub);
 router.get('/points/me/history', authMiddleware, getPointsHistoryStub);
-router.post('/points/grant', authMiddleware, requireRole('officer'), grantPointsStub);
+router.post(
+  '/points/grant',
+  authMiddleware,
+  requireRole('officer'),
+  grantPointsStub
+);
 
 // Events routes
 router.get('/events', authMiddleware, getEventsStub);
@@ -51,6 +65,34 @@ router.get('/perks', authMiddleware, getPerksStub);
 router.post('/perks/:id/redeem', authMiddleware, redeemPerkStub);
 router.get('/vouchers/me', authMiddleware, getVouchersMeStub);
 router.get('/vouchers/:id', authMiddleware, getVoucherByIdStub);
+
+// Attendance routes (officer/admin)
+router.post(
+  '/attendance/checkin',
+  authMiddleware,
+  requireRole('officer'),
+  checkInHandler
+);
+router.get(
+  '/attendance/:eventId',
+  authMiddleware,
+  requireRole('officer'),
+  getAttendanceHandler
+);
+
+// Partner Redemption routes (partner/admin)
+router.post(
+  '/partner/validate',
+  authMiddleware,
+  requireRole('partner'),
+  validateVoucherHandler
+);
+router.post(
+  '/partner/apply',
+  authMiddleware,
+  requireRole('partner'),
+  applyVoucherHandler
+);
 
 // ASTRAscend routes
 router.get('/astrascend/opportunities', getOpportunitiesStub);

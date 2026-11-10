@@ -59,7 +59,12 @@ type Voucher @table {
   member: Member!
   perk: Perk!
   code: String!
-  isRedeemed: Boolean!
+  # status: 'active' | 'used' | 'expired'
+  status: String! @default(expr: "'active'")
+  isRedeemed: Boolean! @default(expr: "false")
   redeemedAt: Timestamp
+  expiresAt: Timestamp
+  # partnerName stored here for fast partner validation without join
+  partnerName: String
   createdAt: Timestamp! @default(expr: "requestTime")
 }

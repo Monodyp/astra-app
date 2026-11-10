@@ -5,7 +5,9 @@ dotenv.config();
 
 const envSchema = z.object({
   PORT: z.string().default('4000'),
-  NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+  NODE_ENV: z
+    .enum(['development', 'production', 'test'])
+    .default('development'),
   FRONTEND_URL: z.string().default('http://localhost:5173'),
   FIREBASE_PROJECT_ID: z.string().default('astra-dev-project'),
   FIREBASE_SERVICE_ACCOUNT_JSON: z.string().optional(),
@@ -19,6 +21,7 @@ const envSchema = z.object({
   MEMBERS_SHEET_ID: z.string().optional(),
   PAID_SHEET_ID: z.string().optional(),
   OPPORTUNITIES_SHEET_ID: z.string().optional(),
+  ATTENDANCE_POINTS: z.string().default('10'),
 });
 
 export const env = envSchema.parse(process.env);

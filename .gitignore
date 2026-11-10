@@ -15,7 +15,9 @@ out/
 .env.local
 .env.*.local
 *.pem
+serviceAccount*.json
 service-account*.json
+*serviceAccount*.json
 firebase-service-account*.json
 
 # Firebase

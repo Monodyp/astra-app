@@ -15,4 +15,51 @@ mutation CreateEvent(
   )
 }
 
+# Record attendance for a member at an event.
+# Note: uniqueness on (member.studentId, event.id) must be enforced at the service layer
+# until Firebase Data Connect supports composite @unique constraints.
+mutation RecordAttendance($studentId: String!, $eventId: String!)
+@auth(level: PUBLIC) {
+  attendance_insert(
+    data: { member: { studentId: $studentId }, event: { id: $eventId } }
+  )
+}
+
+# Mark a voucher as used by its code (conditional update enforced at service layer).
+# In production use UPDATE ... WHERE status = 'active' RETURNING * for true atomicity.
+mutation MarkVoucherUsed($code: String!) @auth(level: PUBLIC) {
+  vouchers_updateMany(
+    where: { code: { eq: $code } }
+    update: {
+      status: { expr: "'used'" }
+      isRedeemed: { expr: "true" }
+      redeemedAt: { expr: "requestTime" }
+    }
+  ) {
+    count
+  }
+}
+
+# Upsert seed vouchers safely (idempotent via code uniqueness)
+mutation UpsertVoucher(
+  $code: String!
+  $status: String!
+  $partnerName: String!
+  $expiresAt: Timestamp
+  $memberId: String!
+  $perkId: String!
+) @auth(level: PUBLIC) {
+  voucher_upsert(
+    data: {
+      code: $code
+      status: $status
+      isRedeemed: false
+      partnerName: $partnerName
+      expiresAt: $expiresAt
+      member: { id: $memberId }
+      perk: { id: $perkId }
+    }
+  )
+}
+
 # TODO(AI/Backend): Add mutations for Member registration, Attendance check-in, PointsLedger grants, Perk creation, and Voucher redemption

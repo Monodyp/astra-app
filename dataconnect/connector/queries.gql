@@ -9,4 +9,50 @@ query ListEvents @auth(level: PUBLIC) {
   }
 }
 
+# Get all attendance records for a specific event (officer/admin use)
+query GetEventAttendance($eventId: String!) @auth(level: PUBLIC) {
+  attendances(where: { event: { id: { eq: $eventId } } }) {
+    id
+    srCode: member {
+      studentId
+      fullName
+    }
+    checkInAt
+  }
+}
+
+# Look up a voucher by its code for partner validation
+query GetVoucherByCode($code: String!) @auth(level: PUBLIC) {
+  vouchers(where: { code: { eq: $code } }) {
+    id
+    code
+    status
+    isRedeemed
+    redeemedAt
+    expiresAt
+    partnerName
+    perk {
+      title
+      pointsCost
+      partner {
+        name
+      }
+    }
+  }
+}
+
+# Check if member already attended an event (uniqueness guard)
+query GetAttendanceByMemberEvent($studentId: String!, $eventId: String!)
+@auth(level: PUBLIC) {
+  attendances(
+    where: {
+      member: { studentId: { eq: $studentId } }
+      event: { id: { eq: $eventId } }
+    }
+  ) {
+    id
+    checkInAt
+  }
+}
+
 # TODO(AI/Backend): Add queries for Member profile, PointsLedger history, Partner perks, Attendance records, and Vouchers
