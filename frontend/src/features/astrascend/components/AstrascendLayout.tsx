@@ -51,6 +51,7 @@ export function AstrascendLayout() {
   const [atTop, setAtTop] = useState(() => window.scrollY <= 24);
   const headerRef = useRef<HTMLElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const skipNextLocationScroll = useRef(false);
   const location = useLocation();
   const previousLocation = useRef(location);
   const theme =
@@ -90,8 +91,10 @@ export function AstrascendLayout() {
     if (location.hash)
       document
         .getElementById(location.hash.slice(1))
-        ?.scrollIntoView?.({ behavior: 'instant' });
-    else window.scrollTo?.({ top: 0 });
+        ?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+    else if (skipNextLocationScroll.current) {
+      skipNextLocationScroll.current = false;
+    } else window.scrollTo?.({ top: 0 });
   }, [location]);
   useEffect(() => {
     const previousTitle = document.title;
@@ -122,7 +125,8 @@ export function AstrascendLayout() {
             Skip to content
           </a>
           <header
-            className="sticky top-0 z-20 border-b border-ascend-line bg-ascend-panel [&_a:focus-visible]:outline-offset-0 as-dark:bg-[#070c1d]"
+            className="as-header sticky top-0 z-20 border-b border-ascend-line bg-ascend-panel [&_a:focus-visible]:outline-offset-0 as-dark:bg-[#070c1d]"
+            data-scrolled={!atTop}
             ref={headerRef}
             onKeyDown={(event) => {
               if (event.key === 'Escape' && menuOpen) {
@@ -138,6 +142,11 @@ export function AstrascendLayout() {
                 to="/astrascend"
                 className={`${brand} h-[calc(var(--as-header-height)*.9)] [--as-mark-height:30px] sm:[--as-mark-height:34px] as-tiny:[--as-mark-height:26px] as-compact:[--as-mark-height:31px]`}
                 aria-label="ASTRAscend home"
+                onClick={() => {
+                  setMenuOpen(false);
+                  skipNextLocationScroll.current = true;
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
               >
                 <BrandWordmark inverse={theme === 'dark'} />
                 <small className="hidden border-l border-ascend-line pl-2.5 text-[16px] text-ascend-muted as-label:inline lg:inline as-compact:text-[14px]">
@@ -167,28 +176,36 @@ export function AstrascendLayout() {
                 <Link
                   className={navigationLink}
                   to="/astrascend#services"
-                  onClick={() => setMenuOpen(false)}
+                  onClick={() => {
+                    setMenuOpen(false);
+                  }}
                 >
                   Services
                 </Link>
                 <Link
                   className={navigationLink}
                   to="/astrascend#how-it-works"
-                  onClick={() => setMenuOpen(false)}
+                  onClick={() => {
+                    setMenuOpen(false);
+                  }}
                 >
                   How it works
                 </Link>
                 <Link
                   className={navigationLink}
                   to="/astrascend#community"
-                  onClick={() => setMenuOpen(false)}
+                  onClick={() => {
+                    setMenuOpen(false);
+                  }}
                 >
                   Community
                 </Link>
                 <Link
                   className={`group mt-1 inline-flex items-center self-start rounded-full lg:mt-0 lg:h-full lg:self-auto ${focus}`}
                   to="/astrascend/request"
-                  onClick={() => setMenuOpen(false)}
+                  onClick={() => {
+                    setMenuOpen(false);
+                  }}
                 >
                   <span
                     className={`${button('primary', 'nav')} group-hover:bg-[#1d4ed8]`}

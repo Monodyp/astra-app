@@ -1,24 +1,24 @@
 @font-face {
     font-family: 'ASTRAscend Urbanist';
-    src: url('./assets/urbanist-400.ttf') format('truetype');
+    src: url('../assets/urbanist-400.ttf') format('truetype');
     font-weight: 400;
     font-display: swap;
 }
 @font-face {
     font-family: 'ASTRAscend Urbanist';
-    src: url('./assets/urbanist-500.ttf') format('truetype');
+    src: url('../assets/urbanist-500.ttf') format('truetype');
     font-weight: 500;
     font-display: swap;
 }
 @font-face {
     font-family: 'ASTRAscend Urbanist';
-    src: url('./assets/urbanist-600.ttf') format('truetype');
+    src: url('../assets/urbanist-600.ttf') format('truetype');
     font-weight: 600;
     font-display: swap;
 }
 @font-face {
     font-family: 'ASTRAscend Urbanist';
-    src: url('./assets/urbanist-700.ttf') format('truetype');
+    src: url('../assets/urbanist-700.ttf') format('truetype');
     font-weight: 700;
     font-display: swap;
 }
@@ -51,4 +51,142 @@
     --as-selected: #142952;
     --as-accent: #82b1ff;
     --as-error: #ffb4ab;
+}
+
+@keyframes as-rise-in {
+    from {
+        opacity: 0;
+        transform: translateY(14px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes as-art-float {
+    0%,
+    100% {
+        transform: translateY(0) rotate(0deg);
+    }
+    50% {
+        transform: translateY(-8px) rotate(0.35deg);
+    }
+}
+
+@keyframes as-section-rule {
+    from {
+        opacity: 0;
+        transform: scaleX(0);
+        transform-origin: left;
+    }
+    to {
+        opacity: 1;
+        transform: scaleX(1);
+        transform-origin: left;
+    }
+}
+
+.astrascend h1,
+.astrascend h2,
+.astrascend h3 {
+    font-family: 'ASTRAscend Urbanist', sans-serif;
+    text-wrap: balance;
+}
+
+.astrascend [data-as-landing] h2 {
+    position: relative;
+    width: fit-content;
+    padding-bottom: 14px;
+}
+
+.astrascend [data-as-landing] h2::after {
+    display: block;
+    width: 56px;
+    height: 4px;
+    margin-top: 12px;
+    border-radius: 999px;
+    background: var(--as-accent);
+    content: '';
+    animation: as-section-rule 700ms ease both;
+}
+
+.as-header {
+    transition: box-shadow 220ms ease, background-color 220ms ease;
+}
+
+.as-header[data-scrolled='true'] {
+    background-color: color-mix(in srgb, var(--as-panel) 88%, transparent);
+    box-shadow: 0 10px 30px rgb(11 20 55 / 8%);
+    -webkit-backdrop-filter: blur(14px);
+    backdrop-filter: blur(14px);
+}
+
+.as-dark .as-header[data-scrolled='true'] {
+    box-shadow: 0 10px 30px rgb(0 0 0 / 22%);
+}
+
+.as-hero::before {
+    position: absolute;
+    inset: 0;
+    background-image: linear-gradient(90deg, rgb(255 255 255 / 5%) 1px, transparent 1px),
+        linear-gradient(rgb(255 255 255 / 5%) 1px, transparent 1px);
+    background-position: center;
+    background-size: 64px 64px;
+    content: '';
+    mask-image: linear-gradient(to bottom, black, transparent 78%);
+    opacity: 0.35;
+    pointer-events: none;
+}
+
+.as-hero-art {
+    isolation: isolate;
+    border: 1px solid rgb(255 255 255 / 18%);
+    box-shadow: 0 28px 60px -28px rgb(5 25 86 / 55%);
+    transform: translateZ(0);
+}
+
+.as-hero-art::after {
+    position: absolute;
+    inset: 12px;
+    border: 1px solid rgb(255 255 255 / 20%);
+    border-radius: 24px;
+    content: '';
+    pointer-events: none;
+}
+
+.as-service-grid > article {
+    animation: as-rise-in 600ms both;
+    transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+
+.as-service-grid > article:nth-child(2) {
+    animation-delay: 80ms;
+}
+
+.as-service-grid > article:nth-child(3) {
+    animation-delay: 160ms;
+}
+
+.as-service-grid > article:nth-child(4) {
+    animation-delay: 240ms;
+}
+
+.as-service-grid > article:hover {
+    border-color: var(--as-accent);
+    box-shadow: 0 18px 34px -18px rgb(37 99 235 / 35%);
+    transform: translateY(-5px);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .as-hero-art img {
+        animation: as-art-float 7s ease-in-out infinite;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .as-service-grid > article {
+        animation: none;
+        transition: none;
+    }
 }

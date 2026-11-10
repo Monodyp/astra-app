@@ -21,7 +21,6 @@ import {
   type ServiceRequest,
 } from '../forms/types';
 import {
-  badge,
   button,
   contactGrid,
   container,
@@ -43,7 +42,6 @@ export function RequestPage() {
   const mounted = useRef(true);
   const form = useRef<HTMLFormElement>(null);
   const focusErrors = useRef(false);
-  const navigate = useNavigate();
   useEffect(() => {
     mounted.current = true;
     return () => {
@@ -114,7 +112,6 @@ export function RequestPage() {
       const receipt = await submitServiceRequest(request);
       if (mounted.current) {
         state.setReceipt(receipt);
-        navigate('/astrascend/request/success');
       }
     } catch (error) {
       if (mounted.current) {
@@ -140,14 +137,13 @@ export function RequestPage() {
     <div className="bg-ascend-form pb-16 pt-10 as-compact:pb-[43px] as-compact:pt-[29px]">
       <div className={container}>
         <div className="mb-10 md:mb-16 as-compact:mb-[29px]">
-          <span className={badge()}>TAKE THE FIRST STEP</span>
           <h1
             className={`${heading} my-3 text-[clamp(34px,4vw,48px)] as-compact:text-[clamp(32px,2.7vw,36px)]`}
           >
             Tell us what you have in mind.
           </h1>
           <p className="text-[18px] font-medium text-ascend-muted as-compact:text-[16px]">
-            A service request, a partnership, or an opportunity worth exploring.
+            Choose a service and tell us what you need.
           </p>
         </div>
         <form
@@ -287,21 +283,13 @@ export function RequestPage() {
             )}
           </fieldset>
         </form>
-        <aside className={`${panel} mt-8 p-6 as-compact:p-[22px]`}>
-          <h2 className="text-[22px] font-bold leading-[1.125] tracking-normal">
-            What happens next?
-          </h2>
-          <ol className="mb-4 mt-5 grid list-inside list-decimal grid-cols-1 gap-3 text-ascend-muted md:grid-cols-3 md:gap-6">
-            <li>Receive your reference number</li>
-            <li>Officers assess fit and feasibility</li>
-            <li>We clarify scope and next steps</li>
-          </ol>
-          <p className="text-[14px] text-ascend-muted">
-            For live requests, submission does not guarantee acceptance.
-            Availability depends on skills, resources, capacity, and leadership
-            approval.
-          </p>
-        </aside>
+        {state.receipt && (
+          <SubmissionReceiptView
+            receipt={state.receipt}
+            modal
+            onStartAnother={state.reset}
+          />
+        )}
       </div>
     </div>
   );

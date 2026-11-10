@@ -25,6 +25,48 @@ export function emailError(raw: string): string | undefined {
         : 'Enter a valid email address, such as you@example.com.';
 }
 
+const DEFAULT_MAX_LENGTH = 200;
+
+export function maxLengthForField(
+    name: string,
+    kind?: string,
+): number {
+    if (name === 'fullName') return 80;
+    if (name === 'email') return 254;
+    if (name === 'organization') return 120;
+    if (kind === 'url') return 2048;
+    if (kind === 'textarea') return 1200;
+    return DEFAULT_MAX_LENGTH;
+}
+
+export function sanitizeFieldValue(
+    name: string,
+    kind: string | undefined,
+    raw: string,
+): string {
+    let value = raw;
+    if (kind === 'number') value = value.replace(/\D/g, '');
+    if (name === 'fullName')
+        value = value.replace(/[^\p{L}\p{M}\s.'-]/gu, '');
+    if (kind === 'text' || kind === 'textarea' || !kind)
+        value = value.replace(/(\p{L})\1{2,}/gu, '$1$1');
+    return value.slice(0, maxLengthForField(name, kind));
+}
+
+export function fieldFormatError(
+    name: string,
+    kind: string | undefined,
+    value: string,
+): string | undefined {
+    if (value.length > maxLengthForField(name, kind))
+        return `Keep this to ${maxLengthForField(name, kind)} characters or fewer.`;
+    if (name === 'fullName' && !/^[\p{L}\p{M}][\p{L}\p{M}\s.'-]*$/u.test(value))
+        return 'Use letters, spaces, apostrophes, or hyphens only.';
+    if (kind === 'number' && !/^\d+$/.test(value))
+        return 'Use numbers only.';
+    return undefined;
+}
+
 export function isValidDate(value: string): boolean {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
     const date = new Date(`${value}T00:00:00Z`);
