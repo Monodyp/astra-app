@@ -3,6 +3,7 @@ import { env } from '../config/env.js';
 
 const QR_PURPOSE = 'astra-member-id';
 const QR_VERSION = 1;
+const CONTROL_NUMBER_PATTERN = /^ASTR1D-(\d{4})$/;
 
 export interface MemberQrPayload {
   v: typeof QR_VERSION;
@@ -32,7 +33,7 @@ function sign(unsignedToken: string): string {
 
 function memberReference(memberId: string): string {
   return createHash('sha256')
-    .update(memberId.trim())
+    .update(memberId.trim().toUpperCase())
     .digest('base64url');
 }
 
@@ -60,14 +61,16 @@ function isMemberQrPayload(value: unknown): value is MemberQrPayload {
 }
 
 export async function generateMemberQrToken(memberId: string): Promise<string> {
-  if (!memberId.trim()) {
-    throw new TypeError('memberId must not be blank');
+  const controlNumber = memberId.trim().toUpperCase();
+  const controlNumberMatch = CONTROL_NUMBER_PATTERN.exec(controlNumber);
+  if (!controlNumberMatch || Number(controlNumberMatch[1]) < 1) {
+    throw new TypeError('memberId must match ASTR1D-0001 or higher');
   }
   const now = Math.floor(Date.now() / 1000);
   const payload: MemberQrPayload = {
     v: QR_VERSION,
     typ: QR_PURPOSE,
-    ref: memberReference(memberId),
+    ref: memberReference(controlNumber),
     iat: now,
     exp: now + env.QR_TOKEN_TTL_SECONDS,
     jti: randomUUID(),
