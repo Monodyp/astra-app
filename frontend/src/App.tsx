@@ -46,14 +46,6 @@ export const App: React.FC = () => {
           )}
           <Route element={<AppShell />}>
             <Route
-              path="/"
-              element={
-                <ProtectedRoute>
-                  <Home />
-                </ProtectedRoute>
-              }
-            />
-            <Route
               path="/id"
               element={
                 <ProtectedRoute>
@@ -116,6 +108,7 @@ export const App: React.FC = () => {
             />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
+          <Route path="/" element={<Home />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>
