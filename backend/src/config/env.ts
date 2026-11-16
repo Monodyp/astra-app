@@ -16,6 +16,7 @@ const envSchema = z.object({
   DATA_CONNECT_CONNECTOR: z.string().default('default'),
   JWT_SECRET: z.string().default('dev-secret-key'),
   QR_SIGNING_SECRET: z.string().default('dev-qr-key'),
+  QR_TOKEN_TTL_SECONDS: z.coerce.number().int().positive().default(300),
   GOOGLE_SERVICE_ACCOUNT_EMAIL: z.string().optional(),
   GOOGLE_PRIVATE_KEY: z.string().optional(),
   MEMBERS_SHEET_ID: z.string().optional(),
