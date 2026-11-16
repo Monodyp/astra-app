@@ -1,13 +1,13 @@
-import { NotImplementedError } from '../lib/errors.js';
+import { getConfiguredMemberService } from '../config/members.js';
+import type { Member } from './members.js';
 
-// TODO(AI/Backend): Implement Google Sheets API lookup for member registration
-export async function fetchMemberFromSheet(studentId: string): Promise<any> {
-  void studentId;
-  throw new NotImplementedError('fetchMemberFromSheet is not implemented');
+// Compatibility entry point for the configured CSV or read-only Sheets source.
+export async function fetchMemberFromSheet(
+  studentId: string
+): Promise<Member | null> {
+  return getConfiguredMemberService().findMember(studentId);
 }
 
-// TODO(AI/Backend): Implement Google Sheets API lookup for membership payment dues
 export async function fetchPaidStatus(studentId: string): Promise<boolean> {
-  void studentId;
-  throw new NotImplementedError('fetchPaidStatus is not implemented');
+  return getConfiguredMemberService().isPaid(studentId);
 }

@@ -1,0 +1,6 @@
+# Only the deliberately synthetic fixtures and instructions are tracked here.
+*
+!.gitignore
+!README.md
+!member_sheet.csv
+!paid_sheet.csv

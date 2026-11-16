@@ -1,0 +1,27 @@
+body {
+  font-family: system-ui, sans-serif;
+  margin: 1rem;
+}
+main {
+  max-width: 48rem;
+}
+.banner {
+  border: 1px solid;
+  padding: 0.5rem;
+  font-weight: bold;
+}
+form {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+input,
+button {
+  font: inherit;
+  padding: 0.25rem;
+}
+pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
