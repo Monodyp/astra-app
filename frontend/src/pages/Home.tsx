@@ -24,15 +24,15 @@ export const Home: React.FC = () => {
         <img src={windowView} alt="" className="h-full w-full object-cover object-top" />
       </div>
       <LandingHeader />
-      <main className="pt-[150px] lg:pt-[150px] relative z-10 mx-auto max-w-[1440px] px-4 pb-12 sm:px-8 lg:px-12 lg:pb-16">
+      <main className="pt-32 lg:pt-[150px] relative z-10 mx-auto max-w-[1440px] px-4 pb-12 sm:px-8 lg:px-12 lg:pb-16">
 
-        <div className="flex flex-col gap-14 py-4 sm:border sm:border-astra-primary-dark sm:py-12 lg:gap-28">
+        <div className="flex flex-col gap-10 py-4 sm:gap-14 sm:border sm:border-astra-primary-dark sm:py-8 lg:gap-28 lg:py-12">
           <section id='home' className="mx-0 sm:mx-6 lg:mx-12 scroll-mt-[150px]">
             <div className="mb-3 hidden justify-between sm:flex gap-4 font-astra text-[10px] font-bold tracking-widest text-astra-gray">
               <span>ASTRA / FLIGHT INTERFACE</span>
               <span>WINDOW PROJECTION · ONLINE</span>
             </div>
-            <div className="grid items-start gap-8 lg:grid-cols-[3fr_2.7fr] lg:gap-16">
+            <div className="grid min-w-0 items-start gap-8 sm:gap-10 lg:grid-cols-[3fr_2.7fr] lg:gap-16">
               <div>
                 <img src={wordmark} alt="ASTRA Developers" className="mb-5 w-44" />
                 <h1 className="max-w-xl font-astra text-4xl font-bold leading-tight tracking-tight text-astra-white sm:text-5xl">One App for Your Student Developer Journey.</h1>
@@ -43,9 +43,12 @@ export const Home: React.FC = () => {
                   <ActionLink href="/login" className="hidden sm:inline-flex">Join ASTRA</ActionLink>
                 </div>
               </div>
-              <TiltCard className='mt-8 w-full aspect-[600/378]  max-w-sm lg:max-w-md'>
-                <MemberIdCard />
-              </TiltCard>
+              {/* Reserve room for the rotated edges and the card's depth. */}
+              <div className="mx-auto flex aspect-[600/460] w-full min-w-0 max-w-[480px] items-center justify-center lg:mx-0 lg:mt-8 lg:block lg:aspect-auto lg:max-w-md">
+                <TiltCard desktopInteractionOnly className="aspect-[600/378] w-[82%] min-w-0 -translate-y-[8%] lg:w-full lg:translate-y-0">
+                  <MemberIdCard />
+                </TiltCard>
+              </div>
             </div>
           </section>
           <FeatureOverview />
