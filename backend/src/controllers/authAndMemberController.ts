@@ -1,4 +1,8 @@
 import { Request, Response } from 'express';
+import {
+  InvalidQrTokenError,
+  verifyQrToken,
+} from '../services/qrService.js';
 
 // TODO(AI/Backend): Implement login validation and return JWT/session token
 export async function loginStub(_req: Request, res: Response): Promise<void> {
@@ -18,9 +22,15 @@ export async function getMemberIdCardStub(_req: Request, res: Response): Promise
   });
 }
 
-// TODO(AI/Backend): Verify QR signed token and return validation status
 export async function verifyTokenStub(req: Request, res: Response): Promise<void> {
   const { token } = req.params;
-  void token;
-  res.status(501).json({ error: 'GET /verify/:token not implemented', isValid: false });
+  try {
+    await verifyQrToken(token);
+    res.set('Cache-Control', 'no-store').json({ isValid: true });
+  } catch (error) {
+    if (!(error instanceof InvalidQrTokenError)) {
+      throw error;
+    }
+    res.set('Cache-Control', 'no-store').json({ isValid: false });
+  }
 }

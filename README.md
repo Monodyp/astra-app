@@ -219,6 +219,7 @@ This generates typed queries and mutations into `frontend/src/lib/dataconnect-sd
 | `DATA_CONNECT_CONNECTOR` | Backend | Connector folder identifier | `default` |
 | `JWT_SECRET` | Backend | Secret key for signing member tokens | `dev-secret-key` |
 | `QR_SIGNING_SECRET` | Backend | Secret key for signing digital ID QR codes | `dev-qr-key` |
+| `QR_TOKEN_TTL_SECONDS` | Backend | Lifetime of a digital ID QR token in seconds | `300` |
 | `GOOGLE_SERVICE_ACCOUNT_EMAIL` | Backend | Google service account email for Sheets API | *(service account email)* |
 | `GOOGLE_PRIVATE_KEY` | Backend | Private key for Google Sheets API integration | *(PEM private key)* |
 | `MEMBERS_SHEET_ID` | Backend | Google Sheet ID containing registered members | *(spreadsheet ID)* |
@@ -247,5 +248,5 @@ The following architecture and domain specifications are intentionally undecided
 4. **Partner and perk list**: Which external partners are participating, and what redemption limits apply?
 5. **Attendance check-in method**: Will check-in be self-service (member scans event QR) or officer-validated (officer scans member ID)?
 6. **Login credential method**: Will authentication rely purely on Firebase Authentication (Google OAuth/Email link), or custom student ID lookups?
-7. **QR payload design**: What is the exact payload structure, expiration duration, and HMAC/JWT signing algorithm for the digital ID QR code?
+7. **QR payload design**: Implemented as a versioned HMAC-SHA256 token with a five-minute default lifetime. The member control number must be sequential, from `ASTR1D-0001` through `ASTR1D-9999`; the readable payload contains only the purpose, version, one-way control-number reference, issue/expiry times, and a random token ID. It does not expose the control number, member profile, or payment data.
 8. **Firebase plan and billing**: What Cloud SQL instance tier and Firebase billing plan (Blaze) are required for Firebase Data Connect in production?
