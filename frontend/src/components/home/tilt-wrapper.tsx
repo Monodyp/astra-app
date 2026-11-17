@@ -99,7 +99,11 @@ export const TiltCard: React.FC<TiltCardProps> = ({
       <div
         className="relative -m-3 p-3"
         onPointerMove={onPointerMove}
-        onPointerLeave={reset}
+        // onPointerLeave={reset}
+        onPointerLeave={(e) => {
+          console.log('left hover area, now over:', e.relatedTarget);
+          reset();
+        }}
       >
         <div
           ref={tiltRef}
@@ -139,7 +143,10 @@ export const TiltCard: React.FC<TiltCardProps> = ({
       </div>
 
       {/* Ground glow */}
-      <div className="absolute bottom-3 left-1/2 h-10 w-64 -translate-x-1/2 rounded-[50%] bg-cyan-400/10 blur-2xl" />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute bottom-3 left-1/2 h-10 w-64 -translate-x-1/2 rounded-[50%] bg-cyan-400/10 blur-2xl"
+      />
     </div>
   );
 };

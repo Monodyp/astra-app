@@ -1,6 +1,6 @@
 import React from 'react';
 
-import windowView from '../assets/astra-home/window-view.png';
+import astraBg from '../assets/astra-home/Astra-Bg.png';
 
 import { MemberIdCard } from '../components/MemberIdCard';
 import LandingHeader from '@/components/home/landing-header';
@@ -14,14 +14,14 @@ import MemberConsole from '@/components/home/member-console';
 import UpcomingEvents from '@/components/home/upcoming-events';
 import EventsCalendar from '@/components/home/events-calendar';
 import LandingFooter from '@/components/home/landing-footer';
+import Starfield from '@/components/star-field';
 
 export const Home: React.FC = () => {
   return (
     <div id="home" className="relative min-h-screen overflow-hidden bg-astra-black font-astra text-astra-white">
-      {/* Star field currently disabled as it lags ID interaction, currently seeking solution */}
-      {/* <Starfield /> */}
+      <Starfield />
       <div className="pointer-events-none fixed inset-0 z-0">
-        <img src={windowView} alt="" className="h-full w-full object-cover object-top" />
+        <img src={astraBg} alt="" className="h-full w-full object-cover object-top" />
       </div>
       <LandingHeader />
       <main className="pt-32 lg:pt-[150px] relative z-10 mx-auto max-w-[1440px] px-4 pb-12 sm:px-8 lg:px-12 lg:pb-16">

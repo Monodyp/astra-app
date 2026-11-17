@@ -9,9 +9,9 @@ import {
 } from '@/components/ui/carousel';
 import Autoplay from "embla-carousel-autoplay";
 
-import howId from '@/assets/astra-home/how-id.png';
-import howEvents from '@/assets/astra-home/how-events.png';
-import howPerks from '@/assets/astra-home/how-perks.png';
+import howId from '@/assets/astra-home/how-scan.jpg';
+import howEvents from '@/assets/astra-home/how-work.jpg';
+import howPerks from '@/assets/astra-home/how-rewards.jpeg';
 import { ActionLink, technicalCorners } from "./ui-util";
 
 const workflowSlides = [

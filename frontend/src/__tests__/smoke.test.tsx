@@ -6,6 +6,8 @@ describe('Frontend Smoke Test', () => {
   it('renders App skeleton without crashing', () => {
     const { container } = render(<App />);
     expect(container).toBeDefined();
-    expect(container.textContent).toContain('ASTRA Developers App');
+    expect(container.textContent).toContain(
+      'One App for Your Student Developer Journey.',
+    );
   });
 });
