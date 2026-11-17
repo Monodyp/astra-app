@@ -1,10 +1,6 @@
 import { useMemo } from "react";
 import { SectionHeading, technicalCorners } from "./ui-util";
 
-import eventOne from '@/assets/astra-home/event-one.png';
-import eventTwo from '@/assets/astra-home/event-two.png';
-import eventThree from '@/assets/astra-home/event-three.png';
-
 export type UpcomingEvent = {
   id: string;
   title: string;
@@ -12,34 +8,6 @@ export type UpcomingEvent = {
   imageUrl?: string;
   status?: string;
 };
-
-const defaultEvents: UpcomingEvent[] = [
-  {
-    id: 'html-css-lab',
-    title: "What's in the BAHHHx?!",
-    description:
-      'Learn how to build your first webpage with HTML and CSS. Beginners welcome. Bring your laptop.',
-    imageUrl: eventOne,
-    status: 'Happening Soon',
-  },
-  {
-    id: 'frontend-lab',
-    title: "What's in the BAHHHx?!",
-    description:
-      'Learn how to build your first webpage with HTML and CSS. Beginners welcome. Bring your laptop.',
-    imageUrl: eventTwo,
-    status: 'Happening Soon',
-  },
-  {
-    id: 'community-lab',
-    title: "What's in the BAHHHx?!",
-    description:
-      'Learn how to build your first webpage with HTML and CSS. Beginners welcome. Bring your laptop.',
-    imageUrl: eventThree,
-    status: 'Happening Soon',
-  },
-];
-
 
 function NoEvents() {
   return (
