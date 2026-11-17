@@ -14,10 +14,10 @@ export default function LandingFooter() {
         <div className="flex items-center justify-center gap-4 self-stretch sm:self-auto">
           {/* <a href="https://www.facebook.com" target='_blank' aria-label="ASTRA Developers on Facebook" className="text-astra-white hover:text-astra-primary-light"><FacebookIcon className="h-5 w-5" /></a> */}
           {/* <a href="https://discord.com" target='_blank' aria-label="ASTRA Developers on Discord" className="text-astra-white hover:text-astra-primary-light"><DiscordIcon className="h-5 w-5" /></a> */}
-          <FacebookLink className='flex h-11 min-w-11 flex-1 items-center justify-center border border-astra-primary-dark text-astra-white hover:text-astra-primary-light sm:h-5 sm:w-5 sm:min-w-0 sm:flex-none sm:border-0' >
+          <FacebookLink className='flex h-11 min-w-11 flex-1 items-center justify-center border border-astra-primary-dark text-astra-white hover:text-astra-primary-light sm:h-11 sm:w-11 sm:min-w-0 sm:flex-none sm:border-0 lg:h-5 lg:w-5 lg:border-0' >
             <FacebookIcon className='h-5 w-5' />
           </FacebookLink>
-          <DiscordLink className='flex h-11 min-w-11 flex-1 items-center justify-center border border-astra-primary-dark text-astra-white hover:text-astra-primary-light sm:h-5 sm:w-5 sm:min-w-0 sm:flex-none sm:border-0' >
+          <DiscordLink className='flex h-11 min-w-11 flex-1 items-center justify-center border border-astra-primary-dark text-astra-white hover:text-astra-primary-light sm:h-11 sm:w-11 sm:min-w-0 sm:flex-none sm:border-0 lg:h-5 lg:w-5 lg:border-0' >
             <DiscordIcon className='h-5 w-5' />
           </DiscordLink>
         </div>

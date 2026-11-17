@@ -112,7 +112,7 @@ export default function HowItWorks() {
           ))}
         </CarouselContent>
         <div className="mt-4 flex items-center justify-center gap-2">
-          <CarouselPrevious className="!static !translate-y-0 border-astra-primary-dark bg-astra-black text-astra-white hover:bg-astra-primary-dark" />
+          <CarouselPrevious className="h-11 w-11 xl:h-8 xl:w-8 !static !translate-y-0 border-astra-primary-dark bg-astra-black text-astra-white hover:bg-astra-primary-dark" />
           <div className="flex items-center gap-2" aria-label="How the app works slides">
             {workflowSlides.map((item, index) => (
               <button
@@ -127,7 +127,7 @@ export default function HowItWorks() {
               </button>
             ))}
           </div>
-          <CarouselNext className="!static !translate-y-0 border-astra-primary-dark bg-astra-black text-astra-white hover:bg-astra-primary-dark" />
+          <CarouselNext className="h-11 w-11 xl:h-8 xl:w-8 !static !translate-y-0 border-astra-primary-dark bg-astra-black text-astra-white hover:bg-astra-primary-dark" />
         </div>
       </Carousel>
     </section>

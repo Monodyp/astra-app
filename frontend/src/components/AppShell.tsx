@@ -47,12 +47,12 @@ export const AppShell: React.FC = () => {
       {fixture && <FixtureBar />}
       <header className="border-b border-astra-primary-dark">
         <div className="mx-auto flex max-w-5xl flex-col gap-3 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] lg:flex-row lg:items-center lg:justify-between lg:gap-8">
-          <Link to="/member" aria-label="ASTRA Developers member home" className="flex justify-center self-center lg:self-auto">
+          <Link to="/member" aria-label="ASTRA Developers member home" className="flex min-h-11 shrink-0 items-center justify-center self-center lg:self-auto">
             <img src={wordmark} alt="ASTRA Developers" className="h-auto w-36" />
           </Link>
           <div className="flex items-center justify-between gap-3 lg:order-3">
-            <p className="min-w-0 break-words font-astra text-base text-astra-white">
-              Welcome back, {profile.data ? profile.data.name : 'member'}
+            <p className="min-w-0 break-words font-astra text-base text-astra-white lg:whitespace-nowrap">
+              <span className="lg:hidden xl:inline">Welcome back, </span>{profile.data ? profile.data.name : 'member'}
             </p>
             <span className="shrink-0 border border-astra-primary-light px-3 py-2 font-astra text-sm font-bold uppercase">
               {isOfficer ? 'Officer' : 'Member'}

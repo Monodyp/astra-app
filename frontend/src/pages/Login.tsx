@@ -44,7 +44,7 @@ export const Login: React.FC = () => {
         className="w-full max-w-md space-y-5 border border-astra-primary-dark bg-black/30 p-5 sm:p-8"
       >
         <div className="flex items-center gap-4">
-          <Link to="/" aria-label="ASTRA Developers home" className="shrink-0">
+          <Link to="/" aria-label="ASTRA Developers home" className="inline-flex min-h-11 shrink-0 items-center">
             <img src={wordmark} alt="ASTRA Developers" className="h-auto w-24" />
           </Link>
           <h1 id={`${uid}-title`} className="text-lg font-bold">

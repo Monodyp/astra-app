@@ -14,17 +14,15 @@ export default function MemberConsole() {
       <div className="mx-0 sm:mx-6 lg:mx-12 grid gap-6 sm:gap-8 xl:grid-cols-[1.15fr_1fr]">
         <div className="relative border border-astra-primary-dark bg-black/30 p-4 shadow-[0_0_16px_rgba(0,140,204,0.07)] sm:p-8">
           {technicalCorners}
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <h3 className="font-astra text-lg font-bold text-astra-white">Your Membership Dashboard</h3>
-              <p className="mt-3 font-astra text-4xl font-bold text-astra-white">430 <span className="text-xl">pts</span></p>
-            </div>
-            <div className="text-right">
+          <h3 className="font-astra text-lg font-bold text-astra-white">Your Membership Dashboard</h3>
+          <div data-testid="membership-status-row" className="mt-3 flex items-start justify-between gap-x-3 gap-y-2">
+            <p className="min-w-0 font-astra text-4xl font-bold text-astra-white">430 <span className="text-xl">pts</span></p>
+            <div data-testid="membership-status" className="flex shrink-0 flex-col items-end text-right">
               <span className="inline-flex rounded-full bg-astra-secondary px-5 py-2 font-astra text-sm font-bold text-white">Active</span>
               <p className="mt-2 font-astra text-xs text-astra-gray">Valid until Aug 2027</p>
             </div>
           </div>
-          <h4 className="mt-10 font-astra text-lg font-medium text-astra-white">Recent Activity</h4>
+          <h4 className="mt-6 font-astra text-lg font-medium text-astra-white">Recent Activity</h4>
           <div className="mt-5 space-y-4">
             {activities.map(([points, label]) => (
               <div key={label} className="relative flex gap-3 pl-1">
