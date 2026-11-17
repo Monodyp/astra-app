@@ -21,6 +21,10 @@ import {
   LegacyServiceRedirect,
 } from './features/astrascend/pages/RequestPage.js';
 import { Opportunities } from './pages/Opportunities.js';
+import { MemberOverview } from './pages/MemberOverview.js';
+import { ClaimedVouchers } from './pages/ClaimedVouchers.js';
+import { EventDetail } from './pages/EventDetail.js';
+import { MemberDataProvider } from './features/member/MemberDataContext.js';
 // DevTools is only imported here; the route is registered only in DEV mode.
 // Vite strips the branch in production builds via import.meta.env.DEV dead-code elimination.
 import { DevTools } from './pages/DevTools.js';
@@ -28,9 +32,11 @@ import { DevTools } from './pages/DevTools.js';
 export const App: React.FC = () => {
   return (
     <AuthProvider>
+      <MemberDataProvider>
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/events/:id" element={<EventDetail />} />
           <Route path="/astrascend" element={<AstrascendLayout />}>
             <Route index element={<LandingPage />} />
             <Route path="request" element={<RequestPage />} />
@@ -45,6 +51,22 @@ export const App: React.FC = () => {
             <Route path="/dev/test" element={<DevTools />} />
           )}
           <Route element={<AppShell />}>
+            <Route
+              path="/member"
+              element={
+                <ProtectedRoute>
+                  <MemberOverview />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/vouchers"
+              element={
+                <ProtectedRoute>
+                  <ClaimedVouchers />
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="/id"
               element={
@@ -111,6 +133,7 @@ export const App: React.FC = () => {
           <Route path="/" element={<Home />} />
         </Routes>
       </BrowserRouter>
+      </MemberDataProvider>
     </AuthProvider>
   );
 };

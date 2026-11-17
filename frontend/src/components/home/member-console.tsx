@@ -9,12 +9,12 @@ export default function MemberConsole() {
   ];
 
   return (
-    <section id="console" className="scroll-mt-[120px] space-y-8">
+    <section id="console" className="scroll-mt-[150px] lg:scroll-mt-[120px] space-y-8">
       <SectionHeading title="Your Member Console" subtitle="Your progress. Your next opportunity." />
-      <div className="mx-12 grid gap-8 xl:grid-cols-[1.15fr_1fr]">
-        <div className="relative border border-astra-primary-dark bg-black/30 p-6 shadow-[0_0_16px_rgba(0,140,204,0.07)] sm:p-8">
+      <div className="mx-0 sm:mx-6 lg:mx-12 grid gap-6 sm:gap-8 xl:grid-cols-[1.15fr_1fr]">
+        <div className="relative border border-astra-primary-dark bg-black/30 p-4 shadow-[0_0_16px_rgba(0,140,204,0.07)] sm:p-8">
           {technicalCorners}
-          <div className="flex items-start justify-between">
+          <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <h3 className="font-astra text-lg font-bold text-astra-white">Your Membership Dashboard</h3>
               <p className="mt-3 font-astra text-4xl font-bold text-astra-white">430 <span className="text-xl">pts</span></p>
@@ -29,19 +29,19 @@ export default function MemberConsole() {
             {activities.map(([points, label]) => (
               <div key={label} className="relative flex gap-3 pl-1">
                 <div className="mt-1 h-3 w-3 shrink-0 rounded-full bg-astra-primary-light" />
-                <div className="flex flex-1 items-start justify-between gap-3 border-b border-white/10 pb-3">
+                <div className="flex min-w-0 flex-1 flex-col items-start justify-between gap-1 sm:flex-row sm:gap-3 border-b border-white/10 pb-3">
                   <div>
                     <p className="font-astra text-sm text-astra-white">{points}</p>
                     <p className="font-astra text-xs text-astra-gray">{label}</p>
                   </div>
-                  <span className="whitespace-nowrap font-astra text-xs text-astra-gray">Mar 25, 2026 · 3:00 PM</span>
+                  <span className="font-astra text-xs text-astra-gray sm:whitespace-nowrap sm:text-right">Mar 25, 2026 · 3:00 PM</span>
                 </div>
               </div>
             ))}
           </div>
           <ActionLink className="mt-8" href="/login">Join Now to Start Earning</ActionLink>
         </div>
-        <div className="relative border border-astra-primary-dark bg-black/30 p-6 shadow-[0_0_16px_rgba(0,140,204,0.07)] sm:p-8">
+        <div className="relative border border-astra-primary-dark bg-black/30 p-4 shadow-[0_0_16px_rgba(0,140,204,0.07)] sm:p-8">
           {technicalCorners}
           <h3 className="font-astra text-lg font-bold text-astra-white">Perks &amp; Partner Rewards</h3>
           <div className="mt-6 space-y-4">

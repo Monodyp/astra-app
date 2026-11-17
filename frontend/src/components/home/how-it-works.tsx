@@ -68,18 +68,29 @@ export default function HowItWorks() {
   }, [carouselApi]);
 
   return (
-    <section id="how-it-works" className="scroll-mt-[120px] space-y-8">
-    <div className="mx-12 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+    <section id="how-it-works" className="scroll-mt-[150px] space-y-8 lg:scroll-mt-[120px]">
+    <div className="mx-0 flex flex-col gap-2 sm:mx-6 sm:flex-row lg:mx-12 sm:items-end sm:justify-between">
       <h2 className="font-astra text-3xl font-bold tracking-tight text-astra-white sm:text-4xl">How the App Works</h2>
       <p className="font-astra text-sm text-astra-gray">A quick briefing before you begin.</p>
     </div>
+      {/* Phones (390px reference): three stacked numbered cards instead of the carousel */}
+      <ol className="space-y-4 md:hidden" aria-label="How the app works">
+        {workflowSlides.map((slide, index) => (
+          <li key={slide.eyebrow} className="relative border border-astra-primary-dark bg-black/30 p-4">
+            {technicalCorners}
+            <h3 className="font-astra text-base font-bold text-astra-white">{index + 1}. {slide.eyebrow}</h3>
+            <p className="mt-3 font-astra text-base leading-6 text-astra-gray">{slide.description}</p>
+            <ActionLink className="mt-3" href={slide.href}>{slide.action}</ActionLink>
+          </li>
+        ))}
+      </ol>
       <Carousel
         opts={{ loop: true, align: 'center' }}
         plugins={[autoplay.current]}
         setApi={setCarouselApi}
         onMouseEnter={autoplay.current.stop}
         onMouseLeave={autoplay.current.reset}
-        className="relative"
+        className="relative hidden md:block"
       >
         <CarouselContent className="ml-0 gap-8 pl-8">
           {workflowSlides.map((slide) => (
@@ -110,8 +121,10 @@ export default function HowItWorks() {
                 onClick={() => carouselApi?.scrollTo(index)}
                 aria-label={`Show ${item.eyebrow}`}
                 aria-current={index === activeSlide ? 'true' : undefined}
-                className={`rounded-full transition-all ${index === activeSlide ? 'h-3 w-3 bg-astra-primary-light' : 'h-2.5 w-2.5 bg-astra-gray/50'}`}
-              />
+                className="group inline-flex h-11 w-11 items-center justify-center"
+              >
+                <span className={`rounded-full transition-all ${index === activeSlide ? 'h-3 w-3 bg-astra-primary-light' : 'h-2.5 w-2.5 bg-astra-gray/50'}`} />
+              </button>
             ))}
           </div>
           <CarouselNext className="!static !translate-y-0 border-astra-primary-dark bg-astra-black text-astra-white hover:bg-astra-primary-dark" />
