@@ -21,6 +21,7 @@ import {
   LegacyServiceRedirect,
 } from './features/astrascend/pages/RequestPage.js';
 import { Opportunities } from './pages/Opportunities.js';
+import { Overview } from './pages/Overview.js';
 // DevTools is only imported here; the route is registered only in DEV mode.
 // Vite strips the branch in production builds via import.meta.env.DEV dead-code elimination.
 import { DevTools } from './pages/DevTools.js';
@@ -46,6 +47,14 @@ export const App: React.FC = () => {
           )}
           <Route element={<AppShell />}>
             <Route
+              path="/home"
+              element={
+                <ProtectedRoute>
+                  <Overview />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/id"
               element={
                 <ProtectedRoute>
@@ -65,7 +74,7 @@ export const App: React.FC = () => {
             <Route
               path="/officer/grant-points"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute role="officer">
                   <OfficerGrantPoints />
                 </ProtectedRoute>
               }
@@ -73,7 +82,7 @@ export const App: React.FC = () => {
             <Route
               path="/checkin"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute role="officer">
                   <CheckIn />
                 </ProtectedRoute>
               }
