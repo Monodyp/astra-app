@@ -133,9 +133,10 @@ export const DigitalID: React.FC = () => {
                     membershipId={memberData.membershipId}
                     joinMessage={isVerified ? 'Annual dues paid' : 'Membership inactive'}
                     status={memberData.membershipStatus}
-                  />
+                    />
                 </div>
               }
+              isPreview={false}
             >
               <TiltCard
                 className="w-full aspect-[600/378]"

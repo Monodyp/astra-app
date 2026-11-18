@@ -81,12 +81,19 @@ export const TiltCard: React.FC<TiltCardProps> = ({
   };
 
   useEffect(() => {
-    if (disabled && tiltRef.current) {
+    if (!tiltRef.current) return;
+    if (disabled) {
       tiltRef.current.style.transform = 'none';
       tiltRef.current.style.transition = 'transform 300ms ease-out';
       if (glintRef.current) glintRef.current.style.opacity = '0';
+    } else {
+      // Set the resting pose imperatively on mount and whenever disabled toggles off.
+      // We do this here — NOT in JSX style prop — so React re-renders never overwrite
+      // the transform that apply() has set via direct DOM writes.
+      tiltRef.current.style.transform = transformFor(0, 0);
+      tiltRef.current.style.transition = '';
     }
-  }, [disabled]);
+  }, [disabled, transformFor]);
 
   // Gyroscope on touch devices. Skipped on iOS, which needs a permission prompt.
   useEffect(() => {
@@ -133,7 +140,7 @@ export const TiltCard: React.FC<TiltCardProps> = ({
         <div
           ref={tiltRef}
           className="relative"
-          style={{ transform: transformFor(0, 0), transformStyle: 'preserve-3d' }}
+          style={{ transformStyle: 'preserve-3d' }}
         >
           {thickness > 0 && (
             <div

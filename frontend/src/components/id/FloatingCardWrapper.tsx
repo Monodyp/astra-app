@@ -9,6 +9,7 @@ type FloatingCardWrapperProps = {
   disabled?: boolean;
   /** Multiplier for animation speed. 1 = default, 0.5 = half speed, 2 = double speed. */
   animationSpeed?: number;
+  isPreview?: boolean;
 };
 
 export const FloatingCardWrapper: React.FC<FloatingCardWrapperProps> = ({
@@ -18,6 +19,7 @@ export const FloatingCardWrapper: React.FC<FloatingCardWrapperProps> = ({
   glowColor = 'rgba(0, 177, 237, 0.22)',
   disabled = false,
   animationSpeed = 0.5,
+  isPreview = true
 }) => {
   // Base durations (prime-ish so layers never phase-sync). Divided by animationSpeed.
   const s = (base: number) => `${(base / animationSpeed).toFixed(2)}s`;
@@ -27,6 +29,7 @@ export const FloatingCardWrapper: React.FC<FloatingCardWrapperProps> = ({
   const renderedZoomed = zoomedContent ?? (typeof children === 'function' ? children({ isZoomed: true }) : children);
 
   const handleOpenZoom = useCallback(() => {
+    if (isPreview) return
     setIsZoomed(true);
   }, []);
 
@@ -226,20 +229,22 @@ export const FloatingCardWrapper: React.FC<FloatingCardWrapperProps> = ({
                       role: 'button' as React.AriaRole,
                       tabIndex: 0,
                       'aria-label': 'Click to zoom in ID card',
-                      cursorClass: 'cursor-zoom-in',
+                      cursorClass: `${!isPreview?'cursor-zoom-in': 'cursor-default'}`,
                     },
                   )
                   : renderedChildren}
 
                 {/* Zoom hint — sibling to TiltCard, uses group-hover from the astra-spin layer */}
-                <div className="pointer-events-none absolute bottom-4 right-4 z-20 flex items-center gap-1.5 rounded-full border border-white/20 bg-black/60 px-3 py-1 text-[11px] font-astra font-medium text-white/90 backdrop-blur-md opacity-0 transition-opacity duration-300 group-hover:opacity-100 shadow-lg">
-                  <ZoomIn className="h-3.5 w-3.5 text-astra-primary-light" />
-                  <span>Click to enlarge</span>
-                </div>
               </div>
             </div>
           </div>
         </div>
+        {!isPreview &&
+          <div className="pointer-events-none absolute -bottom-16 -right-16 z-20 flex items-center gap-1.5 rounded-full border border-white/20 bg-black/60 px-3 py-1 text-[11px] font-astra font-medium text-white/90 backdrop-blur-md transition-opacity duration-300 shadow-lg">
+            <ZoomIn className="h-3.5 w-3.5 text-astra-primary-light" />
+            <span>Click the card to enlarge</span>
+          </div>
+        }
 
         {/* Shadow */}
         <div

@@ -14,6 +14,7 @@ import MemberConsole from '@/components/home/member-console';
 import UpcomingEvents from '@/components/home/upcoming-events';
 import LandingFooter from '@/components/home/landing-footer';
 import Starfield from '@/components/star-field';
+import { FloatingCardWrapper } from '@/components/id/FloatingCardWrapper';
 //test push
 export const Home: React.FC = () => {
   return (
@@ -42,9 +43,18 @@ export const Home: React.FC = () => {
                   <ActionLink href="/login">Join ASTRA</ActionLink>
                 </div>
               </div>
-              <TiltCard className='mt-8 w-full aspect-[600/378]  max-w-sm lg:max-w-md'>
+              {/* <TiltCard className='mt-8 w-full aspect-[600/378]  max-w-sm lg:max-w-md'>
                 <MemberIdCard />
-              </TiltCard>
+              </TiltCard> */}
+
+              <FloatingCardWrapper
+                className="w-full max-w-md sm:max-w-lg aspect-[600/378]"
+                glowColor={'rgba(0, 177, 237, 0.25)'}
+              >
+                <TiltCard className="mt-8 w-full aspect-[600/378]  max-w-sm lg:max-w-md" >
+                  <MemberIdCard />
+                </TiltCard>
+              </FloatingCardWrapper>
             </div>
           </section>
           <FeatureOverview />
