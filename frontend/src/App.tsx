@@ -12,6 +12,7 @@ import { OfficerGrantPoints } from './pages/OfficerGrantPoints.js';
 import { CheckIn } from './pages/CheckIn.js';
 import { Marketplace } from './pages/Marketplace.js';
 import { VoucherDetails } from './pages/VoucherDetails.js';
+import { Vouchers } from './pages/Vouchers.js';
 import { PartnerInstructions } from './pages/PartnerInstructions.js';
 import { AstrascendLayout } from './features/astrascend/components/AstrascendLayout.js';
 import { LandingPage } from './features/astrascend/pages/LandingPage.js';
@@ -92,6 +93,14 @@ export const App: React.FC = () => {
               element={
                 <ProtectedRoute>
                   <Marketplace />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/vouchers"
+              element={
+                <ProtectedRoute>
+                  <Vouchers />
                 </ProtectedRoute>
               }
             />
