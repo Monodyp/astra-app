@@ -351,3 +351,11 @@ export function createRedemptionUnitOfWork(): RedemptionUnitOfWork {
 }
 
 export const redemptionUnitOfWork = createRedemptionUnitOfWork();
+
+export function injectRedemptionFailure(error: Error): void {
+  redemptionUnitOfWork.injectNextFailure(error);
+}
+
+export function resetRedemptionUnitOfWork(): void {
+  redemptionUnitOfWork.reset();
+}

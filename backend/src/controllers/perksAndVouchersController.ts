@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import { NextFunction, Request, Response } from 'express';
 import { z } from 'zod';
 import {
   validateVoucher,
@@ -29,7 +29,8 @@ export async function getPerks(
 
 export async function redeemPerkHandler(
   req: Request,
-  res: Response
+  res: Response,
+  next: NextFunction
 ): Promise<void> {
   if (!req.user) {
     res.status(401).json({ error: 'Authentication required' });
@@ -54,7 +55,7 @@ export async function redeemPerkHandler(
       res.status(error.statusCode).json({ error: error.message });
       return;
     }
-    throw error;
+    next(error);
   }
 }
 

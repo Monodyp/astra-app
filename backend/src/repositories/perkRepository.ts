@@ -161,3 +161,9 @@ export function resetPerkRepository(): void {
     perkRepository.clear();
   }
 }
+
+export function seedPerks(perks: Perk[]): void {
+  if (perkRepository instanceof InMemoryPerkRepository) {
+    perkRepository.seed(perks);
+  }
+}
