@@ -567,12 +567,18 @@ export function createDemoDataSource(
       if (!needle) {
         return [];
       }
+      const ids = (member: DemoMember) => [
+        member.memberId.toLowerCase(),
+        member.studentId.toLowerCase(),
+      ];
+      const exact = (member: DemoMember) => ids(member).includes(needle);
       return records.members
         .filter(
           (member) =>
             member.fullName.toLowerCase().includes(needle) ||
-            member.studentId.includes(needle)
+            ids(member).some((id) => id.includes(needle))
         )
+        .sort((a, b) => Number(exact(b)) - Number(exact(a)))
         .slice(0, SEARCH_RESULT_LIMIT)
         .map((member) => toSearchResult(records, member));
     },

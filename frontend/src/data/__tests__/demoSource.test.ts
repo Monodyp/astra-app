@@ -1,7 +1,12 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { DataError, type PortalDataSource } from '../contracts.js';
 import { createDemoDataSource } from '../demo/demoSource.js';
-import { createMemoryStorage, type KeyValueStorage } from '../demo/store.js';
+import { createSeedRecords } from '../demo/fixtures.js';
+import {
+  RECORDS_KEY,
+  createMemoryStorage,
+  type KeyValueStorage,
+} from '../demo/store.js';
 
 const NOW = new Date('2026-11-18T14:45:00+08:00');
 
@@ -230,6 +235,57 @@ describe('demo data source', () => {
           studentId: '99-99999',
         })
       ).toMatchObject({ outcome: 'rejected', reason: 'unknown_member' });
+    });
+  });
+
+  describe('member search', () => {
+    beforeEach(async () => {
+      await data.signIn({ method: 'shortcut', shortcutId: 'officer' });
+    });
+
+    async function searchIds(query: string) {
+      return (await data.searchMembers(query)).map((item) => item.memberId);
+    }
+
+    it('finds a member by ASTRA ID, student ID, or name', async () => {
+      expect(await searchIds('ASTR1D-0001')).toEqual(['ASTR1D-0001']);
+      expect(await searchIds('24-90001')).toEqual(['ASTR1D-0001']);
+      expect(await searchIds('Verified Doe')).toEqual([
+        'ASTR1D-0001',
+        'ASTR1D-0002',
+      ]);
+    });
+
+    it('matches trimmed partial input in any case', async () => {
+      expect(await searchIds('  uNvErIfIeD  ')).toEqual(['ASTR1D-0002']);
+      expect(await searchIds('astr1d-000')).toHaveLength(6);
+      expect(await searchIds('-9001')).toEqual(['ASTR1D-0002']);
+      expect(await searchIds('officer d')).toEqual(['ASTR1D-0003']);
+    });
+
+    it('returns nothing for empty or unmatched input', async () => {
+      expect(await searchIds('   ')).toEqual([]);
+      expect(await searchIds('Zed Unknown')).toEqual([]);
+    });
+
+    it('ranks exact ID matches first and limits the results', async () => {
+      const records = createSeedRecords();
+      const [mara] = records.members;
+      records.members.unshift({
+        ...mara,
+        memberId: 'ASTR1D-00012',
+        studentId: '26-90012',
+        fullName: 'Rhea Tan',
+        displayName: 'Rhea',
+        email: 'rhea.tan@astra.example',
+      });
+      storage.setItem(RECORDS_KEY, JSON.stringify(records));
+
+      expect(await searchIds('astr1d-0001')).toEqual([
+        'ASTR1D-0001',
+        'ASTR1D-00012',
+      ]);
+      expect(await searchIds('ASTR1D')).toHaveLength(6);
     });
   });
 
