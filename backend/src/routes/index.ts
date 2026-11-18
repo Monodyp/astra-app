@@ -8,9 +8,9 @@ import {
   verifyTokenStub,
 } from '../controllers/authAndMemberController.js';
 import {
-  getPointsMeStub,
-  getPointsHistoryStub,
-  grantPointsStub,
+  getPointsMe,
+  getPointsHistoryHandler,
+  grantPointsHandler,
 } from '../controllers/pointsController.js';
 import {
   getEventsStub,
@@ -47,13 +47,17 @@ router.get('/members/me/id', authMiddleware, getMemberIdCardStub);
 router.get('/verify/:token', verifyTokenStub);
 
 // Points & Ledger routes
-router.get('/points/me', authMiddleware, getPointsMeStub);
-router.get('/points/me/history', authMiddleware, getPointsHistoryStub);
+router.get('/points/me', authMiddleware, getPointsMe);
+router.get(
+  '/points/me/history',
+  authMiddleware,
+  getPointsHistoryHandler
+);
 router.post(
   '/points/grant',
   authMiddleware,
   requireRole('officer'),
-  grantPointsStub
+  grantPointsHandler
 );
 
 // Events routes
