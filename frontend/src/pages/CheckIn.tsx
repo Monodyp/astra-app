@@ -15,6 +15,7 @@ import {
 } from '../data/index.js';
 import { errorMessage, formatPointsDelta, formatTime } from '../lib/format.js';
 import { useResource } from '../lib/useResource.js';
+import { SampleQrPanel } from '../features/checkin/SampleQrPanel.js';
 
 const loadStation = () => portalData.getCheckInStation();
 
@@ -42,6 +43,7 @@ const RosterRow: React.FC<{ record: AttendanceRecord }> = ({ record }) => (
 export const CheckIn: React.FC = () => {
   const station = useResource(loadStation);
   const [samples, setSamples] = useState<ScanSample[]>([]);
+  const [shownSampleId, setShownSampleId] = useState<string | null>(null);
   const [studentId, setStudentId] = useState('');
   const [pending, setPending] = useState<string | null>(null);
   const [outcome, setOutcome] = useState<Outcome | null>(null);
@@ -102,6 +104,8 @@ export const CheckIn: React.FC = () => {
     });
   }
 
+  const shownSample =
+    samples.find((sample) => sample.id === shownSampleId) ?? null;
   const accepted =
     outcome?.kind === 'result' && outcome.result.outcome === 'accepted';
   const busy = pending !== null;
@@ -130,7 +134,7 @@ export const CheckIn: React.FC = () => {
       >
         <div className="flex justify-between text-[10px] font-medium uppercase">
           <span className="text-astra-gray">Cam 01 / Member ID scanner</span>
-          <span className="text-[#4ade80]">Simulated scanner · No camera</span>
+          <span className="text-[#4ade80]">Sample QR · Simulated scan</span>
         </div>
         <div className="mx-auto mt-6 flex w-[300px] flex-col items-center border-x border-astra-primary-light/40 px-6 py-6 text-center">
           <IdCard
@@ -143,7 +147,7 @@ export const CheckIn: React.FC = () => {
             Scan Member Digital ID QR
           </h2>
           <p className="mt-1 text-[10px] text-astra-gray">
-            Present a sample ID to the scanner below
+            Choose a sample ID below to show its QR
           </p>
         </div>
         {samples.length > 0 && (
@@ -155,16 +159,18 @@ export const CheckIn: React.FC = () => {
               <li key={sample.id}>
                 <button
                   type="button"
-                  disabled={busy}
                   onClick={() =>
-                    void submit(sample.id, {
-                      eventId: event.id,
-                      method: 'scan',
-                      credential: sample.credential,
-                    })
+                    setShownSampleId(
+                      shownSampleId === sample.id ? null : sample.id
+                    )
                   }
-                  aria-label={`Scan ${sample.label}, ${sample.hint}`}
-                  className="flex w-full items-center gap-3 border border-astra-primary-dark bg-black/60 px-4 py-3 text-left transition-colors hover:border-astra-primary-light focus-visible:outline focus-visible:outline-2 focus-visible:outline-astra-primary-light disabled:opacity-60"
+                  aria-pressed={shownSampleId === sample.id}
+                  aria-label={`Show QR for ${sample.label}, ${sample.hint}`}
+                  className={`flex w-full items-center gap-3 border bg-black/60 px-4 py-3 text-left transition-colors hover:border-astra-primary-light focus-visible:outline focus-visible:outline-2 focus-visible:outline-astra-primary-light ${
+                    shownSampleId === sample.id
+                      ? 'border-astra-primary-light'
+                      : 'border-astra-primary-dark'
+                  }`}
                 >
                   <ScanLine
                     className="h-5 w-5 shrink-0 text-astra-primary-light"
@@ -172,7 +178,7 @@ export const CheckIn: React.FC = () => {
                   />
                   <span>
                     <span className="block text-sm font-bold">
-                      {pending === sample.id ? 'Scanning…' : sample.label}
+                      {sample.label}
                     </span>
                     <span className="block text-[10px] text-astra-gray">
                       {sample.hint}
@@ -182,6 +188,21 @@ export const CheckIn: React.FC = () => {
               </li>
             ))}
           </ul>
+        )}
+        {shownSample && (
+          <SampleQrPanel
+            sample={shownSample}
+            busy={busy}
+            scanning={pending === shownSample.id}
+            onSimulate={() =>
+              void submit(shownSample.id, {
+                eventId: event.id,
+                method: 'scan',
+                credential: shownSample.credential,
+              })
+            }
+            onClose={() => setShownSampleId(null)}
+          />
         )}
         <div className="mt-6 flex justify-between text-[10px] font-medium uppercase text-astra-gray">
           <span>Scan mode / Digital ID</span>

@@ -23,6 +23,16 @@ function rosterNames() {
     .map((item) => item.textContent);
 }
 
+function showSample(name: string) {
+  const button = screen.getByRole('button', { name: `Show QR for ${name}` });
+  if (button.getAttribute('aria-pressed') !== 'true') fireEvent.click(button);
+}
+
+function simulateScan(name: string) {
+  showSample(name);
+  fireEvent.click(screen.getByRole('button', { name: 'Simulate scan' }));
+}
+
 describe('event check-in', () => {
   beforeEach(() => {
     window.sessionStorage.clear();
@@ -32,31 +42,19 @@ describe('event check-in', () => {
     await openAsOfficer('/checkin');
     expect(await screen.findByText('2 verified attendees')).toBeDefined();
 
-    fireEvent.click(
-      screen.getByRole('button', {
-        name: 'Scan Verified Doe, Sample verified member ID',
-      })
-    );
+    simulateScan('Verified Doe, Sample verified member ID');
     expect((await screen.findByRole('status')).textContent).toContain(
       'Verified Doe checked in. +100 pts'
     );
     expect(screen.getByText('3 verified attendees')).toBeDefined();
     expect(rosterNames()[0]).toContain('Verified Doe');
 
-    fireEvent.click(
-      screen.getByRole('button', {
-        name: 'Scan Verified Doe, Sample verified member ID',
-      })
-    );
+    simulateScan('Verified Doe, Sample verified member ID');
     expect((await screen.findByRole('alert')).textContent).toContain(
       'already checked in'
     );
 
-    fireEvent.click(
-      screen.getByRole('button', {
-        name: 'Scan Unverified Doe, Sample unverified member ID',
-      })
-    );
+    simulateScan('Unverified Doe, Sample unverified member ID');
     await waitFor(() =>
       expect(screen.getByRole('alert').textContent).toContain(
         'does not have an active membership'
@@ -73,6 +71,34 @@ describe('event check-in', () => {
       )
     );
     expect(screen.getByText('3 verified attendees')).toBeDefined();
+  });
+
+  it('shows the sample QR before a simulated scan', async () => {
+    await openAsOfficer('/checkin');
+    expect(await screen.findByText('2 verified attendees')).toBeDefined();
+    showSample('Iris Cruz, Sample verified member ID');
+
+    const panel = screen.getByRole('region', {
+      name: 'Sample QR for Iris Cruz',
+    });
+    expect(
+      within(panel).getByRole('img', { name: 'QR code for Iris Cruz' })
+    ).toBeDefined();
+    expect(within(panel).getByText('demo-qr.v1.c58e0d17a6f2')).toBeDefined();
+    expect(screen.queryByRole('status')).toBeNull();
+    expect(screen.getByText('2 verified attendees')).toBeDefined();
+
+    fireEvent.click(
+      within(panel).getByRole('button', { name: 'Simulate scan' })
+    );
+    expect((await screen.findByRole('alert')).textContent).toContain(
+      'already checked in'
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Close sample QR' }));
+    expect(
+      screen.queryByRole('region', { name: 'Sample QR for Iris Cruz' })
+    ).toBeNull();
   });
 
   it('checks in a member by student ID', async () => {
