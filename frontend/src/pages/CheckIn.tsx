@@ -1,5 +1,5 @@
 import React, { useEffect, useId, useState } from 'react';
-import { CircleCheck, IdCard, ScanLine } from 'lucide-react';
+import { CircleCheck, ScanLine } from 'lucide-react';
 import { PageHeading } from '../components/portal/PageHeading.js';
 import {
   EmptyState,
@@ -15,6 +15,7 @@ import {
 } from '../data/index.js';
 import { errorMessage, formatPointsDelta, formatTime } from '../lib/format.js';
 import { useResource } from '../lib/useResource.js';
+import { CameraScanner } from '../features/checkin/CameraScanner.js';
 import { SampleQrPanel } from '../features/checkin/SampleQrPanel.js';
 
 const loadStation = () => portalData.getCheckInStation();
@@ -134,21 +135,26 @@ export const CheckIn: React.FC = () => {
       >
         <div className="flex justify-between text-[10px] font-medium uppercase">
           <span className="text-astra-gray">Cam 01 / Member ID scanner</span>
-          <span className="text-[#4ade80]">Sample QR · Simulated scan</span>
+          <span className="text-[#4ade80]">Camera or sample QR</span>
         </div>
-        <div className="mx-auto mt-6 flex w-[300px] flex-col items-center border-x border-astra-primary-light/40 px-6 py-6 text-center">
-          <IdCard
-            className="h-10 w-10 text-astra-white"
-            strokeWidth={1.5}
-            aria-hidden="true"
-          />
-          <span className="mt-4 h-px w-full bg-astra-primary-light/60" />
-          <h2 id="scanner-title" className="mt-4 text-sm font-bold">
+        <div className="mx-auto mt-6 flex w-[460px] flex-col items-center border-x border-astra-primary-light/40 px-6 py-6 text-center">
+          <h2 id="scanner-title" className="text-sm font-bold">
             Scan Member Digital ID QR
           </h2>
           <p className="mt-1 text-[10px] text-astra-gray">
-            Choose a sample ID below to show its QR
+            Use the camera, or choose a sample ID below to show its QR
           </p>
+          <span className="mt-4 h-px w-full bg-astra-primary-light/60" />
+          <CameraScanner
+            paused={busy}
+            onDecode={(credential) =>
+              void submit('camera', {
+                eventId: event.id,
+                method: 'scan',
+                credential,
+              })
+            }
+          />
         </div>
         {samples.length > 0 && (
           <ul
