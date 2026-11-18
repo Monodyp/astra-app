@@ -129,37 +129,30 @@ export const CheckIn: React.FC = () => {
         }
       />
 
-      <section
-        aria-labelledby="scanner-title"
-        className="relative overflow-hidden border border-astra-white/10 bg-black/60 bg-[linear-gradient(rgba(0,177,237,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(0,177,237,0.06)_1px,transparent_1px)] bg-[size:32px_32px] px-6 py-6"
-      >
-        <div className="flex justify-between text-[10px] font-medium uppercase">
-          <span className="text-astra-gray">Cam 01 / Member ID scanner</span>
-          <span className="text-[#4ade80]">Camera or sample QR</span>
-        </div>
-        <div className="mx-auto mt-6 flex w-[460px] flex-col items-center border-x border-astra-primary-light/40 px-6 py-6 text-center">
-          <h2 id="scanner-title" className="text-sm font-bold">
-            Scan Member Digital ID QR
-          </h2>
-          <p className="mt-1 text-[10px] text-astra-gray">
-            Use the camera, or choose a sample ID below to show its QR
-          </p>
-          <span className="mt-4 h-px w-full bg-astra-primary-light/60" />
-          <CameraScanner
-            paused={busy}
-            onDecode={(credential) =>
-              void submit('camera', {
-                eventId: event.id,
-                method: 'scan',
-                credential,
-              })
-            }
-          />
-        </div>
-        {samples.length > 0 && (
+      <CameraScanner
+        paused={busy}
+        onDecode={(credential) =>
+          void submit('camera', {
+            eventId: event.id,
+            method: 'scan',
+            credential,
+          })
+        }
+      />
+
+      {samples.length > 0 && (
+        <section aria-labelledby="samples-title">
+          <div className="flex items-end justify-between">
+            <h2 id="samples-title" className="text-sm font-bold">
+              Demo IDs
+            </h2>
+            <p className="text-[10px] font-medium uppercase text-astra-gray">
+              Show a sample QR, then simulate the scan
+            </p>
+          </div>
           <ul
             aria-label="Sample IDs to scan"
-            className="mt-6 grid grid-cols-4 gap-3"
+            className="mt-3 grid grid-cols-4 gap-3"
           >
             {samples.map((sample) => (
               <li key={sample.id}>
@@ -194,27 +187,23 @@ export const CheckIn: React.FC = () => {
               </li>
             ))}
           </ul>
-        )}
-        {shownSample && (
-          <SampleQrPanel
-            sample={shownSample}
-            busy={busy}
-            scanning={pending === shownSample.id}
-            onSimulate={() =>
-              void submit(shownSample.id, {
-                eventId: event.id,
-                method: 'scan',
-                credential: shownSample.credential,
-              })
-            }
-            onClose={() => setShownSampleId(null)}
-          />
-        )}
-        <div className="mt-6 flex justify-between text-[10px] font-medium uppercase text-astra-gray">
-          <span>Scan mode / Digital ID</span>
-          <span>Automatic verification</span>
-        </div>
-      </section>
+          {shownSample && (
+            <SampleQrPanel
+              sample={shownSample}
+              busy={busy}
+              scanning={pending === shownSample.id}
+              onSimulate={() =>
+                void submit(shownSample.id, {
+                  eventId: event.id,
+                  method: 'scan',
+                  credential: shownSample.credential,
+                })
+              }
+              onClose={() => setShownSampleId(null)}
+            />
+          )}
+        </section>
+      )}
 
       <form onSubmit={handleManual} noValidate>
         <label htmlFor={manualId} className="block text-base font-bold">

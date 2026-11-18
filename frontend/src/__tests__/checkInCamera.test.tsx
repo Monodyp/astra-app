@@ -9,6 +9,7 @@ vi.mock('../features/checkin/decodeQr.js', () => ({
 }));
 
 const VERIFIED_CREDENTIAL = 'demo-qr.v1.7f3a9c41e2b8';
+const OPEN_CAMERA = 'Open camera to scan a member QR';
 const decode = vi.mocked(decodeQrFrame);
 
 function installCamera(getUserMedia: () => Promise<MediaStream>) {
@@ -50,8 +51,10 @@ describe('camera check-in', () => {
     const checkIn = vi.spyOn(portalData, 'checkIn');
     await openCheckIn();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Start camera' }));
+    fireEvent.click(screen.getByRole('button', { name: OPEN_CAMERA }));
     expect(await screen.findByLabelText('Camera preview')).toBeDefined();
+    expect(screen.getByText('Camera active')).toBeDefined();
+    expect(screen.queryByRole('button', { name: OPEN_CAMERA })).toBeNull();
     decode.mockReturnValue(VERIFIED_CREDENTIAL);
 
     expect((await screen.findByRole('status')).textContent).toContain(
@@ -71,10 +74,12 @@ describe('camera check-in', () => {
     const stop = vi.fn();
     installCamera(async () => fakeStream(stop));
     await openCheckIn();
-    fireEvent.click(screen.getByRole('button', { name: 'Start camera' }));
-    fireEvent.click(await screen.findByRole('button', { name: 'Stop camera' }));
+    fireEvent.click(screen.getByRole('button', { name: OPEN_CAMERA }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Cancel' }));
     expect(stop).toHaveBeenCalled();
     expect(screen.queryByLabelText('Camera preview')).toBeNull();
+    expect(screen.getByText('Keep the QR code inside the frame')).toBeDefined();
+    expect(screen.getByRole('button', { name: OPEN_CAMERA })).toBeDefined();
   });
 
   it('explains a blocked camera', async () => {
@@ -84,14 +89,16 @@ describe('camera check-in', () => {
       )
     );
     await openCheckIn();
-    fireEvent.click(screen.getByRole('button', { name: 'Start camera' }));
+    fireEvent.click(screen.getByRole('button', { name: OPEN_CAMERA }));
     expect(await screen.findByText(/Camera access is blocked/)).toBeDefined();
+    expect(screen.getByText('Camera blocked')).toBeDefined();
+    expect(screen.getByRole('button', { name: OPEN_CAMERA })).toBeDefined();
   });
 
   it('falls back to sample IDs when there is no camera', async () => {
     await openCheckIn();
     expect(screen.getByText(/No camera is available here/)).toBeDefined();
-    expect(screen.queryByRole('button', { name: 'Start camera' })).toBeNull();
+    expect(screen.queryByRole('button', { name: OPEN_CAMERA })).toBeNull();
     expect(
       screen.getByRole('button', {
         name: 'Show QR for Verified Doe, Sample verified member ID',
