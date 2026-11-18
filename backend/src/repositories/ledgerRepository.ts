@@ -77,6 +77,23 @@ export class InMemoryLedgerRepository implements LedgerRepository {
   clear(): void {
     this.entries.clear();
   }
+
+  snapshot(): LedgerEntry[] {
+    return [...this.entries.values()].map((entry) => ({
+      ...entry,
+      createdAt: new Date(entry.createdAt),
+    }));
+  }
+
+  restore(entries: LedgerEntry[]): void {
+    this.entries.clear();
+    for (const entry of entries) {
+      this.entries.set(entry.id, {
+        ...entry,
+        createdAt: new Date(entry.createdAt),
+      });
+    }
+  }
 }
 
 export class FirestoreLedgerRepository implements LedgerRepository {
