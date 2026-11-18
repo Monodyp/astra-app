@@ -18,6 +18,7 @@ type TiltCardProps = {
   tabIndex?: number;
   'aria-label'?: string;
   cursorClass?: string;
+  isInteractable?: boolean;
 };
 
 export const TiltCard: React.FC<TiltCardProps> = ({
@@ -36,6 +37,7 @@ export const TiltCard: React.FC<TiltCardProps> = ({
   tabIndex,
   'aria-label': ariaLabel,
   cursorClass,
+  isInteractable=true
 }) => {
   const tiltRef = useRef<HTMLDivElement>(null);
   const glintRef = useRef<HTMLDivElement>(null);
@@ -57,7 +59,7 @@ export const TiltCard: React.FC<TiltCardProps> = ({
       tilt.style.transform = transformFor(nx, ny);
 
       const mag = Math.min(1, Math.hypot(nx, ny));
-      glint.style.setProperty('--gp', `${50 - nx * 40 - ny * 20}%`);
+      glint.style.transform = `translateX(${-nx * 40 - ny * 20}%)`;
       glint.style.opacity = String(0.15 + 0.85 * mag);
     },
     [transformFor],
@@ -73,7 +75,7 @@ export const TiltCard: React.FC<TiltCardProps> = ({
   }, [transformFor]);
 
   const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (disabled || e.pointerType !== 'mouse') return;
+    if (!isInteractable || disabled || e.pointerType !== 'mouse') return;
     const rect = e.currentTarget.getBoundingClientRect();
     const nx = clamp(((e.clientX - rect.left) / rect.width) * 2 - 1);
     const ny = clamp(((e.clientY - rect.top) / rect.height) * 2 - 1);
@@ -126,7 +128,7 @@ export const TiltCard: React.FC<TiltCardProps> = ({
         className={`relative -m-3 p-3${cursorClass ? ` ${cursorClass}` : ''}`}
         onPointerMove={onPointerMove}
         onPointerLeave={(e) => {
-          if (e.relatedTarget && e.currentTarget.contains(e.relatedTarget as Node)) {
+          if (e.relatedTarget instanceof Node && e.currentTarget.contains(e.relatedTarget)) {
             return;
           }
           reset();
@@ -152,27 +154,28 @@ export const TiltCard: React.FC<TiltCardProps> = ({
           <div className="relative rounded-2xl shadow-[0_20px_50px_rgba(0,177,237,0.24)]">
             {children}
             {/* Glint overlay: sits on top of the card, so the card design is untouched */}
-            <div
-              ref={glintRef}
-              aria-hidden
-              className="pointer-events-none absolute inset-0 rounded-2xl"
-              style={{
-                opacity: 0,
-                ['--gp' as string]: '50%',
-                background:
-                  'linear-gradient(115deg, transparent calc(var(--gp) - 18%), rgba(255,255,255,0.55) var(--gp), transparent calc(var(--gp) + 18%))',
-                transition: 'opacity 300ms ease-out',
-              }}
-            />
+            <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden rounded-2xl">
+              <div
+                ref={glintRef}
+                className="absolute inset-0"
+                style={{
+                  opacity: 0,
+                  background:
+                    'linear-gradient(115deg, transparent 32%, rgba(255,255,255,0.55) 50%, transparent 68%)',
+                  transition: 'opacity 300ms ease-out, transform 120ms ease-out',
+                  willChange: 'transform, opacity',
+                }}
+              />
+            </div>
           </div>
         </div>
       </div>
 
       {/* Ground glow */}
-      <div
+      {/* <div
         aria-hidden
         className="pointer-events-none absolute bottom-3 left-1/2 h-10 w-64 -translate-x-1/2 rounded-[50%] bg-cyan-400/10 blur-2xl"
-      />
+      /> */}
     </div>
   );
 };

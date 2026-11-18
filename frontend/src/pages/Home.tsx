@@ -19,7 +19,6 @@ import { FloatingCardWrapper } from '@/components/id/FloatingCardWrapper';
 export const Home: React.FC = () => {
   return (
     <div id="home" className="relative min-h-screen overflow-hidden bg-astra-black font-astra text-astra-white">
-      {/* Star field currently disabled as it lags ID interaction, currently seeking solution */}
       <Starfield />
       <div className="pointer-events-none fixed inset-0 z-0">
         <img src={astraBg} alt="" className="h-full w-full object-cover object-top" />
@@ -43,15 +42,12 @@ export const Home: React.FC = () => {
                   <ActionLink href="/login">Join ASTRA</ActionLink>
                 </div>
               </div>
-              {/* <TiltCard className='mt-8 w-full aspect-[600/378]  max-w-sm lg:max-w-md'>
-                <MemberIdCard />
-              </TiltCard> */}
-
               <FloatingCardWrapper
+                isPreview={true}
                 className="w-full max-w-md sm:max-w-lg aspect-[600/378]"
                 glowColor={'rgba(0, 177, 237, 0.25)'}
               >
-                <TiltCard className="mt-8 w-full aspect-[600/378]  max-w-sm lg:max-w-md" >
+                <TiltCard className="mt-8 w-full aspect-[600/378]  max-w-sm lg:max-w-md" isInteractable={false} >
                   <MemberIdCard />
                 </TiltCard>
               </FloatingCardWrapper>

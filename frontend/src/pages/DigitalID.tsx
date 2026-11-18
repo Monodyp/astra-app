@@ -121,6 +121,7 @@ export const DigitalID: React.FC = () => {
           {/* Left Column: 3D Zero-G Floating Card with Lightbox Zoom Overlay */}
           <div className="flex flex-col items-center justify-center py-6 sm:py-8">
             <FloatingCardWrapper
+              isPreview={false}
               className="w-full max-w-md sm:max-w-lg aspect-[600/378]"
               glowColor={isVerified ? 'rgba(0, 177, 237, 0.25)' : 'rgba(100, 116, 139, 0.18)'}
               zoomedContent={
@@ -136,7 +137,6 @@ export const DigitalID: React.FC = () => {
                     />
                 </div>
               }
-              isPreview={false}
             >
               <TiltCard
                 className="w-full aspect-[600/378]"
