@@ -17,10 +17,10 @@ import {
   checkInEventStub,
 } from '../controllers/eventsController.js';
 import {
-  getPerksStub,
-  redeemPerkStub,
-  getVouchersMeStub,
-  getVoucherByIdStub,
+  getPerks,
+  redeemPerkHandler,
+  getVouchersMe,
+  getVoucherById,
   validateVoucherHandler,
   applyVoucherHandler,
 } from '../controllers/perksAndVouchersController.js';
@@ -65,10 +65,10 @@ router.get('/events', authMiddleware, getEventsStub);
 router.post('/events/:id/checkin', authMiddleware, checkInEventStub);
 
 // Perks & Vouchers routes
-router.get('/perks', authMiddleware, getPerksStub);
-router.post('/perks/:id/redeem', authMiddleware, redeemPerkStub);
-router.get('/vouchers/me', authMiddleware, getVouchersMeStub);
-router.get('/vouchers/:id', authMiddleware, getVoucherByIdStub);
+router.get('/perks', authMiddleware, getPerks);
+router.post('/perks/:id/redeem', authMiddleware, redeemPerkHandler);
+router.get('/vouchers/me', authMiddleware, getVouchersMe);
+router.get('/vouchers/:id', authMiddleware, getVoucherById);
 
 // Attendance routes (officer/admin)
 router.post(

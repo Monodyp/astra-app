@@ -4,51 +4,94 @@ import {
   validateVoucher,
   applyVoucher,
 } from '../services/redemptionService.js';
+import { perkRepository } from '../repositories/perkRepository.js';
+import { voucherRepository } from '../repositories/voucherRepository.js';
+import {
+  redeemPerk,
+  RedemptionError,
+} from '../services/redemptionTransactionService.js';
 
 // ---------------------------------------------------------------------------
-// Existing stub handlers (kept as-is)
+// Member perk and voucher handlers
 // ---------------------------------------------------------------------------
 
-// TODO(AI/Backend): Return active partner perks available for redemption
-export async function getPerksStub(
+export async function getPerks(
   _req: Request,
   res: Response
 ): Promise<void> {
-  res.status(501).json({ error: 'GET /perks not implemented', perks: [] });
+  try {
+    const perks = await perkRepository.listActive();
+    res.status(200).json({ perks });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to load perks' });
+  }
 }
 
-// TODO(AI/Backend): Deduct points and issue voucher for specified perk
-export async function redeemPerkStub(
+export async function redeemPerkHandler(
   req: Request,
   res: Response
 ): Promise<void> {
-  const { id } = req.params;
-  void id;
-  res
-    .status(501)
-    .json({ error: 'POST /perks/:id/redeem not implemented', voucher: null });
+  if (!req.user) {
+    res.status(401).json({ error: 'Authentication required' });
+    return;
+  }
+  const parsed = z.object({
+    idempotencyKey: z.string().trim().min(1).max(100),
+  }).safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: 'Invalid input', details: parsed.error.flatten() });
+    return;
+  }
+  try {
+    const result = await redeemPerk({
+      memberId: req.user.srCode,
+      perkId: req.params.id,
+      idempotencyKey: parsed.data.idempotencyKey,
+    });
+    res.status(result.replay ? 200 : 201).json({ voucher: result.voucher });
+  } catch (error) {
+    if (error instanceof RedemptionError) {
+      res.status(error.statusCode).json({ error: error.message });
+      return;
+    }
+    throw error;
+  }
 }
 
-// TODO(AI/Backend): Return list of vouchers claimed by current member
-export async function getVouchersMeStub(
-  _req: Request,
-  res: Response
-): Promise<void> {
-  res
-    .status(501)
-    .json({ error: 'GET /vouchers/me not implemented', vouchers: [] });
-}
-
-// TODO(AI/Backend): Return details, QR token, and status for single voucher
-export async function getVoucherByIdStub(
+export async function getVouchersMe(
   req: Request,
   res: Response
 ): Promise<void> {
-  const { id } = req.params;
-  void id;
-  res
-    .status(501)
-    .json({ error: 'GET /vouchers/:id not implemented', voucher: null });
+  if (!req.user) {
+    res.status(401).json({ error: 'Authentication required' });
+    return;
+  }
+  try {
+    const vouchers = await voucherRepository.listByMember(req.user.srCode);
+    res.status(200).json({ vouchers });
+  } catch {
+    res.status(500).json({ error: 'Failed to load vouchers' });
+  }
+}
+
+export async function getVoucherById(
+  req: Request,
+  res: Response
+): Promise<void> {
+  if (!req.user) {
+    res.status(401).json({ error: 'Authentication required' });
+    return;
+  }
+  try {
+    const voucher = await voucherRepository.getById(req.params.id);
+    if (!voucher || voucher.memberId !== req.user.srCode) {
+      res.status(404).json({ error: 'Voucher not found' });
+      return;
+    }
+    res.status(200).json({ voucher });
+  } catch {
+    res.status(500).json({ error: 'Failed to load voucher' });
+  }
 }
 
 // ---------------------------------------------------------------------------
