@@ -99,7 +99,7 @@ export const TiltCard: React.FC<TiltCardProps> = ({
 
   // Gyroscope on touch devices. Skipped on iOS, which needs a permission prompt.
   useEffect(() => {
-    if (disabled || typeof window === 'undefined' || !('DeviceOrientationEvent' in window)) return;
+    if (!isInteractable || disabled || typeof window === 'undefined' || !('DeviceOrientationEvent' in window)) return;
     const needsPermission =
       typeof (DeviceOrientationEvent as unknown as { requestPermission?: unknown })
         .requestPermission === 'function';
@@ -172,10 +172,10 @@ export const TiltCard: React.FC<TiltCardProps> = ({
       </div>
 
       {/* Ground glow */}
-      {/* <div
+      <div
         aria-hidden
         className="pointer-events-none absolute bottom-3 left-1/2 h-10 w-64 -translate-x-1/2 rounded-[50%] bg-cyan-400/10 blur-2xl"
-      /> */}
+      />
     </div>
   );
 };
