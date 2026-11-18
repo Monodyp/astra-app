@@ -2,12 +2,12 @@ import React from 'react';
 
 import astraBg from '../assets/astra-home/Astra-Bg.png';
 
-import { MemberIdCard } from '../components/MemberIdCard';
+import { MemberIdCard } from '../components/id/MemberIdCard';
 import LandingHeader from '@/components/home/landing-header';
 
 import wordmark from '../assets/astra-home/wordmark.png';
 import { ActionLink, technicalCorners } from '@/components/home/ui-util';
-import { TiltCard } from '@/components/home/tilt-wrapper';
+import { TiltCard } from '@/components/id/tilt-wrapper';
 import FeatureOverview from '@/components/home/feature-overview';
 import HowItWorks from '@/components/home/how-it-works';
 import MemberConsole from '@/components/home/member-console';

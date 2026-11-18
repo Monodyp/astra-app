@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef } from "react";
-import { clamp, ease } from "./ui-util";
+import { clamp, ease } from "../home/ui-util";
 
 type TiltCardProps = {
   children: React.ReactNode;
@@ -9,6 +9,7 @@ type TiltCardProps = {
   perspective?: number;
   thickness?: number;
   intensity?: number;
+  disabled?: boolean;
   className?: string;
 };
 
@@ -20,6 +21,7 @@ export const TiltCard: React.FC<TiltCardProps> = ({
   perspective = 700,
   thickness = 14,
   intensity = 9,
+  disabled = false,
   className = '',
 }) => {
   const tiltRef = useRef<HTMLDivElement>(null);
@@ -58,16 +60,24 @@ export const TiltCard: React.FC<TiltCardProps> = ({
   }, [transformFor]);
 
   const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (e.pointerType !== 'mouse') return;
+    if (disabled || e.pointerType !== 'mouse') return;
     const rect = e.currentTarget.getBoundingClientRect();
     const nx = clamp(((e.clientX - rect.left) / rect.width) * 2 - 1);
     const ny = clamp(((e.clientY - rect.top) / rect.height) * 2 - 1);
     apply(nx, ny, 'transform 80ms ease-out');
   };
 
+  useEffect(() => {
+    if (disabled && tiltRef.current) {
+      tiltRef.current.style.transform = 'none';
+      tiltRef.current.style.transition = 'transform 300ms ease-out';
+      if (glintRef.current) glintRef.current.style.opacity = '0';
+    }
+  }, [disabled]);
+
   // Gyroscope on touch devices. Skipped on iOS, which needs a permission prompt.
   useEffect(() => {
-    if (typeof window === 'undefined' || !('DeviceOrientationEvent' in window)) return;
+    if (disabled || typeof window === 'undefined' || !('DeviceOrientationEvent' in window)) return;
     const needsPermission =
       typeof (DeviceOrientationEvent as unknown as { requestPermission?: unknown })
         .requestPermission === 'function';
@@ -87,7 +97,6 @@ export const TiltCard: React.FC<TiltCardProps> = ({
     return () => window.removeEventListener('deviceorientation', onOrientation);
   }, [apply]);
 
-
   return (
     <div
       className={`relative ${className}`}
@@ -97,8 +106,7 @@ export const TiltCard: React.FC<TiltCardProps> = ({
         className="relative -m-3 p-3"
         onPointerMove={onPointerMove}
         // onPointerLeave={reset}
-        onPointerLeave={(e) => {
-          console.log('left hover area, now over:', e.relatedTarget);
+        onPointerLeave={() => {
           reset();
         }}
       >
