@@ -104,8 +104,8 @@ body {
   to   { transform: translate3d(0, 8px, 0); }
 }
 @keyframes astraDriftTilt {
-  from { transform: rotateX(-1.2deg) rotateY(1.5deg) rotateZ(-0.6deg); }
-  to   { transform: rotateX(1.2deg) rotateY(-1.5deg) rotateZ(0.6deg); }
+  from { transform: rotateZ(-1.5deg); }
+  to   { transform: rotateZ(1.5deg); }
 }
 @keyframes astraShadowDrift {
   from { transform: translateX(-54%) scale(0.95); opacity: 0.45; }
@@ -126,7 +126,9 @@ body {
 }
 
 .astra-paused .astra-layer,
-.astra-paused .astra-shadow-drifter {
+.astra-paused .astra-shadow-drifter,
+.astra-active:hover .astra-layer,
+.astra-active:hover .astra-shadow-drifter {
   animation-play-state: paused;
 }
 

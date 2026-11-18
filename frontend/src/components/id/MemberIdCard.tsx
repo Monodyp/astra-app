@@ -53,7 +53,7 @@ export const MemberIdCard: React.FC<MemberIdCardProps> = ({
 
   return (
     // Container: cqw units inside resolve against this element's width.
-    <div className="w-full" style={{ containerType: 'inline-size' }}>
+    <div className="w-full select-none" style={{ containerType: 'inline-size' }}>
       <article
         className={`relative aspect-[600/378] w-full overflow-hidden border ${cardBorderClass} ${cardBgClass} text-white ${className}`}
         style={{ borderRadius: cq(22), padding: cq(32) }}

@@ -11,6 +11,13 @@ type TiltCardProps = {
   intensity?: number;
   disabled?: boolean;
   className?: string;
+  // Click / keyboard / accessibility passthrough onto the hover-area div
+  onClick?: () => void;
+  onKeyDown?: (e: React.KeyboardEvent<HTMLDivElement>) => void;
+  role?: React.AriaRole;
+  tabIndex?: number;
+  'aria-label'?: string;
+  cursorClass?: string;
 };
 
 export const TiltCard: React.FC<TiltCardProps> = ({
@@ -23,6 +30,12 @@ export const TiltCard: React.FC<TiltCardProps> = ({
   intensity = 9,
   disabled = false,
   className = '',
+  onClick,
+  onKeyDown,
+  role,
+  tabIndex,
+  'aria-label': ariaLabel,
+  cursorClass,
 }) => {
   const tiltRef = useRef<HTMLDivElement>(null);
   const glintRef = useRef<HTMLDivElement>(null);
@@ -103,12 +116,19 @@ export const TiltCard: React.FC<TiltCardProps> = ({
     >
       {/* Hover area: untransformed and only as big as the card, so it never moves while tilting */}
       <div
-        className="relative -m-3 p-3"
+        className={`relative -m-3 p-3${cursorClass ? ` ${cursorClass}` : ''}`}
         onPointerMove={onPointerMove}
-        // onPointerLeave={reset}
-        onPointerLeave={() => {
+        onPointerLeave={(e) => {
+          if (e.relatedTarget && e.currentTarget.contains(e.relatedTarget as Node)) {
+            return;
+          }
           reset();
         }}
+        onClick={onClick}
+        onKeyDown={onKeyDown}
+        role={role}
+        tabIndex={tabIndex}
+        aria-label={ariaLabel}
       >
         <div
           ref={tiltRef}

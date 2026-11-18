@@ -3,7 +3,7 @@ import { MemberIdCard } from '../components/id/MemberIdCard';
 import { TiltCard } from '@/components/id/tilt-wrapper';
 import { FloatingCardWrapper } from '@/components/id/FloatingCardWrapper';
 import { technicalCorners } from '@/components/home/ui-util';
-import { RotateCw, CheckCircle2, AlertCircle, QrCode as QrIcon } from 'lucide-react';
+import { CheckCircle2, AlertCircle } from 'lucide-react';
 
 type MemberData = {
   fullName: string;
@@ -33,13 +33,9 @@ const DEFAULT_MEMBER_PLACEHOLDER: MemberData = {
 
 export const DigitalID: React.FC = () => {
   const [memberData, setMemberData] = useState<MemberData>(DEFAULT_MEMBER_PLACEHOLDER);
-  const [refreshCountdown, setRefreshCountdown] = useState<number>(300);
-  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
-  const [loading, setLoading] = useState<boolean>(false);
 
   // Accomplish TODO(Frontend): Wire up /members/me/id data fetching with fallback to rich placeholder data
   const fetchMemberId = useCallback(async () => {
-    setLoading(true);
     try {
       // In development/stub environment, try fetching; fallback seamlessly to placeholder
       const response = await fetch('/api/members/me/id').catch(() => null);
@@ -57,29 +53,11 @@ export const DigitalID: React.FC = () => {
       }
     } catch {
       // Graceful fallback to default placeholder
-    } finally {
-      setLoading(false);
-      setRefreshCountdown(300);
     }
   }, []);
 
   useEffect(() => {
     void fetchMemberId();
-  }, [fetchMemberId]);
-
-  // Dynamic QR Refresh Timer (5-minute countdown as specified in the handoff)
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setRefreshCountdown((prev) => {
-        if (prev <= 1) {
-          void fetchMemberId();
-          return 300;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(timer);
   }, [fetchMemberId]);
 
   const isVerified = memberData.membershipStatus === 'verified';
