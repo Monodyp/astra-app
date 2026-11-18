@@ -64,7 +64,9 @@ describe('sign-in and route access', () => {
     expect(
       await screen.findByRole('heading', { name: 'Officer access only' })
     ).toBeDefined();
-    expect(screen.queryByText(/Officer Grant Points/)).toBeNull();
+    expect(
+      screen.queryByRole('button', { name: 'Grant Points to Member' })
+    ).toBeNull();
   });
 
   it('lets an officer open officer screens', async () => {
