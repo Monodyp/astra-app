@@ -1,4 +1,5 @@
 import { createSeedRecords, type DemoRecords } from './fixtures.js';
+import { migrateRecords } from './migrate.js';
 
 export interface KeyValueStorage {
   getItem(key: string): string | null;
@@ -49,9 +50,11 @@ export class DemoStore {
     const raw = this.storage.getItem(RECORDS_KEY);
     if (raw) {
       try {
-        const parsed = JSON.parse(raw) as DemoRecords;
-        if (parsed.version === 1) {
-          return parsed;
+        const parsed: unknown = JSON.parse(raw);
+        const records = migrateRecords(parsed);
+        if (records) {
+          if (records !== parsed) this.write(records);
+          return records;
         }
       } catch {}
     }

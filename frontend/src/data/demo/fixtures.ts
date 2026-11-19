@@ -13,40 +13,54 @@ export interface DemoMember {
   qrToken: string;
 }
 
+export const DEMO_RECORDS_VERSION = 2;
+
+export const SYSTEM_ACTOR = 'system';
+
+export type DemoLedgerType =
+  | 'attendance'
+  | 'grant'
+  | 'redemption'
+  | 'adjustment';
+
 export interface DemoLedgerEntry {
   id: string;
   memberId: string;
-  delta: number;
-  kind: 'points_granted' | 'event_checked_in' | 'voucher_claimed';
-  title: string;
-  reference: string;
-  occurredAt: string;
+  amount: number;
+  type: DemoLedgerType;
+  reason: string;
+  referenceId: string;
+  createdBy: string;
+  createdAt: string;
 }
 
 export interface DemoPerk {
   id: string;
-  name: string;
-  partner: string;
+  title: string;
+  partnerName: string;
+  pointsCost: number;
+  stock: number | null;
+  validityDays: number;
   category: PerkCategory;
   eyebrow: string;
   headline: string;
   subline: string;
   description: string;
   bannerLabel: string;
-  cost: number;
-  stock: number;
   claimLimit: number;
   featured: boolean;
-  validDays: number;
   terms: string[];
 }
+
+export type DemoVoucherStatus = 'active' | 'used' | 'expired';
 
 export interface DemoVoucher {
   id: string;
   code: string;
   memberId: string;
   perkId: string;
-  claimedAt: string;
+  status: DemoVoucherStatus;
+  createdAt: string;
   expiresAt: string;
   redeemedAt: string | null;
   qrToken: string;
@@ -67,7 +81,7 @@ export interface DemoAttendance {
 }
 
 export interface DemoRecords {
-  version: 1;
+  version: typeof DEMO_RECORDS_VERSION;
   sequence: number;
   currentEventId: string;
   members: DemoMember[];
@@ -141,7 +155,7 @@ function member(
 
 export function createSeedRecords(): DemoRecords {
   return {
-    version: 1,
+    version: DEMO_RECORDS_VERSION,
     sequence: 100,
     currentEventId: 'EVT-WEB-2026',
     members: [
@@ -221,146 +235,158 @@ export function createSeedRecords(): DemoRecords {
     ledger: [
       ledger(
         'L-001',
-        'ASTR1D-0001',
+        '24-90001',
         200,
-        'points_granted',
+        'grant',
         'Welcome Bonus',
         'Membership activated',
+        SYSTEM_ACTOR,
         '2026-08-18T09:00:00+08:00'
       ),
       ledger(
         'L-002',
-        'ASTR1D-0001',
+        '24-90001',
         100,
-        'event_checked_in',
+        'attendance',
         'Intro to Cloud',
         'EVT-CLOUD-2026',
+        'ASTR1D-0003',
         '2026-09-12T15:00:00+08:00'
       ),
       ledger(
         'L-003',
-        'ASTR1D-0001',
+        '24-90001',
         100,
-        'points_granted',
+        'grant',
         'Project Contribution',
-        'Granted by Officer Doe',
+        'L-003',
+        'ASTR1D-0003',
         '2026-10-03T11:30:00+08:00'
       ),
       ledger(
         'L-004',
-        'ASTR1D-0001',
+        '24-90001',
         100,
-        'event_checked_in',
+        'attendance',
         'Git Essentials',
         'EVT-GIT-2026',
+        'ASTR1D-0003',
         '2026-10-21T14:42:00+08:00'
       ),
       ledger(
         'L-005',
-        'ASTR1D-0001',
+        '24-90001',
         -50,
-        'voucher_claimed',
+        'redemption',
         'Campus Cafe Free Beverage',
         'ASTR-PRK-50412',
+        '24-90001',
         '2026-02-10T10:15:00+08:00'
       ),
       ledger(
         'L-006',
-        'ASTR1D-0002',
+        '24-90010',
         50,
-        'points_granted',
+        'grant',
         'Welcome Bonus',
         'Profile created',
+        SYSTEM_ACTOR,
         '2026-09-01T09:00:00+08:00'
       ),
       ledger(
         'L-007',
-        'ASTR1D-0003',
+        '23-90003',
         300,
-        'points_granted',
+        'grant',
         'Officer Onboarding',
         'Membership activated',
+        SYSTEM_ACTOR,
         '2026-08-01T09:00:00+08:00'
       ),
       ledger(
         'L-008',
-        'ASTR1D-0004',
+        '24-90004',
         250,
-        'points_granted',
+        'grant',
         'Welcome Bonus',
         'Membership activated',
+        SYSTEM_ACTOR,
         '2026-08-20T09:00:00+08:00'
       ),
       ledger(
         'L-009',
-        'ASTR1D-0004',
+        '24-90004',
         100,
-        'event_checked_in',
+        'attendance',
         'Web Foundations Workshop',
         'EVT-WEB-2026',
+        'ASTR1D-0003',
         '2026-11-18T14:31:00+08:00'
       ),
       ledger(
         'L-010',
-        'ASTR1D-0005',
+        '25-90005',
         150,
-        'points_granted',
+        'grant',
         'Welcome Bonus',
         'Membership activated',
+        SYSTEM_ACTOR,
         '2026-09-02T09:00:00+08:00'
       ),
       ledger(
         'L-011',
-        'ASTR1D-0005',
+        '25-90005',
         100,
-        'event_checked_in',
+        'attendance',
         'Web Foundations Workshop',
         'EVT-WEB-2026',
+        'ASTR1D-0003',
         '2026-11-18T14:36:00+08:00'
       ),
       ledger(
         'L-012',
-        'ASTR1D-0006',
+        '23-90006',
         400,
-        'points_granted',
+        'grant',
         'Welcome Bonus',
         'Membership activated',
+        SYSTEM_ACTOR,
         '2026-08-15T09:00:00+08:00'
       ),
     ],
     perks: [
       {
         id: 'perk-workshop-discount',
-        name: '10% Off All Tech Workshops & Merchandise',
-        partner: 'Partner Exclusive',
+        title: '10% Off All Tech Workshops & Merchandise',
+        partnerName: 'Partner Exclusive',
         category: 'discount',
         eyebrow: 'Partner exclusive',
         headline: '10%',
         subline: 'Off your next build',
         description: 'A little boost for your next big idea.',
         bannerLabel: '10% OFF',
-        cost: 100,
-        stock: 40,
+        pointsCost: 100,
+        stock: null,
         claimLimit: 2,
         featured: true,
-        validDays: 280,
+        validityDays: 280,
         terms: STANDARD_TERMS,
       },
       {
         id: 'perk-sticker-pack',
-        name: 'ASTRA Official Dev Sticker Pack',
-        partner: 'ASTRA Originals',
+        title: 'ASTRA Official Dev Sticker Pack',
+        partnerName: 'ASTRA Originals',
         category: 'merch',
         eyebrow: 'ASTRA originals',
         headline: 'ASTRA Developers',
         subline: 'Build. Learn. Ship.',
         description: 'Make your setup unmistakably yours.',
         bannerLabel: 'ASTRA ORIGINALS',
-        cost: 50,
+        pointsCost: 50,
         stock: 25,
         claimLimit: 3,
         featured: false,
-        validDays: 280,
+        validityDays: 280,
         terms: [
           'Valid for one sticker pack per voucher.',
           'Claim at the ASTRA booth during office hours.',
@@ -369,36 +395,36 @@ export function createSeedRecords(): DemoRecords {
       },
       {
         id: 'perk-cafe-beverage',
-        name: 'Campus Cafe Free Beverage',
-        partner: 'Campus Cafe',
+        title: 'Campus Cafe Free Beverage',
+        partnerName: 'Campus Cafe',
         category: 'food',
         eyebrow: 'Campus cafe',
         headline: 'One on us.',
         subline: 'Fuel your next idea',
         description: 'A well-earned break between builds.',
         bannerLabel: 'COFFEE BREAK',
-        cost: 50,
+        pointsCost: 50,
         stock: 30,
         claimLimit: 5,
         featured: false,
-        validDays: 90,
+        validityDays: 90,
         terms: STANDARD_TERMS,
       },
       {
         id: 'perk-cloud-lab',
-        name: 'Cloud Lab Seat Reservation',
-        partner: 'Partner Workshops',
+        title: 'Cloud Lab Seat Reservation',
+        partnerName: 'Partner Workshops',
         category: 'workshop',
         eyebrow: 'Partner workshop',
         headline: 'Cloud Lab',
         subline: 'Reserved seat',
         description: 'Hands-on cloud deployment session with a partner team.',
         bannerLabel: 'CLOUD LAB',
-        cost: 150,
+        pointsCost: 150,
         stock: 12,
         claimLimit: 1,
         featured: false,
-        validDays: 60,
+        validityDays: 60,
         terms: [
           'Valid for one seat in the next scheduled Cloud Lab.',
           'Show your digital ID at the lab entrance.',
@@ -407,19 +433,19 @@ export function createSeedRecords(): DemoRecords {
       },
       {
         id: 'perk-hoodie',
-        name: 'ASTRA Mission Hoodie',
-        partner: 'ASTRA Originals',
+        title: 'ASTRA Mission Hoodie',
+        partnerName: 'ASTRA Originals',
         category: 'merch',
         eyebrow: 'ASTRA originals',
         headline: 'Mission Hoodie',
         subline: 'Limited run',
         description: 'Heavyweight hoodie from the ASTRA mission collection.',
         bannerLabel: 'ASTRA ORIGINALS',
-        cost: 1200,
+        pointsCost: 1200,
         stock: 8,
         claimLimit: 1,
         featured: false,
-        validDays: 120,
+        validityDays: 120,
         terms: [
           'Valid for one hoodie while stock lasts.',
           'Sizes are subject to availability at pickup.',
@@ -428,36 +454,36 @@ export function createSeedRecords(): DemoRecords {
       },
       {
         id: 'perk-mentor-session',
-        name: 'Mentor Code Review Session',
-        partner: 'Partner Workshops',
+        title: 'Mentor Code Review Session',
+        partnerName: 'Partner Workshops',
         category: 'workshop',
         eyebrow: 'Partner workshop',
         headline: '1:1 Review',
         subline: 'With an industry mentor',
         description: 'Thirty minutes of feedback on a project of your choice.',
         bannerLabel: 'MENTOR 1:1',
-        cost: 200,
+        pointsCost: 200,
         stock: 0,
         claimLimit: 1,
         featured: false,
-        validDays: 60,
+        validityDays: 60,
         terms: STANDARD_TERMS,
       },
       {
         id: 'perk-bookstore',
-        name: '15% Off at the Campus Bookstore',
-        partner: 'Campus Bookstore',
+        title: '15% Off at the Campus Bookstore',
+        partnerName: 'Campus Bookstore',
         category: 'discount',
         eyebrow: 'Partner exclusive',
         headline: '15%',
         subline: 'Off reference books',
         description: 'Stock up on the books behind your next build.',
         bannerLabel: '15% OFF',
-        cost: 80,
+        pointsCost: 80,
         stock: 20,
         claimLimit: 1,
         featured: false,
-        validDays: 180,
+        validityDays: 180,
         terms: STANDARD_TERMS,
       },
     ],
@@ -465,9 +491,10 @@ export function createSeedRecords(): DemoRecords {
       {
         id: 'V-98214',
         code: 'ASTR-PRK-98214',
-        memberId: 'ASTR1D-0001',
+        memberId: '24-90001',
         perkId: 'perk-bookstore',
-        claimedAt: '2026-09-15T10:00:00+08:00',
+        status: 'active',
+        createdAt: '2026-09-15T10:00:00+08:00',
         expiresAt: '2027-08-31T23:59:59+08:00',
         redeemedAt: null,
         qrToken: 'demo-voucher.v1.98214',
@@ -475,9 +502,10 @@ export function createSeedRecords(): DemoRecords {
       {
         id: 'V-66319',
         code: 'ASTR-PRK-66319',
-        memberId: 'ASTR1D-0001',
+        memberId: '24-90001',
         perkId: 'perk-sticker-pack',
-        claimedAt: '2026-02-01T10:00:00+08:00',
+        status: 'used',
+        createdAt: '2026-02-01T10:00:00+08:00',
         expiresAt: '2027-08-31T23:59:59+08:00',
         redeemedAt: '2026-03-08T13:20:00+08:00',
         qrToken: 'demo-voucher.v1.66319',
@@ -485,9 +513,10 @@ export function createSeedRecords(): DemoRecords {
       {
         id: 'V-50412',
         code: 'ASTR-PRK-50412',
-        memberId: 'ASTR1D-0001',
+        memberId: '24-90001',
         perkId: 'perk-cafe-beverage',
-        claimedAt: '2026-02-10T10:15:00+08:00',
+        status: 'expired',
+        createdAt: '2026-02-10T10:15:00+08:00',
         expiresAt: '2026-02-28T23:59:59+08:00',
         redeemedAt: null,
         qrToken: 'demo-voucher.v1.50412',
@@ -530,13 +559,23 @@ export function createSeedRecords(): DemoRecords {
 function ledger(
   id: string,
   memberId: string,
-  delta: number,
-  kind: DemoLedgerEntry['kind'],
-  title: string,
-  reference: string,
-  occurredAt: string
+  amount: number,
+  type: DemoLedgerType,
+  reason: string,
+  referenceId: string,
+  createdBy: string,
+  createdAt: string
 ): DemoLedgerEntry {
-  return { id, memberId, delta, kind, title, reference, occurredAt };
+  return {
+    id,
+    memberId,
+    amount,
+    type,
+    reason,
+    referenceId,
+    createdBy,
+    createdAt,
+  };
 }
 
 function attendance(

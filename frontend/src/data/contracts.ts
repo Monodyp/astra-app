@@ -85,7 +85,7 @@ export interface Perk {
   subline: string;
   description: string;
   cost: number;
-  remainingStock: number;
+  remainingStock: number | null;
   remainingClaims: number;
   featured: boolean;
 }

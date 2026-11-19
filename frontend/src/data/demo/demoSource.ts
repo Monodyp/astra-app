@@ -24,6 +24,9 @@ import {
 import {
   DEMO_SCAN_SAMPLES,
   DEMO_SHORTCUTS,
+  SYSTEM_ACTOR,
+  type DemoLedgerEntry,
+  type DemoLedgerType,
   type DemoMember,
   type DemoRecords,
   type DemoVoucher,
@@ -53,6 +56,13 @@ const STATUS_LABELS: Record<ActivityEntry['kind'], string> = {
   voucher_claimed: 'Voucher claimed',
 };
 
+const ACTIVITY_KINDS: Record<DemoLedgerType, ActivityEntry['kind']> = {
+  grant: 'points_granted',
+  adjustment: 'points_granted',
+  attendance: 'event_checked_in',
+  redemption: 'voucher_claimed',
+};
+
 function clone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
@@ -66,10 +76,40 @@ function nextId(records: DemoRecords, prefix: string): string {
   return `${prefix}-${records.sequence}`;
 }
 
-function balanceOf(records: DemoRecords, memberId: string): number {
+function balanceOf(records: DemoRecords, studentId: string): number {
   return records.ledger
-    .filter((entry) => entry.memberId === memberId)
-    .reduce((total, entry) => total + entry.delta, 0);
+    .filter((entry) => entry.memberId === studentId)
+    .reduce((total, entry) => total + entry.amount, 0);
+}
+
+function activityReference(
+  records: DemoRecords,
+  entry: DemoLedgerEntry
+): string {
+  const kind = ACTIVITY_KINDS[entry.type];
+  if (kind !== 'points_granted' || entry.createdBy === SYSTEM_ACTOR) {
+    return entry.referenceId;
+  }
+  const officer = records.members.find(
+    (member) => member.memberId === entry.createdBy
+  );
+  return `Granted by ${officer?.fullName ?? entry.createdBy}`;
+}
+
+function toActivity(
+  records: DemoRecords,
+  entry: DemoLedgerEntry
+): ActivityEntry {
+  const kind = ACTIVITY_KINDS[entry.type];
+  return {
+    id: entry.id,
+    kind,
+    title: entry.reason,
+    reference: activityReference(records, entry),
+    statusLabel: STATUS_LABELS[kind],
+    pointsDelta: entry.amount,
+    occurredAt: entry.createdAt,
+  };
 }
 
 function findMember(records: DemoRecords, memberId: string): DemoMember {
@@ -103,7 +143,7 @@ function toSearchResult(
     fullName: member.fullName,
     studentId: member.studentId,
     membershipStatus: member.duesPaid ? 'verified' : 'unverified',
-    balance: balanceOf(records, member.memberId),
+    balance: balanceOf(records, member.studentId),
   };
 }
 
@@ -140,8 +180,11 @@ export function createDemoDataSource(
   }
 
   function voucherState(voucher: DemoVoucher): Voucher['state'] {
-    if (voucher.redeemedAt) {
+    if (voucher.status === 'used') {
       return 'redeemed';
+    }
+    if (voucher.status === 'expired') {
+      return 'expired';
     }
     return new Date(voucher.expiresAt) < now() ? 'expired' : 'ready';
   }
@@ -155,14 +198,14 @@ export function createDemoDataSource(
       id: voucher.id,
       code: voucher.code,
       perkId: perk.id,
-      perkName: perk.name,
-      partner: perk.partner,
+      perkName: perk.title,
+      partner: perk.partnerName,
       category: perk.category,
       categoryLabel: CATEGORY_LABELS[perk.category],
       bannerLabel: perk.bannerLabel,
-      title: `Voucher Claimed: ${perk.partner}`,
+      title: `Voucher Claimed: ${perk.partnerName}`,
       state: voucherState(voucher),
-      claimedAt: voucher.claimedAt,
+      claimedAt: voucher.createdAt,
       expiresAt: voucher.expiresAt,
       redeemedAt: voucher.redeemedAt,
       qrValue: voucher.qrToken,
@@ -170,10 +213,10 @@ export function createDemoDataSource(
     };
   }
 
-  function memberVouchers(records: DemoRecords, memberId: string): Voucher[] {
+  function memberVouchers(records: DemoRecords, studentId: string): Voucher[] {
     return records.vouchers
-      .filter((voucher) => voucher.memberId === memberId)
-      .sort((a, b) => newestFirst(a.claimedAt, b.claimedAt))
+      .filter((voucher) => voucher.memberId === studentId)
+      .sort((a, b) => newestFirst(a.createdAt, b.createdAt))
       .map((voucher) => toVoucher(records, voucher));
   }
 
@@ -193,25 +236,25 @@ export function createDemoDataSource(
       });
   }
 
-  function toPerk(records: DemoRecords, memberId: string, id: string): Perk {
+  function toPerk(records: DemoRecords, studentId: string, id: string): Perk {
     const perk = records.perks.find((item) => item.id === id);
     if (!perk) {
       throw new DataError('not_found', 'That perk does not exist.');
     }
     const claimed = records.vouchers.filter(
-      (voucher) => voucher.memberId === memberId && voucher.perkId === id
+      (voucher) => voucher.memberId === studentId && voucher.perkId === id
     ).length;
     return {
       id: perk.id,
-      name: perk.name,
-      partner: perk.partner,
+      name: perk.title,
+      partner: perk.partnerName,
       category: perk.category,
       categoryLabel: CATEGORY_LABELS[perk.category],
       eyebrow: perk.eyebrow,
       headline: perk.headline,
       subline: perk.subline,
       description: perk.description,
-      cost: perk.cost,
+      cost: perk.pointsCost,
       remainingStock: perk.stock,
       remainingClaims: Math.max(0, perk.claimLimit - claimed),
       featured: perk.featured,
@@ -294,15 +337,15 @@ export function createDemoDataSource(
       const records = store.read();
       const member = currentMember(records);
       const entries = records.ledger
-        .filter((entry) => entry.memberId === member.memberId)
-        .sort((a, b) => newestFirst(a.occurredAt, b.occurredAt));
+        .filter((entry) => entry.memberId === member.studentId)
+        .sort((a, b) => newestFirst(a.createdAt, b.createdAt));
       const attended = records.attendance
         .filter((item) => item.memberId === member.memberId)
         .sort((a, b) => newestFirst(a.checkedInAt, b.checkedInAt));
       const lastEvent = attended[0]
         ? records.events.find((event) => event.id === attended[0].eventId)
         : undefined;
-      const ready = memberVouchers(records, member.memberId).filter(
+      const ready = memberVouchers(records, member.studentId).filter(
         (voucher) => voucher.state === 'ready'
       );
       return {
@@ -313,22 +356,14 @@ export function createDemoDataSource(
           program: member.program,
           membershipStatus: member.duesPaid ? 'verified' : 'unverified',
         },
-        points: balanceOf(records, member.memberId),
+        points: balanceOf(records, member.studentId),
         eventsAttended: attended.length,
         lastEventName: lastEvent?.name ?? null,
         activeVoucherCount: ready.length,
         activeVoucherHighlight: ready[0]?.perkName ?? null,
         recentActivity: entries
           .slice(0, RECENT_ACTIVITY_LIMIT)
-          .map((entry) => ({
-            id: entry.id,
-            kind: entry.kind,
-            title: entry.title,
-            reference: entry.reference,
-            statusLabel: STATUS_LABELS[entry.kind],
-            pointsDelta: entry.delta,
-            occurredAt: entry.occurredAt,
-          })),
+          .map((entry) => toActivity(records, entry)),
         activityCount: entries.length,
       };
     },
@@ -361,9 +396,9 @@ export function createDemoDataSource(
       const member = currentMember(records);
       return {
         perks: records.perks.map((perk) =>
-          toPerk(records, member.memberId, perk.id)
+          toPerk(records, member.studentId, perk.id)
         ),
-        balance: balanceOf(records, member.memberId),
+        balance: balanceOf(records, member.studentId),
       };
     },
 
@@ -371,8 +406,8 @@ export function createDemoDataSource(
       await settle();
       return store.update((records) => {
         const member = currentMember(records);
-        const perk = toPerk(records, member.memberId, perkId);
-        const balance = balanceOf(records, member.memberId);
+        const perk = toPerk(records, member.studentId, perkId);
+        const balance = balanceOf(records, member.studentId);
         const decline = (
           reason: Extract<ClaimResult, { status: 'declined' }>['reason'],
           message: string
@@ -384,7 +419,7 @@ export function createDemoDataSource(
             'Your membership is inactive. Pay your annual dues to claim perks.'
           );
         }
-        if (perk.remainingStock <= 0) {
+        if (perk.remainingStock !== null && perk.remainingStock <= 0) {
           return decline('out_of_stock', 'This perk is out of stock.');
         }
         if (perk.remainingClaims <= 0) {
@@ -403,35 +438,39 @@ export function createDemoDataSource(
         const stored = records.perks.find((item) => item.id === perkId)!;
         const claimedAt = now();
         const expiresAt = new Date(
-          claimedAt.getTime() + stored.validDays * 24 * 60 * 60 * 1000
+          claimedAt.getTime() + stored.validityDays * 24 * 60 * 60 * 1000
         );
         const id = nextId(records, 'V');
         const serial = String(70000 + records.sequence);
         const voucher: DemoVoucher = {
           id,
           code: `ASTR-PRK-${serial}`,
-          memberId: member.memberId,
+          memberId: member.studentId,
           perkId,
-          claimedAt: claimedAt.toISOString(),
+          status: 'active',
+          createdAt: claimedAt.toISOString(),
           expiresAt: expiresAt.toISOString(),
           redeemedAt: null,
           qrToken: `demo-voucher.v1.${serial}`,
         };
-        stored.stock -= 1;
+        if (stored.stock !== null) {
+          stored.stock -= 1;
+        }
         records.vouchers.push(voucher);
         records.ledger.push({
           id: nextId(records, 'L'),
-          memberId: member.memberId,
-          delta: -stored.cost,
-          kind: 'voucher_claimed',
-          title: stored.name,
-          reference: voucher.code,
-          occurredAt: claimedAt.toISOString(),
+          memberId: member.studentId,
+          amount: -stored.pointsCost,
+          type: 'redemption',
+          reason: stored.title,
+          referenceId: voucher.code,
+          createdBy: member.studentId,
+          createdAt: claimedAt.toISOString(),
         });
         return {
           status: 'claimed',
           voucher: toVoucher(records, voucher),
-          balance: balance - stored.cost,
+          balance: balance - stored.pointsCost,
         };
       });
     },
@@ -439,7 +478,7 @@ export function createDemoDataSource(
     async listVouchers(): Promise<Voucher[]> {
       await settle();
       const records = store.read();
-      return memberVouchers(records, currentMember(records).memberId);
+      return memberVouchers(records, currentMember(records).studentId);
     },
 
     async getVoucher(voucherId: string): Promise<Voucher> {
@@ -447,7 +486,7 @@ export function createDemoDataSource(
       const records = store.read();
       const member = currentMember(records);
       const voucher = records.vouchers.find(
-        (item) => item.id === voucherId && item.memberId === member.memberId
+        (item) => item.id === voucherId && item.memberId === member.studentId
       );
       if (!voucher) {
         throw new DataError('not_found', 'That voucher is not in your wallet.');
@@ -474,7 +513,7 @@ export function createDemoDataSource(
     async checkIn(input: CheckInInput): Promise<CheckInResult> {
       await settle();
       return store.update((records) => {
-        currentOfficer(records);
+        const officer = currentOfficer(records);
         const event = records.events.find((item) => item.id === input.eventId);
         if (!event) {
           throw new DataError('not_found', 'That event does not exist.');
@@ -542,12 +581,13 @@ export function createDemoDataSource(
         });
         records.ledger.push({
           id: nextId(records, 'L'),
-          memberId,
-          delta: event.points,
-          kind: 'event_checked_in',
-          title: event.name,
-          reference: event.id,
-          occurredAt: checkedInAt,
+          memberId: member.studentId,
+          amount: event.points,
+          type: 'attendance',
+          reason: event.name,
+          referenceId: event.id,
+          createdBy: officer.memberId,
+          createdAt: checkedInAt,
         });
         const updated = roster(records, event.id);
         return {
@@ -604,16 +644,17 @@ export function createDemoDataSource(
           );
         }
         const member = findMember(records, input.memberId);
-        const previousBalance = balanceOf(records, member.memberId);
+        const previousBalance = balanceOf(records, member.studentId);
         const entryId = nextId(records, 'L');
         records.ledger.push({
           id: entryId,
-          memberId: member.memberId,
-          delta: input.amount,
-          kind: 'points_granted',
-          title: input.reason.trim(),
-          reference: `Granted by ${officer.fullName}`,
-          occurredAt: now().toISOString(),
+          memberId: member.studentId,
+          amount: input.amount,
+          type: 'grant',
+          reason: input.reason.trim(),
+          referenceId: entryId,
+          createdBy: officer.memberId,
+          createdAt: now().toISOString(),
         });
         return {
           entryId,
