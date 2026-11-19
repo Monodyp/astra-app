@@ -13,7 +13,7 @@ import {
   grantPointsStub,
 } from '../controllers/pointsController.js';
 import {
-  getEventsStub,
+  getEvents,
   checkInEventStub,
 } from '../controllers/eventsController.js';
 import {
@@ -57,7 +57,7 @@ router.post(
 );
 
 // Events routes
-router.get('/events', authMiddleware, getEventsStub);
+router.get('/events', authMiddleware, getEvents);
 router.post('/events/:id/checkin', authMiddleware, checkInEventStub);
 
 // Perks & Vouchers routes
