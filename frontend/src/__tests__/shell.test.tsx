@@ -59,6 +59,7 @@ describe('portal shell', () => {
       ['Digital ID', '/id', 1, 'Digital ID'],
       ['Perks Marketplace', '/marketplace', 2, 'Perks Marketplace'],
       ['My Vouchers', '/vouchers', 2, 'Claimed Vouchers'],
+      ['Overview', '/home', 1, 'Verified Doe'],
     ];
     for (const [label, path, level, heading] of tabs) {
       fireEvent.click(within(nav).getByRole('link', { name: label }));
