@@ -348,7 +348,7 @@ export function createDemoDataSource(
           ? member.role === 'officer'
             ? 'Officer'
             : 'Member'
-          : 'Non-member',
+          : 'Unverified',
         membershipStatus: verified ? 'verified' : 'unverified',
         qrValue: member.qrToken,
         statusNote: verified ? 'Annual dues paid' : 'Membership inactive',
