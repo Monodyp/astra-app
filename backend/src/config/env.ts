@@ -23,6 +23,7 @@ const envSchema = z.object({
   PAID_SHEET_ID: z.string().optional(),
   OPPORTUNITIES_SHEET_ID: z.string().optional(),
   ATTENDANCE_POINTS: z.string().default('10'),
+  POINTS_LEDGER_STORAGE: z.enum(['firestore', 'memory']).default('firestore'),
 });
 
 export const env = envSchema.parse(process.env);
