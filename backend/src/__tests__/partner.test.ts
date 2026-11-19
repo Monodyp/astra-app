@@ -32,11 +32,11 @@ function pastDate(daysAgo = 1): Date {
 }
 
 describe('Partner Redemption API', () => {
-  beforeEach(() => {
-    _resetVoucherStore();
+  beforeEach(async () => {
+    await _resetVoucherStore();
 
     // Seed standard test vouchers
-    _seedVoucher({
+    await _seedVoucher({
       id: 'v1',
       code: 'NEXCAFE-001',
       status: 'active',
@@ -44,7 +44,7 @@ describe('Partner Redemption API', () => {
       reward: 'Free Latte',
       expiresAt: futureDate(),
     });
-    _seedVoucher({
+    await _seedVoucher({
       id: 'v2',
       code: 'BEANB-001',
       status: 'active',
@@ -52,14 +52,14 @@ describe('Partner Redemption API', () => {
       reward: '10% Off Any Drink',
       expiresAt: futureDate(),
     });
-    _seedVoucher({
+    await _seedVoucher({
       id: 'v3',
       code: 'USED-001',
       status: 'used',
       partnerName: 'NexCafe',
       reward: 'Free Latte',
     });
-    _seedVoucher({
+    await _seedVoucher({
       id: 'v4',
       code: 'EXP-001',
       status: 'active',
