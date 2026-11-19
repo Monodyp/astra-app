@@ -113,8 +113,8 @@ export const FloatingCardWrapper: React.FC<FloatingCardWrapperProps> = ({
       astraSpin   ${s(37)} ease-in-out -9s infinite;
   }
 
-  .astra-paused .astra-card${!isPreview ? `,
-  .astra-active:hover .astra-card` : ''} {
+  .astra-paused .astra-card,
+  .astra-active:hover .astra-card {
     animation-play-state: paused;
   }
 
@@ -125,7 +125,7 @@ export const FloatingCardWrapper: React.FC<FloatingCardWrapperProps> = ({
 
       {/* Main Container */}
       <div
-        className={`relative ${className} ${!disabled ? 'astra-active' : ''} ${isZoomed ? 'astra-paused' : ''
+        className={`group relative ${className} ${!disabled ? 'astra-active' : ''} ${isZoomed ? 'astra-paused' : ''
           }`}
       >
         <div className="astra-card relative">
@@ -158,7 +158,7 @@ export const FloatingCardWrapper: React.FC<FloatingCardWrapperProps> = ({
 
         </div>
         {!isPreview &&
-          <div className="pointer-events-none absolute -bottom-16 -right-16 z-20 flex items-center gap-1.5 rounded-full border border-white/20 bg-black/60 px-3 py-1 text-[11px] font-astra font-medium text-white/90  transition-opacity duration-300 shadow-lg">
+          <div className="opacity-0 group-hover:opacity-100 pointer-events-none absolute -bottom-16 -right-16 z-20 flex items-center gap-1.5 rounded-full border border-white/20 bg-black/60 px-3 py-1 text-[11px] font-astra font-medium text-white/90  transition-opacity duration-300 shadow-lg">
             <ZoomIn className="h-3.5 w-3.5 text-astra-primary-light" />
             <span>Click the card to enlarge</span>
           </div>

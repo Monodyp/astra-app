@@ -47,7 +47,7 @@ export const Home: React.FC = () => {
                 className="w-full max-w-md sm:max-w-lg aspect-[600/378]"
                 glowColor={'rgba(0, 177, 237, 0.25)'}
               >
-                <TiltCard className="mt-8 w-full aspect-[600/378]  max-w-sm lg:max-w-md" isInteractable={false} >
+                <TiltCard className="mt-8 w-full aspect-[600/378]  max-w-sm lg:max-w-md" isInteractable={true} >
                   <MemberIdCard />
                 </TiltCard>
               </FloatingCardWrapper>
