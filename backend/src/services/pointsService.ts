@@ -1,27 +1,61 @@
-import { NotImplementedError } from '../lib/errors.js';
+import { createHash } from 'node:crypto';
+import { getConfiguredMemberService } from '../config/members.js';
+import {
+  type LedgerEntry,
+  type LedgerEntryType,
+  ledgerRepository,
+} from '../repositories/ledgerRepository.js';
+import { normalizeSrCode } from './members.js';
 
-// TODO(AI/Backend): Implement Data Connect points calculation for member
+export class PointsServiceError extends Error {
+  constructor(
+    message: string,
+    public readonly statusCode: number
+  ) {
+    super(message);
+    this.name = 'PointsServiceError';
+  }
+}
+
 export async function getMemberPoints(memberId: string): Promise<number> {
-  void memberId;
-  throw new NotImplementedError('getMemberPoints is not implemented');
+  return ledgerRepository.getBalance(normalizeSrCode(memberId));
 }
 
-// TODO(AI/Backend): Query PointsLedger entries for member
-export async function getPointsHistory(memberId: string): Promise<any[]> {
-  void memberId;
-  throw new NotImplementedError('getPointsHistory is not implemented');
+export async function getPointsHistory(memberId: string): Promise<LedgerEntry[]> {
+  return ledgerRepository.listByMember(normalizeSrCode(memberId));
 }
 
-// TODO(AI/Backend): Validate officer permission and insert PointsLedger entry
-export async function grantPoints(
-  memberId: string,
-  amount: number,
-  reason: string,
-  officerId: string
-): Promise<any> {
-  void memberId;
-  void amount;
-  void reason;
-  void officerId;
-  throw new NotImplementedError('grantPoints is not implemented');
+export interface GrantPointsInput {
+  memberId: string;
+  amount: number;
+  reason: string;
+  officerId: string;
+  referenceId?: string;
+  idempotencyKey: string;
+}
+
+function entryId(memberId: string, type: LedgerEntryType, referenceId: string): string {
+  return createHash('sha256')
+    .update(`${normalizeSrCode(memberId)}|${type}|${referenceId}`)
+    .digest('hex');
+}
+
+export async function grantPoints(input: GrantPointsInput): Promise<LedgerEntry> {
+  const memberId = normalizeSrCode(input.memberId);
+  const memberService = getConfiguredMemberService();
+  const membership = await memberService.verifyMembership(memberId);
+  if (!membership.isValid) {
+    throw new PointsServiceError('Unknown or unpaid member', 404);
+  }
+
+  const referenceId = input.referenceId ?? input.idempotencyKey;
+  return ledgerRepository.create({
+    id: entryId(memberId, 'grant', referenceId),
+    memberId,
+    amount: input.amount,
+    reason: input.reason,
+    type: 'grant',
+    referenceId,
+    createdBy: input.officerId,
+  });
 }

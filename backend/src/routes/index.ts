@@ -8,19 +8,19 @@ import {
   verifyTokenStub,
 } from '../controllers/authAndMemberController.js';
 import {
-  getPointsMeStub,
-  getPointsHistoryStub,
-  grantPointsStub,
+  getPointsMe,
+  getPointsHistoryHandler,
+  grantPointsHandler,
 } from '../controllers/pointsController.js';
 import {
   getEventsStub,
   checkInEventStub,
 } from '../controllers/eventsController.js';
 import {
-  getPerksStub,
-  redeemPerkStub,
-  getVouchersMeStub,
-  getVoucherByIdStub,
+  getPerks,
+  redeemPerkHandler,
+  getVouchersMe,
+  getVoucherById,
   validateVoucherHandler,
   applyVoucherHandler,
 } from '../controllers/perksAndVouchersController.js';
@@ -47,13 +47,17 @@ router.get('/members/me/id', authMiddleware, getMemberIdCardStub);
 router.get('/verify/:token', verifyTokenStub);
 
 // Points & Ledger routes
-router.get('/points/me', authMiddleware, getPointsMeStub);
-router.get('/points/me/history', authMiddleware, getPointsHistoryStub);
+router.get('/points/me', authMiddleware, getPointsMe);
+router.get(
+  '/points/me/history',
+  authMiddleware,
+  getPointsHistoryHandler
+);
 router.post(
   '/points/grant',
   authMiddleware,
   requireRole('officer'),
-  grantPointsStub
+  grantPointsHandler
 );
 
 // Events routes
@@ -61,10 +65,10 @@ router.get('/events', authMiddleware, getEventsStub);
 router.post('/events/:id/checkin', authMiddleware, checkInEventStub);
 
 // Perks & Vouchers routes
-router.get('/perks', authMiddleware, getPerksStub);
-router.post('/perks/:id/redeem', authMiddleware, redeemPerkStub);
-router.get('/vouchers/me', authMiddleware, getVouchersMeStub);
-router.get('/vouchers/:id', authMiddleware, getVoucherByIdStub);
+router.get('/perks', authMiddleware, getPerks);
+router.post('/perks/:id/redeem', authMiddleware, redeemPerkHandler);
+router.get('/vouchers/me', authMiddleware, getVouchersMe);
+router.get('/vouchers/:id', authMiddleware, getVoucherById);
 
 // Attendance routes (officer/admin)
 router.post(
