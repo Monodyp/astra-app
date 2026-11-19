@@ -76,15 +76,13 @@ describe('sign-in and route access', () => {
     expect(screen.queryByText('Officer access only')).toBeNull();
   });
 
-  it('keeps the placeholder screens for the ID and rewards pages', async () => {
+  it('keeps the placeholder screens for the rewards pages', async () => {
     const first = renderAt('/login');
     await chooseDemoAccount(/Verified member/);
     await waitFor(() => expect(window.location.pathname).toBe('/home'));
     first.unmount();
 
     const placeholders = [
-      ['/id', 'Digital ID'],
-      ['/not-valid', 'Not Valid'],
       ['/marketplace', 'Perks Marketplace'],
       ['/vouchers/V-1', 'Voucher Details'],
     ];

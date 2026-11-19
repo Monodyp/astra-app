@@ -1,4 +1,5 @@
 import React from 'react';
+import { QRCodeSVG } from 'qrcode.react';
 
 import wordmark from '@/assets/astra-home/wordmark.png';
 import starfield from '@/assets/astra-member/member-starfield.svg';
@@ -13,6 +14,7 @@ export type MemberIdCardProps = {
   membershipId?: string;
   joinMessage?: string;
   status?: 'verified' | 'unverified';
+  qrValue?: string;
   className?: string;
 };
 
@@ -29,18 +31,21 @@ export const MemberIdCard: React.FC<MemberIdCardProps> = ({
   membershipId,
   joinMessage,
   status = 'verified',
+  qrValue,
   className = '',
 }) => {
   const isVerified = status === 'verified';
 
   // Sensible defaults based on status matching reference design
-  const defaultYearRole = isVerified ? 'Year | Role' : '3rd year | Non-member';
+  const defaultYearRole = isVerified ? 'Year | Role' : '3rd year | Unverified';
   const displayYearRole = yearRole ?? defaultYearRole;
 
-  const defaultMembershipId = isVerified ? 'ASTR1D-XXXX' : 'NON-MEMBER';
+  const defaultMembershipId = isVerified ? 'ASTR1D-XXXX' : 'UNVERIFIED';
   const displayMembershipId = membershipId ?? defaultMembershipId;
 
-  const defaultJoinMessage = isVerified ? 'Join to get yours' : 'Membership inactive';
+  const defaultJoinMessage = isVerified
+    ? 'Join to get yours'
+    : 'Membership inactive';
   const displayJoinMessage = joinMessage ?? defaultJoinMessage;
 
   const cardBorderClass = isVerified ? 'border-[#84b2ea]' : 'border-[#5e6973]';
@@ -53,11 +58,14 @@ export const MemberIdCard: React.FC<MemberIdCardProps> = ({
 
   return (
     // Container: cqw units inside resolve against this element's width.
-    <div className="w-full select-none" style={{ containerType: 'inline-size' }}>
+    <div
+      className="w-full select-none"
+      style={{ containerType: 'inline-size' }}
+    >
       <article
         className={`relative aspect-[600/378] w-full overflow-hidden border ${cardBorderClass} ${cardBgClass} text-white ${className}`}
         style={{ borderRadius: cq(22), padding: cq(32) }}
-        aria-label={`${name} ASTRA Developers ${isVerified ? 'member' : 'non-member'} identification`}
+        aria-label={`${name} ASTRA Developers ${isVerified ? 'member' : 'unverified member'} identification`}
       >
         <img
           src={starfield}
@@ -79,7 +87,9 @@ export const MemberIdCard: React.FC<MemberIdCardProps> = ({
               className={`font-sans ${secondaryTextColor}`}
               style={{ fontSize: cq(10), lineHeight: cq(14) }}
             >
-              {isVerified ? 'Member identification' : 'Profile identification · Sample'}
+              {isVerified
+                ? 'Member identification'
+                : 'Member identification · Unverified'}
             </p>
           </div>
 
@@ -130,7 +140,25 @@ export const MemberIdCard: React.FC<MemberIdCardProps> = ({
             </div>
 
             {/* QR / Verification container */}
-            {isVerified ? (
+            {isVerified && qrValue ? (
+              <div
+                className="shrink-0 bg-white"
+                style={{
+                  width: cq(136),
+                  height: cq(136),
+                  borderRadius: cq(14),
+                  padding: cq(10),
+                }}
+              >
+                <QRCodeSVG
+                  value={qrValue}
+                  size={256}
+                  role="img"
+                  aria-label="Member check-in QR"
+                  style={{ width: '100%', height: '100%' }}
+                />
+              </div>
+            ) : isVerified ? (
               <img
                 src={verification}
                 alt="Verified membership"
@@ -149,15 +177,20 @@ export const MemberIdCard: React.FC<MemberIdCardProps> = ({
               >
                 <img
                   src={verification}
-                  alt="Inactive QR Code"
+                  alt=""
+                  aria-hidden="true"
                   className="h-auto w-full object-contain"
                   style={{ maxHeight: cq(96) }}
                 />
                 <p
-                  className="font-astra font-medium text-[#1e293b]"
-                  style={{ fontSize: cq(11), lineHeight: cq(14), marginTop: cq(2) }}
+                  className="text-center font-astra font-medium text-[#1e293b]"
+                  style={{
+                    fontSize: cq(11),
+                    lineHeight: cq(14),
+                    marginTop: cq(2),
+                  }}
                 >
-                  Inactive
+                  Inactive for check-in
                 </p>
               </div>
             )}

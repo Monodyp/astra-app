@@ -8,7 +8,6 @@ import { Login } from './pages/Login.js';
 import { Home } from './pages/Home.js';
 import { Overview } from './pages/Overview.js';
 import { DigitalID } from './pages/DigitalID.js';
-import { NotValid } from './pages/NotValid.js';
 import { Points } from './pages/Points.js';
 import { OfficerGrantPoints } from './pages/OfficerGrantPoints.js';
 import { CheckIn } from './pages/CheckIn.js';
@@ -33,103 +32,110 @@ export const App: React.FC = () => {
     <AuthProvider>
       <PortalProvider>
         <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/astrascend" element={<AstrascendLayout />}>
-            <Route index element={<LandingPage />} />
-            <Route path="request" element={<RequestPage />} />
-            <Route path="request/success" element={<SuccessPage />} />
-            <Route
-              path="service/:serviceId"
-              element={<LegacyServiceRedirect />}
-            />
-          </Route>
-          {/* Dev-only test page — not registered in production */}
-          {import.meta.env.DEV && (
-            <Route path="/dev/test" element={<DevTools />} />
-          )}
-          <Route element={<AppShell />}>
-            <Route
-              path="/home"
-              element={
-                <ProtectedRoute>
-                  <Overview />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/id"
-              element={
-                <ProtectedRoute>
-                  <DigitalID />
-                </ProtectedRoute>
-              }
-            />
-            <Route path="/not-valid" element={<NotValid />} />
-            <Route
-              path="/points"
-              element={
-                <ProtectedRoute>
-                  <Points />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/officer/grant-points"
-              element={
-                <ProtectedRoute role="officer">
-                  <OfficerGrantPoints />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/checkin"
-              element={
-                <ProtectedRoute role="officer">
-                  <CheckIn />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/marketplace"
-              element={
-                <ProtectedRoute>
-                  <Marketplace />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/vouchers"
-              element={
-                <ProtectedRoute>
-                  <Vouchers />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/vouchers/:id"
-              element={
-                <ProtectedRoute>
-                  <VoucherDetails />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/partner-instructions"
-              element={<PartnerInstructions />}
-            />
-            <Route
-              path="/opportunities"
-              element={
-                <ProtectedRoute>
-                  <Opportunities />
-                </ProtectedRoute>
-              }
-            />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Route>
-          <Route path="/" element={<Home />} />
-        </Routes>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/astrascend" element={<AstrascendLayout />}>
+              <Route index element={<LandingPage />} />
+              <Route path="request" element={<RequestPage />} />
+              <Route path="request/success" element={<SuccessPage />} />
+              <Route
+                path="service/:serviceId"
+                element={<LegacyServiceRedirect />}
+              />
+            </Route>
+            {/* Dev-only test page — not registered in production */}
+            {import.meta.env.DEV && (
+              <Route path="/dev/test" element={<DevTools />} />
+            )}
+            <Route element={<AppShell />}>
+              <Route
+                path="/home"
+                element={
+                  <ProtectedRoute>
+                    <Overview />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/id"
+                element={
+                  <ProtectedRoute>
+                    <DigitalID />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/not-valid"
+                element={
+                  <ProtectedRoute>
+                    <Navigate to="/id" replace />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/points"
+                element={
+                  <ProtectedRoute>
+                    <Points />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/officer/grant-points"
+                element={
+                  <ProtectedRoute role="officer">
+                    <OfficerGrantPoints />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/checkin"
+                element={
+                  <ProtectedRoute role="officer">
+                    <CheckIn />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/marketplace"
+                element={
+                  <ProtectedRoute>
+                    <Marketplace />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/vouchers"
+                element={
+                  <ProtectedRoute>
+                    <Vouchers />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/vouchers/:id"
+                element={
+                  <ProtectedRoute>
+                    <VoucherDetails />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/partner-instructions"
+                element={<PartnerInstructions />}
+              />
+              <Route
+                path="/opportunities"
+                element={
+                  <ProtectedRoute>
+                    <Opportunities />
+                  </ProtectedRoute>
+                }
+              />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Route>
+            <Route path="/" element={<Home />} />
+          </Routes>
         </BrowserRouter>
       </PortalProvider>
     </AuthProvider>

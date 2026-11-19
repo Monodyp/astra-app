@@ -52,20 +52,19 @@ describe('portal shell', () => {
     expect(screen.getByText('Officer console · Secure session')).toBeDefined();
   });
 
-  it('opens the placeholder screens from the member tabs', async () => {
+  it('opens each member tab', async () => {
     await signInAs(/Verified member/);
     const nav = screen.getByRole('navigation', { name: 'Portal' });
-    const tabs = [
-      ['Digital ID', '/id', 'Digital ID'],
-      ['Perks Marketplace', '/marketplace', 'Perks Marketplace'],
-      ['My Vouchers', '/vouchers', 'Claimed Vouchers'],
-      ['Overview', '/home', 'Overview'],
+    const tabs: Array<[string, string, number, string]> = [
+      ['Digital ID', '/id', 1, 'Digital ID'],
+      ['Perks Marketplace', '/marketplace', 2, 'Perks Marketplace'],
+      ['My Vouchers', '/vouchers', 2, 'Claimed Vouchers'],
     ];
-    for (const [label, path, heading] of tabs) {
+    for (const [label, path, level, heading] of tabs) {
       fireEvent.click(within(nav).getByRole('link', { name: label }));
       await waitFor(() => expect(window.location.pathname).toBe(path));
       expect(
-        await screen.findByRole('heading', { level: 2, name: heading })
+        await screen.findByRole('heading', { level, name: heading })
       ).toBeDefined();
     }
   });
