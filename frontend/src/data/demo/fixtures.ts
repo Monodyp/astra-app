@@ -32,6 +32,7 @@ export interface DemoLedgerEntry {
   referenceId: string;
   createdBy: string;
   createdAt: string;
+  idempotencyKey?: string;
 }
 
 export interface DemoPerk {
@@ -64,6 +65,7 @@ export interface DemoVoucher {
   expiresAt: string;
   redeemedAt: string | null;
   qrToken: string;
+  idempotencyKey?: string;
 }
 
 export interface DemoEvent {

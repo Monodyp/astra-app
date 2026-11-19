@@ -280,4 +280,60 @@ describe('demo records', () => {
       createdBy: 'ASTR1D-0003',
     });
   });
+
+  describe('retry keys', () => {
+    beforeEach(() => {
+      data = createDemoDataSource({
+        storage,
+        now: () => NOW,
+        newKey: () => 'retry-1',
+      });
+    });
+
+    it('replays a claim that reuses its key', async () => {
+      await data.signIn({ method: 'shortcut', shortcutId: 'verified-member' });
+      const first = await data.claimPerk('perk-cafe-beverage');
+      const retried = await data.claimPerk('perk-cafe-beverage');
+      expect(first.status).toBe('claimed');
+      expect(retried).toEqual(first);
+      expect((await data.getOverview()).points).toBe(400);
+      const records = storedRecords(storage);
+      expect(
+        records.vouchers.filter((item) => item.idempotencyKey === 'retry-1')
+      ).toHaveLength(1);
+      expect(
+        records.ledger.filter((item) => item.idempotencyKey === 'retry-1')
+      ).toHaveLength(1);
+    });
+
+    it('rejects a claim key reused for another perk', async () => {
+      await data.signIn({ method: 'shortcut', shortcutId: 'verified-member' });
+      await data.claimPerk('perk-cafe-beverage');
+      await expect(data.claimPerk('perk-sticker-pack')).rejects.toMatchObject({
+        code: 'invalid_input',
+      });
+    });
+
+    it('records a retried grant once', async () => {
+      await data.signIn({ method: 'shortcut', shortcutId: 'officer' });
+      const input = {
+        memberId: 'ASTR1D-0004',
+        amount: 40,
+        reason: 'Event Volunteer',
+        note: '',
+      };
+      const first = await data.grantPoints(input);
+      const retried = await data.grantPoints(input);
+      expect(retried).toEqual(first);
+      expect(first).toMatchObject({ previousBalance: 350, newBalance: 390 });
+      const entries = storedRecords(storage).ledger.filter(
+        (item) => item.idempotencyKey === 'retry-1'
+      );
+      expect(entries).toHaveLength(1);
+      expect(entries[0]).toMatchObject({
+        memberId: '24-90004',
+        referenceId: 'retry-1',
+      });
+    });
+  });
 });

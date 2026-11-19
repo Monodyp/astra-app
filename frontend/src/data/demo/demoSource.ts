@@ -37,6 +37,23 @@ export interface DemoSourceOptions {
   storage?: KeyValueStorage;
   latencyMs?: number;
   now?: () => Date;
+  newKey?: () => string;
+}
+
+export interface DemoClaimInput {
+  perkId: string;
+  idempotencyKey: string;
+}
+
+export interface DemoGrantInput extends GrantPointsInput {
+  idempotencyKey: string;
+}
+
+function randomKey(): string {
+  if (typeof globalThis.crypto?.randomUUID === 'function') {
+    return globalThis.crypto.randomUUID();
+  }
+  return `key-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
 }
 
 const CATEGORY_LABELS: Record<PerkCategory, string> = {
@@ -153,6 +170,7 @@ export function createDemoDataSource(
   const store = new DemoStore(options.storage ?? createTabStorage());
   const latencyMs = options.latencyMs ?? 0;
   const now = options.now ?? (() => new Date());
+  const newKey = options.newKey ?? randomKey;
 
   async function settle(): Promise<void> {
     if (latencyMs > 0) {
@@ -404,10 +422,29 @@ export function createDemoDataSource(
 
     async claimPerk(perkId: string): Promise<ClaimResult> {
       await settle();
+      const input: DemoClaimInput = { perkId, idempotencyKey: newKey() };
       return store.update((records) => {
         const member = currentMember(records);
         const perk = toPerk(records, member.studentId, perkId);
         const balance = balanceOf(records, member.studentId);
+        const replayed = records.vouchers.find(
+          (voucher) =>
+            voucher.memberId === member.studentId &&
+            voucher.idempotencyKey === input.idempotencyKey
+        );
+        if (replayed) {
+          if (replayed.perkId !== input.perkId) {
+            throw new DataError(
+              'invalid_input',
+              'That retry key was already used for a different perk.'
+            );
+          }
+          return {
+            status: 'claimed',
+            voucher: toVoucher(records, replayed),
+            balance,
+          };
+        }
         const decline = (
           reason: Extract<ClaimResult, { status: 'declined' }>['reason'],
           message: string
@@ -452,6 +489,7 @@ export function createDemoDataSource(
           expiresAt: expiresAt.toISOString(),
           redeemedAt: null,
           qrToken: `demo-voucher.v1.${serial}`,
+          idempotencyKey: input.idempotencyKey,
         };
         if (stored.stock !== null) {
           stored.stock -= 1;
@@ -466,6 +504,7 @@ export function createDemoDataSource(
           referenceId: voucher.code,
           createdBy: member.studentId,
           createdAt: claimedAt.toISOString(),
+          idempotencyKey: input.idempotencyKey,
         });
         return {
           status: 'claimed',
@@ -623,10 +662,32 @@ export function createDemoDataSource(
         .map((member) => toSearchResult(records, member));
     },
 
-    async grantPoints(input: GrantPointsInput): Promise<GrantPointsResult> {
+    async grantPoints(
+      grantInput: GrantPointsInput
+    ): Promise<GrantPointsResult> {
       await settle();
+      const input: DemoGrantInput = { ...grantInput, idempotencyKey: newKey() };
       return store.update((records) => {
         const officer = currentOfficer(records);
+        const replayed = records.ledger.find(
+          (entry) =>
+            entry.type === 'grant' &&
+            entry.idempotencyKey === input.idempotencyKey
+        );
+        if (replayed) {
+          const recipient = records.members.find(
+            (member) => member.studentId === replayed.memberId
+          )!;
+          const balance = balanceOf(records, replayed.memberId);
+          return {
+            entryId: replayed.id,
+            recipient: toSearchResult(records, recipient),
+            amount: replayed.amount,
+            reason: replayed.reason,
+            previousBalance: balance - replayed.amount,
+            newBalance: balance,
+          };
+        }
         if (
           !Number.isInteger(input.amount) ||
           input.amount < 1 ||
@@ -652,9 +713,10 @@ export function createDemoDataSource(
           amount: input.amount,
           type: 'grant',
           reason: input.reason.trim(),
-          referenceId: entryId,
+          referenceId: input.idempotencyKey,
           createdBy: officer.memberId,
           createdAt: now().toISOString(),
+          idempotencyKey: input.idempotencyKey,
         });
         return {
           entryId,
