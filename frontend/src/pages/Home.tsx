@@ -2,23 +2,23 @@ import React from 'react';
 
 import astraBg from '../assets/astra-home/Astra-Bg.png';
 
-import { MemberIdCard } from '../components/MemberIdCard';
+import { MemberIdCard } from '../components/id/MemberIdCard';
 import LandingHeader from '@/components/home/landing-header';
 
 import wordmark from '../assets/astra-home/wordmark.png';
 import { ActionLink, technicalCorners } from '@/components/home/ui-util';
-import { TiltCard } from '@/components/home/tilt-wrapper';
+import { TiltCard } from '@/components/id/tilt-wrapper';
 import FeatureOverview from '@/components/home/feature-overview';
 import HowItWorks from '@/components/home/how-it-works';
 import MemberConsole from '@/components/home/member-console';
 import UpcomingEvents from '@/components/home/upcoming-events';
 import LandingFooter from '@/components/home/landing-footer';
 import Starfield from '@/components/star-field';
+import { FloatingCardWrapper } from '@/components/id/FloatingCardWrapper';
 //test push
 export const Home: React.FC = () => {
   return (
     <div id="home" className="relative min-h-screen overflow-hidden bg-astra-black font-astra text-astra-white">
-      {/* Star field currently disabled as it lags ID interaction, currently seeking solution */}
       <Starfield />
       <div className="pointer-events-none fixed inset-0 z-0">
         <img src={astraBg} alt="" className="h-full w-full object-cover object-top" />
@@ -42,9 +42,15 @@ export const Home: React.FC = () => {
                   <ActionLink href="/login">Join ASTRA</ActionLink>
                 </div>
               </div>
-              <TiltCard className='mt-8 w-full aspect-[600/378]  max-w-sm lg:max-w-md'>
-                <MemberIdCard />
-              </TiltCard>
+              <FloatingCardWrapper
+                isPreview={true}
+                className="w-full max-w-md sm:max-w-lg aspect-[600/378]"
+                glowColor={'rgba(0, 177, 237, 0.25)'}
+              >
+                <TiltCard className="mt-8 w-full aspect-[600/378]  max-w-sm lg:max-w-md" isInteractable={true} >
+                  <MemberIdCard />
+                </TiltCard>
+              </FloatingCardWrapper>
             </div>
           </section>
           <FeatureOverview />
