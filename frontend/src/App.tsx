@@ -1,10 +1,12 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext.js';
+import { PortalProvider } from './context/PortalContext.js';
 import { AppShell } from './components/AppShell.js';
 import { ProtectedRoute } from './components/ProtectedRoute.js';
 import { Login } from './pages/Login.js';
 import { Home } from './pages/Home.js';
+import { Overview } from './pages/Overview.js';
 import { DigitalID } from './pages/DigitalID.js';
 import { NotValid } from './pages/NotValid.js';
 import { Points } from './pages/Points.js';
@@ -22,7 +24,6 @@ import {
   LegacyServiceRedirect,
 } from './features/astrascend/pages/RequestPage.js';
 import { Opportunities } from './pages/Opportunities.js';
-import { Overview } from './pages/Overview.js';
 // DevTools is only imported here; the route is registered only in DEV mode.
 // Vite strips the branch in production builds via import.meta.env.DEV dead-code elimination.
 import { DevTools } from './pages/DevTools.js';
@@ -30,7 +31,8 @@ import { DevTools } from './pages/DevTools.js';
 export const App: React.FC = () => {
   return (
     <AuthProvider>
-      <BrowserRouter>
+      <PortalProvider>
+        <BrowserRouter>
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/astrascend" element={<AstrascendLayout />}>
@@ -128,7 +130,8 @@ export const App: React.FC = () => {
           </Route>
           <Route path="/" element={<Home />} />
         </Routes>
-      </BrowserRouter>
+        </BrowserRouter>
+      </PortalProvider>
     </AuthProvider>
   );
 };
