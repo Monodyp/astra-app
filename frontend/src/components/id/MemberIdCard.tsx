@@ -108,8 +108,8 @@ export const MemberIdCard: React.FC<MemberIdCardProps> = ({
               <div className="min-w-0 overflow-hidden">
                 <div className="flex flex-col" style={{ gap: cq(4) }}>
                   <p
-                    className="truncate font-astra font-bold tracking-tight uppercase"
-                    style={{ fontSize: cq(32), lineHeight: cq(40) }}
+                    className="line-clamp-3 break-words font-astra font-bold tracking-tight uppercase"
+                    style={{ fontSize: cq(26), lineHeight: cq(32) }}
                   >
                     {name}
                   </p>
