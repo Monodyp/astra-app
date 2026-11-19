@@ -47,6 +47,15 @@ describe('digital ID', () => {
       screen.queryByRole('img', { name: 'Member check-in QR' })
     ).toBeNull();
     expect(screen.queryByText(/Non-member/i)).toBeNull();
+    const card = screen.getByRole('article', {
+      name: /unverified member identification/,
+    });
+    const images = Array.from(card.querySelectorAll('img')).map((image) =>
+      image.getAttribute('src')
+    );
+    expect(images.some((src) => src?.includes('member-verification'))).toBe(
+      false
+    );
   });
 
   it('opens /not-valid as the signed-in member ID', async () => {

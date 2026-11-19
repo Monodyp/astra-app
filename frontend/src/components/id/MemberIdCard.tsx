@@ -1,5 +1,6 @@
 import React from 'react';
 import { QRCodeSVG } from 'qrcode.react';
+import { QrCode } from 'lucide-react';
 
 import wordmark from '@/assets/astra-home/wordmark.png';
 import starfield from '@/assets/astra-member/member-starfield.svg';
@@ -175,12 +176,11 @@ export const MemberIdCard: React.FC<MemberIdCardProps> = ({
                   padding: cq(6),
                 }}
               >
-                <img
-                  src={verification}
-                  alt=""
+                <QrCode
                   aria-hidden="true"
-                  className="h-auto w-full object-contain"
-                  style={{ maxHeight: cq(96) }}
+                  className="text-[#94a3b8] opacity-60"
+                  strokeWidth={1.5}
+                  style={{ width: cq(84), height: cq(84) }}
                 />
                 <p
                   className="text-center font-astra font-medium text-[#1e293b]"
