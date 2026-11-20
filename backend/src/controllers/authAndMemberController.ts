@@ -75,11 +75,40 @@ export async function getAuthMeStub(req: Request, res: Response): Promise<void> 
   }
 }
 
-export async function getMemberIdCardStub(_req: Request, res: Response): Promise<void> {
-  res.status(501).json({
-    error: 'GET /members/me/id not implemented',
-    card: { studentId: 'S-STUB', fullName: 'Stub Member', isPaid: false, qrToken: '' },
-  });
+export async function getMemberIdCardStub(req: Request, res: Response): Promise<void> {
+  if (!req.user) {
+    res.status(401).json({ error: 'Authentication required' });
+    return;
+  }
+
+  try {
+    const members = getConfiguredMemberService();
+    const member = await members.findMember(req.user.srCode);
+    if (!member) {
+      res.status(404).json({ error: 'Member not found' });
+      return;
+    }
+
+    const [isPaid, qrToken] = await Promise.all([
+      members.isPaid(member.srCode),
+      generateMemberQrToken(member.srCode),
+    ]);
+
+    res.status(200).json({
+      card: {
+        studentId: member.srCode,
+        fullName: member.fullName,
+        isPaid,
+        qrToken,
+      },
+    });
+  } catch (error) {
+    if (error instanceof TypeError) {
+      res.status(400).json({ error: 'Member ID cannot generate a QR token' });
+      return;
+    }
+    res.status(503).json({ error: 'Member source unavailable' });
+  }
 }
 
 export async function verifyTokenStub(req: Request, res: Response): Promise<void> {
