@@ -21,7 +21,7 @@ export function ActionLink({
   return (
     <a
       href={href}
-      className={`inline-flex items-center gap-2 font-astra text-sm font-bold text-astra-primary-light transition-opacity hover:opacity-75 ${className}`}
+      className={`inline-flex min-h-11 items-center gap-2 font-astra text-sm font-bold text-astra-primary-light transition-opacity hover:opacity-75 ${className}`}
     >
       {children}
       <ChevronRight className="h-5 w-5" aria-hidden="true" />
@@ -31,7 +31,7 @@ export function ActionLink({
 
 export function SectionHeading({ title, subtitle }: { title: string; subtitle: string }) {
   return (
-    <div className="mx-12 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+    <div className="mx-0 flex flex-col gap-2 sm:mx-6 lg:mx-12 sm:flex-row sm:items-end sm:justify-between">
       <h2 className="font-astra text-3xl font-bold tracking-tight text-astra-white sm:text-4xl">{title}</h2>
       <p className="font-astra text-sm text-astra-gray">{subtitle}</p>
     </div>

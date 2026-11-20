@@ -1,6 +1,6 @@
 import React from 'react';
 
-const serviceRequestUrl = import.meta.env.VITE_FORM_REQUEST_SERVICE_URL || '#';
+const serviceRequestUrl = import.meta.env.VITE_FORM_REQUEST_SERVICE_URL || '/astrascend/request';
 const partnershipUrl = import.meta.env.VITE_FORM_PARTNERSHIP_URL || '#';
 const opportunitiesUrl = import.meta.env.VITE_FORM_OPPORTUNITIES_URL || '#';
 
@@ -21,6 +21,7 @@ export const Opportunities: React.FC = () => {
         >
           Request ASTRA Service
         </a>
+        {partnershipUrl === '#' && <p className="text-xs text-amber-300">The partnership form link has not been configured yet.</p>}
         <a
           href={partnershipUrl}
           target="_blank"
@@ -29,6 +30,7 @@ export const Opportunities: React.FC = () => {
         >
           Partner With ASTRA
         </a>
+        {opportunitiesUrl === '#' && <p className="text-xs text-amber-300">The opportunities form link has not been configured yet.</p>}
         <a
           href={opportunitiesUrl}
           target="_blank"
@@ -39,10 +41,6 @@ export const Opportunities: React.FC = () => {
         </a>
       </div>
 
-      {/* TODO(Frontend): Wire up dynamic opportunities fetching from GET /astrascend/opportunities */}
-      <div className="p-4 rounded-lg border border-slate-800 bg-slate-900/60 text-xs text-amber-400 font-mono">
-        TODO(Frontend): Render dynamic opportunities list and analytics for outbound form clicks.
-      </div>
     </div>
   );
 };

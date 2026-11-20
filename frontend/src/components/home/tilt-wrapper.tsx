@@ -9,6 +9,7 @@ type TiltCardProps = {
   perspective?: number;
   thickness?: number;
   intensity?: number;
+  desktopInteractionOnly?: boolean;
   className?: string;
 };
 
@@ -20,6 +21,7 @@ export const TiltCard: React.FC<TiltCardProps> = ({
   perspective = 700,
   thickness = 14,
   intensity = 9,
+  desktopInteractionOnly = false,
   className = '',
 }) => {
   const tiltRef = useRef<HTMLDivElement>(null);
@@ -38,8 +40,8 @@ export const TiltCard: React.FC<TiltCardProps> = ({
       const glint = glintRef.current;
       if (!tilt || !glint) return;
 
-      tilt.style.transition = transition;
-      tilt.style.transform = transformFor(nx, ny);
+      tilt.style.setProperty('--tilt-transition', transition);
+      tilt.style.setProperty('--tilt-transform', transformFor(nx, ny));
 
       const mag = Math.min(1, Math.hypot(nx, ny));
       glint.style.setProperty('--gp', `${50 - nx * 40 - ny * 20}%`);
@@ -52,13 +54,14 @@ export const TiltCard: React.FC<TiltCardProps> = ({
     const tilt = tiltRef.current;
     const glint = glintRef.current;
     if (!tilt || !glint) return;
-    tilt.style.transition = 'transform 500ms ease-out';
-    tilt.style.transform = transformFor(0, 0);
+    tilt.style.setProperty('--tilt-transition', 'transform 500ms ease-out');
+    tilt.style.setProperty('--tilt-transform', transformFor(0, 0));
     glint.style.opacity = '0'; // fade out in place so the band doesn't jump
   }, [transformFor]);
 
   const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
     if (e.pointerType !== 'mouse') return;
+    if (desktopInteractionOnly && !window.matchMedia('(min-width: 1024px)').matches) return;
     const rect = e.currentTarget.getBoundingClientRect();
     const nx = clamp(((e.clientX - rect.left) / rect.width) * 2 - 1);
     const ny = clamp(((e.clientY - rect.top) / rect.height) * 2 - 1);
@@ -67,7 +70,7 @@ export const TiltCard: React.FC<TiltCardProps> = ({
 
   // Gyroscope on touch devices. Skipped on iOS, which needs a permission prompt.
   useEffect(() => {
-    if (typeof window === 'undefined' || !('DeviceOrientationEvent' in window)) return;
+    if (desktopInteractionOnly || typeof window === 'undefined' || !('DeviceOrientationEvent' in window)) return;
     const needsPermission =
       typeof (DeviceOrientationEvent as unknown as { requestPermission?: unknown })
         .requestPermission === 'function';
@@ -85,7 +88,7 @@ export const TiltCard: React.FC<TiltCardProps> = ({
     };
     window.addEventListener('deviceorientation', onOrientation);
     return () => window.removeEventListener('deviceorientation', onOrientation);
-  }, [apply]);
+  }, [apply, desktopInteractionOnly]);
 
 
   return (
@@ -104,8 +107,14 @@ export const TiltCard: React.FC<TiltCardProps> = ({
       >
         <div
           ref={tiltRef}
-          className="relative"
-          style={{ transform: transformFor(0, 0), transformStyle: 'preserve-3d' }}
+          // Small screens retain the resting tilt without pointer or sensor movement.
+          className={`relative ${desktopInteractionOnly ? '[transform:var(--tilt-rest-transform)] [transition:none] lg:[transform:var(--tilt-transform)] lg:[transition:var(--tilt-transition)]' : '[transform:var(--tilt-transform)] [transition:var(--tilt-transition)]'}`}
+          style={{
+            ['--tilt-rest-transform' as string]: transformFor(0, 0),
+            ['--tilt-transform' as string]: transformFor(0, 0),
+            ['--tilt-transition' as string]: 'none',
+            transformStyle: 'preserve-3d',
+          }}
         >
           {thickness > 0 && (
             <div
@@ -120,7 +129,7 @@ export const TiltCard: React.FC<TiltCardProps> = ({
             <div
               ref={glintRef}
               aria-hidden
-              className="pointer-events-none absolute inset-0 rounded-2xl"
+              className={`pointer-events-none absolute inset-0 rounded-2xl ${desktopInteractionOnly ? 'hidden lg:block' : ''}`}
               style={{
                 opacity: 0,
                 ['--gp' as string]: '50%',
