@@ -61,6 +61,15 @@ describe('Attendance Check-In API', () => {
     expect(res.body).toHaveProperty('error');
   });
 
+  it('POST /attendance/checkin → 400 for an invalid QR token', async () => {
+    const res = await request(app)
+      .post(`${BASE}/checkin`)
+      .send({ qrToken: 'invalid-token', eventId: 'EVT-001' });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe('Invalid or expired QR token');
+  });
+
   // -------------------------------------------------------------------------
   // Business logic
   // -------------------------------------------------------------------------

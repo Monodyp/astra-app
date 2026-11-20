@@ -1,5 +1,11 @@
 import { Request, Response } from 'express';
+import { z } from 'zod';
 import { firebaseAdmin } from '../lib/firebase.js';
+import {
+  resolveCheckInIdentity,
+  checkInMember,
+} from '../services/attendanceService.js';
+import { InvalidQrTokenError } from '../services/qrService.js';
 
 const events = firebaseAdmin.firestore().collection('events');
 
@@ -32,12 +38,39 @@ export async function getEvents(_req: Request, res: Response): Promise<void> {
   res.status(200).json({ events: result });
 }
 
-// TODO(AI/Backend): Record member attendance check-in and award event points
-export async function checkInEventStub(req: Request, res: Response): Promise<void> {
-  const { id } = req.params;
-  void id;
-  res.status(501).json({
-    error: 'POST /events/:id/checkin not implemented',
-    checkedIn: false,
-  });
+const eventCheckInSchema = z.object({
+  qrToken: z.string().min(1, 'qrToken is required'),
+  points: z.number().int().positive().optional(),
+});
+
+export async function checkInEvent(
+  req: Request,
+  res: Response
+): Promise<void> {
+  const parsed = eventCheckInSchema.safeParse(req.body);
+  const eventId = z.string().min(1).safeParse(req.params.id);
+  if (!parsed.success || !eventId.success) {
+    const details = parsed.success
+      ? { id: eventId.success ? undefined : eventId.error.flatten() }
+      : parsed.error.flatten();
+    res.status(400).json({
+      error: 'Invalid input',
+      details,
+    });
+    return;
+  }
+
+  try {
+    const srCode = await resolveCheckInIdentity({
+      qrToken: parsed.data.qrToken,
+    });
+    const result = await checkInMember(srCode, eventId.data, parsed.data.points);
+    res.status(200).json({ ...result, checkedIn: result.awarded });
+  } catch (error) {
+    if (error instanceof InvalidQrTokenError) {
+      res.status(400).json({ error: error.message, checkedIn: false });
+      return;
+    }
+    throw error;
+  }
 }

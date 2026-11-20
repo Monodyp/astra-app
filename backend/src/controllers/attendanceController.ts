@@ -5,15 +5,20 @@ import {
   checkInMember,
   getEventAttendance,
 } from '../services/attendanceService.js';
+import { InvalidQrTokenError } from '../services/qrService.js';
 
 // ---------------------------------------------------------------------------
 // Input schemas
 // ---------------------------------------------------------------------------
 
 const checkInSchema = z.object({
-  srCode: z.string().min(1, 'srCode is required'),
+  srCode: z.string().min(1, 'srCode is required').optional(),
+  qrToken: z.string().min(1, 'qrToken is required').optional(),
   eventId: z.string().min(1, 'eventId is required'),
   points: z.number().int().positive().optional(),
+}).refine((value) => value.srCode || value.qrToken, {
+  message: 'srCode or qrToken is required',
+  path: ['srCode'],
 });
 
 const getAttendanceSchema = z.object({
@@ -45,9 +50,21 @@ export async function checkInHandler(
     return;
   }
 
-  const { srCode: rawCode, eventId, points } = parsed.data;
+  const { srCode: rawCode, qrToken, eventId, points } = parsed.data;
 
-  const normalizedCode = await resolveCheckInIdentity({ srCode: rawCode });
+  let normalizedCode: string;
+  try {
+    normalizedCode = await resolveCheckInIdentity({
+      srCode: rawCode,
+      qrToken,
+    });
+  } catch (error) {
+    if (error instanceof InvalidQrTokenError) {
+      res.status(400).json({ error: error.message });
+      return;
+    }
+    throw error;
+  }
   const result = await checkInMember(normalizedCode, eventId, points);
 
   res.status(200).json(result);
