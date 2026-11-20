@@ -35,7 +35,11 @@ import {
 
 export const router = Router();
 
-// Health check (Real implementation)
+// Root & health check
+router.get('/', (_req, res) => {
+  res.json({ status: 'ok', service: 'astra-backend' });
+});
+
 router.get('/health', (_req, res) => {
   res.json({ status: 'ok' });
 });

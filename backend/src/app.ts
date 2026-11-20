@@ -7,9 +7,19 @@ import { createMemberVerificationRouter } from './routes/memberVerification.js';
 
 export const app = express();
 
+function parseAllowedOrigins(raw: string): string | string[] {
+  const origins = raw
+    .split(',')
+    .map((origin) => origin.trim().replace(/\/+$/, ''))
+    .filter(Boolean);
+  return origins.length === 1 ? origins[0] : origins;
+}
+
+app.set('trust proxy', 1);
+
 app.use(
   cors({
-    origin: env.FRONTEND_URL,
+    origin: parseAllowedOrigins(env.FRONTEND_URL),
     credentials: true,
   })
 );
@@ -21,7 +31,5 @@ app.use('/', createMemberVerificationRouter());
 
 // Error handling middleware
 app.use(errorHandler);
-
-app.get("/health", (_req, res) => res.json({ ok: true }));
 
 export default app;
