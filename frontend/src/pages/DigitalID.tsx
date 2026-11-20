@@ -1,104 +1,187 @@
-import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { CheckCircle2, XCircle } from 'lucide-react';
-import wordmark from '../assets/astra-home/wordmark.png';
-import photoPlaceholder from '../assets/astra-member/member-photo-placeholder.svg';
-import { ErrorState, LoadingState, SampleQr, SimulatedNote, btnSecondary } from '@/components/member/ui';
-import { useMemberData, useMemberQuery } from '@/features/member/MemberDataContext';
+import React from 'react';
+import { MemberIdCard } from '../components/id/MemberIdCard';
+import { TiltCard } from '@/components/id/tilt-wrapper';
+import { FloatingCardWrapper } from '@/components/id/FloatingCardWrapper';
+import { technicalCorners } from '@/components/home/ui-util';
+import { CheckCircle2, AlertCircle } from 'lucide-react';
+import { ErrorState, LoadingState } from '../components/portal/StatusViews.js';
+import { portalData, type DigitalId } from '../data/index.js';
+import { errorMessage } from '../lib/format.js';
+import { useResource } from '../lib/useResource.js';
 
-const REFRESH_SECONDS = 45;
+const loadDigitalId = () => portalData.getDigitalId();
 
-/** Fixture-only countdown. A production QR must be issued and refreshed by the backend. */
-function useFixtureCountdown(active: boolean) {
-  const [left, setLeft] = useState(REFRESH_SECONDS);
-  const [cycle, setCycle] = useState(1);
-  useEffect(() => {
-    if (!active) return;
-    const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-    const t = setInterval(() => {
-      setLeft((l) => {
-        if (l <= 1) {
-          setCycle((c) => c + 1);
-          return REFRESH_SECONDS;
-        }
-        return l - 1;
-      });
-    }, reduce ? 5000 : 1000);
-    return () => clearInterval(t);
-  }, [active]);
-  return { left, cycle };
-}
+const IdCard: React.FC<{ id: DigitalId }> = ({ id }) => {
+  const isVerified = id.membershipStatus === 'verified';
+  return (
+    <MemberIdCard
+      name={id.fullName}
+      memberNumber={id.studentId}
+      program={id.program}
+      yearRole={`${id.yearLevel} | ${id.roleLabel}`}
+      membershipId={id.membershipId}
+      joinMessage={id.statusNote}
+      status={id.membershipStatus}
+      qrValue={isVerified ? id.qrValue : undefined}
+    />
+  );
+};
 
 export const DigitalID: React.FC = () => {
-  const { fixture } = useMemberData();
-  const profile = useMemberQuery((s) => s.getProfile());
-  const valid = !!profile.data?.duesPaid;
-  const { left, cycle } = useFixtureCountdown(fixture && valid);
+  const digitalId = useResource(loadDigitalId);
 
-  if (profile.status === 'error') return <ErrorState error={profile.error} onRetry={profile.reload} />;
-  if (profile.status === 'loading' || !profile.data) return <LoadingState label="Loading your Digital ID" />;
-  const p = profile.data;
+  if (digitalId.status === 'loading') {
+    return <LoadingState label="Loading your digital ID" />;
+  }
+  if (digitalId.status === 'error') {
+    return (
+      <ErrorState
+        message={errorMessage(digitalId.error)}
+        onRetry={digitalId.reload}
+      />
+    );
+  }
+
+  const memberData = digitalId.data;
+  const isVerified = memberData.membershipStatus === 'verified';
 
   return (
-    <article aria-label="ASTRA Developers official member card" className="space-y-4 border border-astra-primary-dark bg-black/30 p-4 sm:p-6">
-      <header className="flex flex-col items-center gap-2 text-center">
-        <img src={wordmark} alt="ASTRA Developers" className="h-auto w-32" />
-        <h2 className="text-sm text-astra-gray">ASTRA Developers · Official Member Card</h2>
-      </header>
-
-      <div className="flex items-center gap-4">
-        <img src={photoPlaceholder} alt="Member photo placeholder" className="h-20 w-16 shrink-0 object-cover" />
-        <div className="min-w-0">
-          <p className="break-words text-lg font-bold">{p.name}</p>
-          <p className="break-words text-sm text-astra-gray">{p.yearLabel}</p>
-          <p className="break-words text-sm text-astra-gray">{p.studentId}</p>
-        </div>
+    <div className="relative font-astra text-astra-white">
+      <div className="pointer-events-none fixed inset-0 z-0">
+        <div className="absolute top-1/4 left-1/3 h-96 w-96 rounded-full bg-cyan-600/10 blur-[120px]" />
+        <div className="absolute bottom-1/3 right-1/4 h-96 w-96 rounded-full bg-indigo-600/10 blur-[140px]" />
       </div>
 
-      <p
-        role="status"
-        className={`flex min-h-12 items-center justify-center gap-2 border-2 px-3 text-center font-bold ${
-          valid ? 'border-emerald-400 text-emerald-200' : 'border-red-400 text-red-200'
-        }`}
-      >
-        {valid ? <CheckCircle2 className="h-5 w-5" aria-hidden="true" /> : <XCircle className="h-5 w-5" aria-hidden="true" />}
-        {valid ? 'VALID / ACTIVE DUES' : 'UNPAID / NOT VALID'}
-      </p>
+      <div className="relative z-10 mx-auto max-w-5xl space-y-10">
+        <div className="border-b border-astra-primary-dark/60 pb-5">
+          <h1 className="mt-1 text-3xl sm:text-4xl font-bold tracking-tight text-astra-white">
+            Digital ID
+          </h1>
+          <p className="mt-1 text-sm sm:text-base text-[#d3e5ff]">
+            Present your member card to an ASTRA officer or partner staff.
+          </p>
+        </div>
 
-      {valid ? (
-        <div className="space-y-3">
-          {fixture ? (
-            <>
-              <SampleQr seed={`fixture-${cycle}`} label="Dynamic security QR code (sample)" />
-              <p className="text-center">Refreshes in {left}s</p>
-              <SimulatedNote>
-                This pattern is a visual sample. A real, signed QR token must be issued and refreshed by the ASTRA backend, which is not connected.
-              </SimulatedNote>
-            </>
-          ) : (
-            <div role="status" className="border border-dashed border-astra-primary-dark p-6 text-center">
-              <p className="font-bold">Security QR unavailable</p>
-              <p className="mt-2 text-sm text-astra-gray">
-                The service that issues your live, signed QR code is not connected yet, so no QR is shown. Do not rely on screenshots for verification.
-              </p>
+        <div className="grid gap-32 lg:grid-rows-[1.1fr_0.9fr] lg:items-center">
+          <div className="flex flex-col items-center justify-center py-6 sm:py-8">
+            <FloatingCardWrapper
+              isPreview={false}
+              className="w-full max-w-md sm:max-w-lg aspect-[600/378]"
+              glowColor={
+                isVerified
+                  ? 'rgba(0, 177, 237, 0.25)'
+                  : 'rgba(100, 116, 139, 0.18)'
+              }
+              zoomedContent={
+                <div className="w-full aspect-[600/378] select-none">
+                  <IdCard id={memberData} />
+                </div>
+              }
+            >
+              <TiltCard
+                className="w-full aspect-[600/378]"
+                rotateX={18}
+                rotateY={10}
+                rotateZ={-16}
+                intensity={8}
+              >
+                <IdCard id={memberData} />
+              </TiltCard>
+            </FloatingCardWrapper>
+          </div>
+
+          <div className="space-y-6">
+            <div className="relative border border-astra-primary-dark/80 bg-black/40 p-6 sm:p-7 shadow-[0_0_20px_rgba(0,140,204,0.08)]">
+              {technicalCorners}
+
+              <div className="flex items-center justify-between border-b border-white/10 pb-4">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wider text-astra-gray">
+                    Verification Clearance
+                  </p>
+                  <h2 className="mt-1 text-lg font-bold text-astra-white">
+                    {memberData.fullName}
+                  </h2>
+                </div>
+                <div className="text-right">
+                  <span
+                    className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold ${
+                      isVerified
+                        ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
+                        : 'bg-slate-700/60 text-slate-300 border border-slate-600'
+                    }`}
+                  >
+                    {isVerified ? (
+                      <CheckCircle2
+                        className="h-3.5 w-3.5 text-cyan-400"
+                        aria-hidden="true"
+                      />
+                    ) : (
+                      <AlertCircle
+                        className="h-3.5 w-3.5 text-amber-400"
+                        aria-hidden="true"
+                      />
+                    )}
+                    {isVerified ? 'Verified Member' : 'Unverified'}
+                  </span>
+                </div>
+              </div>
+
+              <div className="mt-4 grid grid-cols-2 gap-y-4 gap-x-6 text-sm">
+                <div>
+                  <span className="block text-[11px] font-bold uppercase tracking-wide text-astra-gray">
+                    Student SR-Code
+                  </span>
+                  <span className="mt-0.5 block font-mono font-medium text-slate-200">
+                    {memberData.studentId}
+                  </span>
+                </div>
+                <div>
+                  <span className="block text-[11px] font-bold uppercase tracking-wide text-astra-gray">
+                    Membership ID
+                  </span>
+                  <span className="mt-0.5 block font-mono font-medium text-slate-200">
+                    {memberData.membershipId}
+                  </span>
+                </div>
+                <div>
+                  <span className="block text-[11px] font-bold uppercase tracking-wide text-astra-gray">
+                    Academic Program
+                  </span>
+                  <span className="mt-0.5 block text-slate-200">
+                    {memberData.program}
+                  </span>
+                </div>
+                <div>
+                  <span className="block text-[11px] font-bold uppercase tracking-wide text-astra-gray">
+                    Year &amp; Role
+                  </span>
+                  <span className="mt-0.5 block text-slate-200">
+                    {memberData.yearLevel} · {memberData.roleLabel}
+                  </span>
+                </div>
+              </div>
+
+              <div className="mt-5 border-t border-white/10 pt-3">
+                <p className="text-xs text-slate-400">
+                  <span className="font-semibold text-slate-300">
+                    Status Note:
+                  </span>{' '}
+                  {memberData.statusNote}
+                </p>
+                <p className="mt-1 text-xs text-slate-400">
+                  <span className="font-semibold text-slate-300">
+                    Check-in QR:
+                  </span>{' '}
+                  {isVerified
+                    ? 'Ready to scan at ASTRA events'
+                    : 'Inactive for check-in'}
+                </p>
+              </div>
             </div>
-          )}
-          <p className="text-center text-sm text-astra-gray">
-            Present this QR code to event officers or partner staff for verification.
-          </p>
+          </div>
         </div>
-      ) : (
-        <div className="space-y-3 border border-red-400/60 p-4" aria-labelledby="renew-h">
-          <h3 id="renew-h" className="font-bold">Payment Instructions</h3>
-          <p className="text-sm text-astra-gray">
-            Your annual dues are unpaid, so this ID cannot be verified and no verification QR is shown. To renew, contact an ASTRA officer.
-          </p>
-          <p className="text-sm text-astra-gray">
-            Payment details and officer contact information are not available in this app yet. Official instructions will appear here once published by ASTRA.
-          </p>
-          <Link to="/not-valid" className={btnSecondary}>Read renewal guidance</Link>
-        </div>
-      )}
-    </article>
+      </div>
+    </div>
   );
 };

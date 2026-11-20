@@ -4,14 +4,23 @@ import { AuthProvider } from './context/AuthContext.js';
 import { AppShell } from './components/AppShell.js';
 import { ProtectedRoute } from './components/ProtectedRoute.js';
 import { Login } from './pages/Login.js';
+import { ViewportScreen } from './components/ViewportScreen.js';
+import { MobileLogin } from './features/auth/mobile/MobileLogin.js';
+import { MobileCheckIn } from './features/checkin/mobile/MobileCheckIn.js';
+import { MobileDigitalID } from './features/member/mobile/MobileDigitalID.js';
+import { MobileNotValid } from './features/member/mobile/MobileNotValid.js';
+import { MobileOverview } from './features/member/mobile/MobileOverview.js';
+import { MobileGrantPoints } from './features/officer/mobile/MobileGrantPoints.js';
 import { Home } from './pages/Home.js';
+import { Overview } from './pages/Overview.js';
 import { DigitalID } from './pages/DigitalID.js';
-import { NotValid } from './pages/NotValid.js';
 import { Points } from './pages/Points.js';
 import { OfficerGrantPoints } from './pages/OfficerGrantPoints.js';
 import { CheckIn } from './pages/CheckIn.js';
 import { Marketplace } from './pages/Marketplace.js';
 import { VoucherDetails } from './pages/VoucherDetails.js';
+import { Vouchers } from './pages/Vouchers.js';
+import { EventDetail } from './pages/EventDetail.js';
 import { PartnerInstructions } from './pages/PartnerInstructions.js';
 import { AstrascendLayout } from './features/astrascend/components/AstrascendLayout.js';
 import { LandingPage } from './features/astrascend/pages/LandingPage.js';
@@ -21,21 +30,21 @@ import {
   LegacyServiceRedirect,
 } from './features/astrascend/pages/RequestPage.js';
 import { Opportunities } from './pages/Opportunities.js';
-import { MemberOverview } from './pages/MemberOverview.js';
-import { ClaimedVouchers } from './pages/ClaimedVouchers.js';
-import { EventDetail } from './pages/EventDetail.js';
-import { MemberDataProvider } from './features/member/MemberDataContext.js';
 // DevTools is only imported here; the route is registered only in DEV mode.
 // Vite strips the branch in production builds via import.meta.env.DEV dead-code elimination.
 import { DevTools } from './pages/DevTools.js';
 
+const RedirectToDigitalId: React.FC = () => <Navigate to="/id" replace />;
+
 export const App: React.FC = () => {
   return (
     <AuthProvider>
-      <MemberDataProvider>
       <BrowserRouter>
         <Routes>
-          <Route path="/login" element={<Login />} />
+          <Route
+            path="/login"
+            element={<ViewportScreen mobile={MobileLogin} desktop={Login} />}
+          />
           <Route path="/events/:id" element={<EventDetail />} />
           <Route path="/astrascend" element={<AstrascendLayout />}>
             <Route index element={<LandingPage />} />
@@ -52,18 +61,18 @@ export const App: React.FC = () => {
           )}
           <Route element={<AppShell />}>
             <Route
-              path="/member"
+              path="/home"
               element={
                 <ProtectedRoute>
-                  <MemberOverview />
+                  <ViewportScreen mobile={MobileOverview} desktop={Overview} />
                 </ProtectedRoute>
               }
             />
             <Route
-              path="/vouchers"
+              path="/member"
               element={
                 <ProtectedRoute>
-                  <ClaimedVouchers />
+                  <Navigate to="/home" replace />
                 </ProtectedRoute>
               }
             />
@@ -71,11 +80,24 @@ export const App: React.FC = () => {
               path="/id"
               element={
                 <ProtectedRoute>
-                  <DigitalID />
+                  <ViewportScreen
+                    mobile={MobileDigitalID}
+                    desktop={DigitalID}
+                  />
                 </ProtectedRoute>
               }
             />
-            <Route path="/not-valid" element={<NotValid />} />
+            <Route
+              path="/not-valid"
+              element={
+                <ProtectedRoute>
+                  <ViewportScreen
+                    mobile={MobileNotValid}
+                    desktop={RedirectToDigitalId}
+                  />
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="/points"
               element={
@@ -87,16 +109,19 @@ export const App: React.FC = () => {
             <Route
               path="/officer/grant-points"
               element={
-                <ProtectedRoute>
-                  <OfficerGrantPoints />
+                <ProtectedRoute role="officer">
+                  <ViewportScreen
+                    mobile={MobileGrantPoints}
+                    desktop={OfficerGrantPoints}
+                  />
                 </ProtectedRoute>
               }
             />
             <Route
               path="/checkin"
               element={
-                <ProtectedRoute>
-                  <CheckIn />
+                <ProtectedRoute role="officer">
+                  <ViewportScreen mobile={MobileCheckIn} desktop={CheckIn} />
                 </ProtectedRoute>
               }
             />
@@ -105,6 +130,14 @@ export const App: React.FC = () => {
               element={
                 <ProtectedRoute>
                   <Marketplace />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/vouchers"
+              element={
+                <ProtectedRoute>
+                  <Vouchers />
                 </ProtectedRoute>
               }
             />
@@ -133,7 +166,6 @@ export const App: React.FC = () => {
           <Route path="/" element={<Home />} />
         </Routes>
       </BrowserRouter>
-      </MemberDataProvider>
     </AuthProvider>
   );
 };

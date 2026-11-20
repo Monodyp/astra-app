@@ -1,18 +1,25 @@
-# Mobile / responsive work (branch `mobile/claude-wireframes`)
+# Mobile and responsive portal
 
-## Fixture mode (sample data, no backend)
-The member backend routes are stubs and `AuthContext` is a stub, so member screens read through the
-`MemberDataSource` boundary in `src/features/member/`:
+## Demo data
 
-- Fixture mode ON: `VITE_MEMBER_FIXTURES=true npm run dev -- --host 127.0.0.1 --port 5175 --strictPort`
-  (or, in dev only, open any URL once with `?fixtures=1`; `?fixtures=0` turns it off).
-- Fixture mode OFF (default / production builds): every member screen shows an honest
-  "not connected" state. Nothing is faked.
-- In fixture mode an amber bar is shown with "Dues paid" and "Officer role" toggles to preview the
-  unverified ID and officer tools. All writes (claim, check-in, grant) are simulated, labeled and
-  held in memory only. Sample check-in code: `ASTRA-DEMO`.
-- QR images are decorative sample patterns, captioned "not scannable".
+The portal screens read through the `PortalDataSource` contract in `src/data/`.
+`src/data/index.ts` selects the demo adapter, which keeps fictional records in
+the session storage of the browser tab. Nothing is sent to a server.
 
-To go live, implement `MemberDataSource` (src/features/member/types.ts) against the real API and pass it
-to `MemberDataProvider`; add real auth to `ProtectedRoute`. Server-side authorization is still required:
-the officer role check in the UI is only a convenience.
+- Sign in with the demo accounts on the login screen: Verified Doe, Unverified
+  Doe, or Officer Doe.
+- Claims, check-ins, and grants change the demo records of the tab. Sign out
+  keeps the records. A new tab starts from the seed records.
+- Demo voucher and member QR codes work only with the demo check-in screen.
+
+To go live, add a `PortalDataSource` for the API and select it in
+`src/data/index.ts`. Pages, routes, and components need no changes. The backend
+must still check every role and membership rule. The role checks in the portal
+only hide screens.
+
+## Layout
+
+- Below the `lg` breakpoint the portal shows a fixed bottom navigation. It uses
+  the same role destinations as the desktop navigation and adds a More menu
+  with Points and the other pages.
+- The portal footer stays visible on phones above the bottom navigation.

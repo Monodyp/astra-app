@@ -1,149 +1,330 @@
-import React, { useId, useState } from 'react';
-import { Link } from 'react-router-dom';
-import wordmark from '../assets/astra-home/wordmark.png';
-import { btnPrimary, btnSecondary, inputCls } from '@/components/member/ui';
-import { isFixtureMode } from '@/features/member/fixtures';
+import React, { useEffect, useId, useState } from 'react';
+import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
+import { ChevronLeft, ExternalLink, Eye, EyeOff } from 'lucide-react';
+import logoMark from '../assets/astra-portal/logo-mark.png';
+import { technicalCorners } from '../components/home/ui-util.js';
+import { PortalBackdrop } from '../components/portal/PortalBackdrop.js';
+import { landingPathFor } from '../components/portal/access.js';
+import { LoadingState } from '../components/portal/StatusViews.js';
+import { useAuth } from '../context/AuthContext.js';
+import {
+  isDataError,
+  portalData,
+  type SignInInput,
+  type SignInShortcut,
+} from '../data/index.js';
 
-/**
- * Login screen. No authentication service is connected (AuthContext is a stub and the
- * backend /auth/login route is a stub), so submitting validates the form and then says
- * so honestly. It never pretends to sign anyone in.
- */
+type HelpTopic = 'password' | 'renewal';
+
+const HELP_TEXT: Record<HelpTopic, string> = {
+  password:
+    'ASTRA officers reset portal passwords. Ask an officer at the ASTRA booth or on Discord.',
+  renewal:
+    'Pay your annual dues to an ASTRA officer. Your ID turns active after the officer confirms payment.',
+};
+
+const fieldClass =
+  'h-12 w-full border border-astra-primary-dark bg-black/40 px-4 font-astra text-sm text-astra-white placeholder:text-astra-gray/70 focus:border-astra-primary-light focus:outline-none focus-visible:ring-1 focus-visible:ring-astra-primary-light';
+
+const GoogleMark: React.FC = () => (
+  <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true">
+    <path
+      fill="#4285F4"
+      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.27-4.74 3.27-8.1z"
+    />
+    <path
+      fill="#34A853"
+      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A11 11 0 0 0 12 23z"
+    />
+    <path
+      fill="#FBBC05"
+      d="M5.84 14.1A6.6 6.6 0 0 1 5.5 12c0-.73.13-1.44.34-2.1V7.06H2.18A11 11 0 0 0 1 12c0 1.77.43 3.45 1.18 4.94l3.66-2.84z"
+    />
+    <path
+      fill="#EA4335"
+      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15A10.96 10.96 0 0 0 12 1 11 11 0 0 0 2.18 7.06l3.66 2.84C6.71 7.3 9.14 5.38 12 5.38z"
+    />
+  </svg>
+);
+
 export const Login: React.FC = () => {
-  const uid = useId();
+  const { user, loading, signIn } = useAuth();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const next = searchParams.get('next');
+
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
-  const [show, setShow] = useState(false);
-  const [errors, setErrors] = useState<{ identifier?: string; password?: string }>({});
-  const [notice, setNotice] = useState<string | null>(null);
-  const fixture = isFixtureMode();
+  const [showPassword, setShowPassword] = useState(false);
+  const [pending, setPending] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [help, setHelp] = useState<HelpTopic | null>(null);
+  const [shortcuts, setShortcuts] = useState<SignInShortcut[]>([]);
 
-  const onSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const next: typeof errors = {};
-    if (!identifier.trim()) next.identifier = 'Enter your student ID or email address.';
-    if (!password) next.password = 'Enter your password.';
-    setErrors(next);
-    setNotice(null);
-    if (Object.keys(next).length) return;
-    setNotice(
-      'Sign-in is not available yet: the member authentication service is not connected to this site. Nothing was sent and you are not signed in.',
+  const identifierId = useId();
+  const passwordId = useId();
+  const errorId = useId();
+
+  useEffect(() => {
+    let active = true;
+    portalData
+      .listSignInShortcuts()
+      .then((items) => {
+        if (active) setShortcuts(items);
+      })
+      .catch(() => {
+        if (active) setShortcuts([]);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-astra-black">
+        <LoadingState label="Restoring your session" />
+      </div>
     );
-  };
+  }
+  if (user && !pending) {
+    return <Navigate to={landingPathFor(next, user.role)} replace />;
+  }
 
-  const unavailable = (what: string) => () => setNotice(`${what} is not available yet. Please ask an ASTRA officer for help.`);
-  const linkBtn =
-    'inline-flex min-h-11 items-center self-start font-astra text-sm text-astra-white underline underline-offset-4 hover:text-astra-primary-light';
+  async function attempt(key: string, input: SignInInput) {
+    setPending(key);
+    setError(null);
+    try {
+      const signedIn = await signIn(input);
+      navigate(landingPathFor(next, signedIn.role), { replace: true });
+    } catch (caught) {
+      setError(
+        isDataError(caught)
+          ? caught.message
+          : 'Sign-in is unavailable right now. Try again.'
+      );
+      setPending(null);
+    }
+  }
+
+  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    // Validate fields before submitting
+    if (!identifier.trim()) {
+      setError('Enter your student ID or email address.');
+      return;
+    }
+    if (!password) {
+      setError('Enter your password.');
+      return;
+    }
+    setError(null);
+    void attempt('credentials', {
+      method: 'credentials',
+      identifier,
+      password,
+    });
+  }
+
+  const busy = pending !== null;
 
   return (
-    <div className="flex min-h-dvh items-start justify-center bg-astra-black px-4 pb-[max(2rem,env(safe-area-inset-bottom))] pt-[max(2.5rem,env(safe-area-inset-top))] font-astra text-astra-white sm:items-center sm:pt-10">
-      <form
-        onSubmit={onSubmit}
-        noValidate
-        aria-labelledby={`${uid}-title`}
-        className="w-full max-w-md space-y-5 border border-astra-primary-dark bg-black/30 p-5 sm:p-8"
-      >
-        <div className="flex items-center gap-4">
-          <Link to="/" aria-label="ASTRA Developers home" className="inline-flex min-h-11 shrink-0 items-center">
-            <img src={wordmark} alt="ASTRA Developers" className="h-auto w-24" />
-          </Link>
-          <h1 id={`${uid}-title`} className="text-lg font-bold">
-            ASTRA Member Portal Login
-          </h1>
-        </div>
-        <p className="text-sm text-astra-gray">Sign in using your student credentials or registered account.</p>
+    <div className="relative min-h-screen overflow-hidden bg-astra-black font-astra text-astra-white">
+      <PortalBackdrop />
+      <header className="relative z-10 mx-auto flex max-w-[1440px] items-center justify-between px-[112px] py-8">
+        <Link
+          to="/"
+          className="flex items-center gap-4 text-h6 font-bold text-astra-white transition-colors hover:text-astra-primary-light"
+        >
+          <img src={logoMark} alt="" className="h-11 w-11" />
+          <span className="flex items-center gap-1">
+            <ChevronLeft className="h-5 w-5" aria-hidden="true" />
+            Home
+          </span>
+        </Link>
+        <nav aria-label="Account" className="flex items-center gap-8">
+          <span aria-current="page" className="text-base font-medium">
+            Login
+          </span>
+          <a
+            href="/astrascend"
+            className="inline-flex items-center gap-2 rounded-full bg-astra-primary-light px-8 py-3 text-sm font-bold text-astra-white transition-transform hover:scale-105"
+          >
+            ASTRAscend
+            <ExternalLink className="h-4 w-4" aria-hidden="true" />
+          </a>
+        </nav>
+      </header>
 
-        <div>
-          <label htmlFor={`${uid}-id`} className="mb-2 block text-sm">
-            Student ID or Email Address
-          </label>
-          <input
-            id={`${uid}-id`}
-            name="username"
-            type="text"
-            inputMode="email"
-            autoComplete="username"
-            autoCapitalize="none"
-            spellCheck={false}
-            className={inputCls}
-            value={identifier}
-            onChange={(e) => setIdentifier(e.target.value)}
-            aria-invalid={!!errors.identifier}
-            aria-describedby={errors.identifier ? `${uid}-id-err` : undefined}
-          />
-          {errors.identifier && (
-            <p id={`${uid}-id-err`} className="mt-1 text-sm text-red-300">
-              Error: {errors.identifier}
+      <main className="relative z-10 mx-auto flex max-w-[1440px] justify-center px-6 pb-20 pt-4">
+        <section
+          aria-labelledby="login-title"
+          className="relative w-full max-w-[476px] border border-astra-primary-dark bg-[#0b1118]/80 px-8 py-8 shadow-[0_0_32px_rgba(0,140,204,0.12)] backdrop-blur-sm"
+        >
+          {technicalCorners}
+          <div className="flex items-center gap-4">
+            <img src={logoMark} alt="" className="h-12 w-12" />
+            <h1 id="login-title" className="text-h6 font-bold">
+              Your Membership Dashboard
+            </h1>
+          </div>
+          <p className="mt-4 text-sm font-medium">
+            Sign in using your student credentials or registered account
+          </p>
+
+          {error && (
+            <p
+              id={errorId}
+              role="alert"
+              className="mt-6 border border-red-400/40 bg-red-950/30 px-4 py-3 text-sm text-red-200"
+            >
+              {error}
             </p>
           )}
-        </div>
 
-        <div>
-          <div className="mb-2 flex items-center justify-between">
-            <label htmlFor={`${uid}-pw`} className="text-sm">
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => void attempt('google', { method: 'google' })}
+            className="mt-6 flex h-12 w-full items-center justify-center gap-3 rounded-xl border border-astra-primary-dark bg-black/30 text-sm text-astra-white transition-colors hover:border-astra-primary-light disabled:opacity-60"
+          >
+            <GoogleMark />
+            Continue with Google
+          </button>
+
+          <div className="my-5 flex items-center gap-4 text-sm text-astra-gray">
+            <span className="h-px flex-1 bg-astra-white/60" />
+            or
+            <span className="h-px flex-1 bg-astra-white/60" />
+          </div>
+
+          <form onSubmit={handleSubmit} noValidate>
+            <label
+              htmlFor={identifierId}
+              className="block text-sm font-bold text-astra-white"
+            >
+              Student ID or Email Address
+            </label>
+            <input
+              id={identifierId}
+              name="identifier"
+              autoComplete="username"
+              value={identifier}
+              onChange={(event) => setIdentifier(event.target.value)}
+              placeholder="2X-XXXXX or name@astra.example"
+              aria-describedby={error ? errorId : undefined}
+              className={`${fieldClass} mt-3`}
+            />
+
+            <label
+              htmlFor={passwordId}
+              className="mt-5 block text-sm font-bold text-astra-white"
+            >
               Password
             </label>
+            <div className="relative mt-3">
+              <input
+                id={passwordId}
+                name="password"
+                type={showPassword ? 'text' : 'password'}
+                autoComplete="current-password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                placeholder="Password"
+                className={`${fieldClass} pr-12`}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((value) => !value)}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                aria-pressed={showPassword}
+                className="absolute inset-y-0 right-0 flex w-12 items-center justify-center text-astra-primary-light"
+              >
+                {showPassword ? (
+                  <Eye className="h-5 w-5" aria-hidden="true" />
+                ) : (
+                  <EyeOff className="h-5 w-5" aria-hidden="true" />
+                )}
+              </button>
+            </div>
+
+            <div className="mt-6 flex justify-between text-xs font-bold">
+              <button
+                type="button"
+                onClick={() => setHelp(help === 'password' ? null : 'password')}
+                aria-expanded={help === 'password'}
+                className="underline underline-offset-2 hover:text-astra-primary-light"
+              >
+                Forgot password?
+              </button>
+              <button
+                type="button"
+                onClick={() => setHelp(help === 'renewal' ? null : 'renewal')}
+                aria-expanded={help === 'renewal'}
+                className="underline underline-offset-2 hover:text-astra-primary-light"
+              >
+                Need membership renewal?
+              </button>
+            </div>
+            {help && (
+              <p className="mt-3 text-xs leading-5 text-astra-gray">
+                {HELP_TEXT[help]}
+              </p>
+            )}
+
             <button
-              type="button"
-              className="inline-flex min-h-11 min-w-11 items-center justify-end text-sm underline underline-offset-4"
-              onClick={() => setShow((s) => !s)}
-              aria-pressed={show}
-              aria-controls={`${uid}-pw`}
+              type="submit"
+              disabled={busy}
+              className="mt-8 h-12 w-full rounded-xl bg-astra-secondary text-sm font-medium text-astra-white transition-colors hover:bg-[#1a2f73] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-astra-primary-light disabled:opacity-60"
             >
-              {show ? 'Hide' : 'Show'}
-              <span className="sr-only"> password</span>
+              {pending === 'credentials' ? 'Signing in…' : 'Sign In to Portal'}
             </button>
-          </div>
-          <input
-            id={`${uid}-pw`}
-            name="password"
-            type={show ? 'text' : 'password'}
-            autoComplete="current-password"
-            className={inputCls}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            aria-invalid={!!errors.password}
-            aria-describedby={errors.password ? `${uid}-pw-err` : undefined}
-          />
-          {errors.password && (
-            <p id={`${uid}-pw-err`} className="mt-1 text-sm text-red-300">
-              Error: {errors.password}
-            </p>
+          </form>
+
+          {shortcuts.length > 0 && (
+            <div className="mt-8 border-t border-astra-primary-dark pt-6">
+              <h2 className="text-xs font-bold uppercase tracking-widest text-astra-primary-light">
+                Demo accounts
+              </h2>
+              <p className="mt-2 text-xs leading-5 text-astra-gray">
+                Fictional accounts for trying the portal. Choose one, or type
+                its student ID with any password.
+              </p>
+              <ul className="mt-4 space-y-2">
+                {shortcuts.map((shortcut) => (
+                  <li key={shortcut.id}>
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() =>
+                        void attempt(shortcut.id, {
+                          method: 'shortcut',
+                          shortcutId: shortcut.id,
+                        })
+                      }
+                      className="flex w-full items-center justify-between gap-4 border border-astra-primary-dark bg-black/30 px-4 py-3 text-left transition-colors hover:border-astra-primary-light focus-visible:outline focus-visible:outline-2 focus-visible:outline-astra-primary-light disabled:opacity-60"
+                    >
+                      <span>
+                        <span className="block text-sm font-bold">
+                          {shortcut.label}
+                        </span>
+                        <span className="block text-xs text-astra-gray">
+                          {shortcut.description}
+                        </span>
+                      </span>
+                      <span className="text-xs font-bold text-astra-primary-light">
+                        {pending === shortcut.id
+                          ? 'Signing in…'
+                          : shortcut.identifier}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
           )}
-        </div>
-
-        <div className="flex flex-col">
-          <button type="button" className={linkBtn} onClick={unavailable('Password recovery')}>
-            Forgot password?
-          </button>
-          <button type="button" className={linkBtn} onClick={unavailable('Membership renewal')}>
-            Need membership renewal?
-          </button>
-        </div>
-
-        {notice && (
-          <p role="alert" className="border border-amber-400/60 bg-amber-400/10 p-3 text-sm">
-            {notice}
-          </p>
-        )}
-
-        <button type="submit" className={btnPrimary}>
-          Sign In to Portal
-        </button>
-        <button type="button" className={btnSecondary} onClick={unavailable('Google / institutional SSO sign-in')}>
-          Login with Google / Institutional SSO
-        </button>
-
-        {fixture && (
-          <p className="border-t border-white/10 pt-4 text-sm text-astra-gray">
-            Fixture mode is on.{' '}
-            <Link to="/member" className="font-bold text-astra-primary-light underline">
-              Open the sample member screens
-            </Link>{' '}
-            (no sign-in takes place).
-          </p>
-        )}
-      </form>
+        </section>
+      </main>
     </div>
   );
 };

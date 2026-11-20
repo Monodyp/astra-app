@@ -1,147 +1,284 @@
-import React, { useCallback, useEffect, useId, useRef, useState } from 'react';
-import { Camera, CameraOff } from 'lucide-react';
-import { LoadingState, Panel, SimulatedNote, btnPrimary, btnSecondary, inputCls } from '@/components/member/ui';
-import { FIXTURE_CHECKIN_CODE } from '@/features/member/fixtures';
-import { useMemberData, useMemberQuery } from '@/features/member/MemberDataContext';
-import { CheckInError } from '@/features/member/types';
+import React, { useEffect, useId, useState } from 'react';
+import { CircleCheck, ScanLine } from 'lucide-react';
+import { PageHeading } from '../components/portal/PageHeading.js';
+import {
+  EmptyState,
+  ErrorState,
+  LoadingState,
+} from '../components/portal/StatusViews.js';
+import {
+  portalData,
+  type AttendanceRecord,
+  type CheckInInput,
+  type CheckInResult,
+  type ScanSample,
+} from '../data/index.js';
+import { errorMessage, formatPointsDelta, formatTime } from '../lib/format.js';
+import { useResource } from '../lib/useResource.js';
+import { CameraScanner } from '../features/checkin/CameraScanner.js';
+import { SampleQrPanel } from '../features/checkin/SampleQrPanel.js';
 
-type CamState = 'idle' | 'requesting' | 'active' | 'denied' | 'unsupported' | 'error';
+const loadStation = () => portalData.getCheckInStation();
 
-/**
- * Check-in. Interpretation of the wireframe: the camera area is the QR scanner (officers scanning a
- * member's Digital ID QR) and the manual field takes the EVENT code. Those are different tokens
- * (backend: POST /attendance/checkin {srCode,eventId} vs POST /events/:id/checkin), so scanner
- * results are never auto-submitted as event codes. This screen wires the camera permission states and the
- * manual event-code path; QR decoding is not wired (needs a decoder library + backend contract).
- */
+type Outcome =
+  | { kind: 'result'; result: CheckInResult }
+  | { kind: 'error'; message: string };
+
+const RosterRow: React.FC<{ record: AttendanceRecord }> = ({ record }) => (
+  <li className="grid grid-cols-[1.6fr_1fr_1fr_0.8fr_0.6fr] items-center gap-4 border border-astra-white/10 bg-black/50 px-4 py-4 text-sm">
+    <span className="flex items-center gap-3 font-bold text-astra-white">
+      <CircleCheck className="h-5 w-5 text-[#4ade80]" aria-hidden="true" />
+      {record.memberName}
+    </span>
+    <span className="text-xs text-astra-gray">{record.studentId}</span>
+    <span className="text-astra-gray">Checked in</span>
+    <span className="font-bold text-[#4ade80]">
+      {formatPointsDelta(record.pointsAwarded)}
+    </span>
+    <span className="text-right text-xs text-astra-gray">
+      {formatTime(record.checkedInAt)}
+    </span>
+  </li>
+);
+
 export const CheckIn: React.FC = () => {
-  const uid = useId();
-  const { source, fixture } = useMemberData();
-  const scans = useMemberQuery((s) => s.getScans());
-  const [cam, setCam] = useState<CamState>(
-    typeof navigator !== 'undefined' && typeof navigator.mediaDevices?.getUserMedia === 'function' ? 'idle' : 'unsupported',
-  );
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const [code, setCode] = useState('');
-  const [fieldError, setFieldError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [result, setResult] = useState<{ ok: boolean; message: string; simulated?: boolean } | null>(null);
+  const station = useResource(loadStation);
+  const [samples, setSamples] = useState<ScanSample[]>([]);
+  const [shownSampleId, setShownSampleId] = useState<string | null>(null);
+  const [studentId, setStudentId] = useState('');
+  const [pending, setPending] = useState<string | null>(null);
+  const [outcome, setOutcome] = useState<Outcome | null>(null);
+  const manualId = useId();
 
-  const stopCam = useCallback(() => {
-    streamRef.current?.getTracks().forEach((t) => t.stop());
-    streamRef.current = null;
-  }, []);
-  useEffect(() => stopCam, [stopCam]);
-
-  const startCam = async () => {
-    setCam('requesting');
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-      streamRef.current = stream;
-      setCam('active');
-      requestAnimationFrame(() => {
-        if (videoRef.current) videoRef.current.srcObject = stream;
+  useEffect(() => {
+    let active = true;
+    portalData
+      .listScanSamples()
+      .then((items) => {
+        if (active) setSamples(items);
+      })
+      .catch(() => {
+        if (active) setSamples([]);
       });
-    } catch (e) {
-      const name = (e as DOMException).name;
-      setCam(name === 'NotAllowedError' || name === 'SecurityError' ? 'denied' : name === 'NotFoundError' ? 'unsupported' : 'error');
-    }
-  };
+    return () => {
+      active = false;
+    };
+  }, []);
 
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (busy) return; // repeat-submission guard
-    const trimmed = code.trim();
-    setResult(null);
-    if (!trimmed) return setFieldError('Enter the event code shown at the event.');
-    if (!/^[A-Za-z0-9-]{4,32}$/.test(trimmed)) return setFieldError('Event codes use letters, numbers and dashes only (4–32 characters).');
-    setFieldError(null);
-    setBusy(true);
+  if (station.status === 'loading') {
+    return <LoadingState label="Opening the check-in station" />;
+  }
+  if (station.status === 'error') {
+    return (
+      <ErrorState
+        message={errorMessage(station.error)}
+        onRetry={station.reload}
+      />
+    );
+  }
+
+  const { event, roster } = station.data;
+
+  async function submit(key: string, input: CheckInInput) {
+    setPending(key);
+    setOutcome(null);
     try {
-      const r = await source.checkIn(trimmed);
-      setResult({ ok: true, message: r.message, simulated: r.simulated });
-      setCode('');
-    } catch (err) {
-      setResult({ ok: false, message: err instanceof CheckInError || err instanceof Error ? err.message : 'Check-in failed.' });
+      const result = await portalData.checkIn(input);
+      setOutcome({ kind: 'result', result });
+      station.setData({ event, roster: result.roster });
+      if (result.outcome === 'accepted' && input.method === 'manual') {
+        setStudentId('');
+      }
+    } catch (error) {
+      setOutcome({ kind: 'error', message: errorMessage(error) });
     } finally {
-      setBusy(false);
-      scans.reload();
+      setPending(null);
     }
-  };
+  }
 
-  const camMessage: Record<CamState, string> = {
-    idle: 'Camera is off. Start the camera to scan a Member Digital ID QR.',
-    requesting: 'Waiting for camera permission…',
-    active: 'Camera active. QR decoding is not connected yet: use the event code below.',
-    denied: 'Camera permission was denied. Allow camera access in your browser settings, or use the event code below.',
-    unsupported: 'No camera or scanner is available on this device or browser. Use the event code below.',
-    error: 'The camera could not be started. Use the event code below.',
-  };
+  function handleManual(formEvent: React.FormEvent<HTMLFormElement>) {
+    formEvent.preventDefault();
+    void submit('manual', {
+      eventId: event.id,
+      method: 'manual',
+      studentId,
+    });
+  }
+
+  const shownSample =
+    samples.find((sample) => sample.id === shownSampleId) ?? null;
+  const accepted =
+    outcome?.kind === 'result' && outcome.result.outcome === 'accepted';
+  const busy = pending !== null;
 
   return (
-    <div className="space-y-4">
-      <h2 className="sr-only">Event check-in</h2>
-      <section aria-label="QR scanner" className="space-y-3 border border-astra-primary-dark bg-black/30 p-4">
-        <div className="relative grid aspect-[4/3] place-items-center overflow-hidden border border-dashed border-astra-primary-dark">
-          {cam === 'active' ? (
-            <video ref={videoRef} autoPlay playsInline muted className="h-full w-full object-cover" aria-label="Camera preview" />
-          ) : (
-            <div className="flex flex-col items-center gap-2 p-4 text-center">
-              {cam === 'denied' || cam === 'unsupported' || cam === 'error' ? <CameraOff className="h-8 w-8" aria-hidden="true" /> : <Camera className="h-8 w-8" aria-hidden="true" />}
-              <p className="text-sm">Scan Member Digital ID QR</p>
-            </div>
-          )}
-        </div>
-        <p role="status" className="text-sm text-astra-gray">{camMessage[cam]}</p>
-        {(cam === 'idle' || cam === 'denied' || cam === 'error') && (
-          <button type="button" className={btnSecondary} onClick={startCam}>{cam === 'idle' ? 'Start camera' : 'Try camera again'}</button>
-        )}
-        {cam === 'active' && (
-          <button type="button" className={btnSecondary} onClick={() => { stopCam(); setCam('idle'); }}>Stop camera</button>
-        )}
-      </section>
+    <div className="space-y-6">
+      <PageHeading
+        eyebrow="04 / Attendance Station"
+        title="Event Check-In"
+        description="Scan a member's digital ID to verify attendance."
+        aside={
+          <div className="min-w-[340px] border border-astra-primary-dark bg-black/50 px-6 py-4">
+            <p className="text-[10px] font-medium uppercase text-astra-primary-light">
+              Current event / +{event.points} pts
+            </p>
+            <p className="mt-1 text-sm font-bold text-astra-white">
+              {event.name}
+            </p>
+          </div>
+        }
+      />
 
-      <form onSubmit={submit} noValidate className="space-y-3" aria-label="Manual event code check-in">
-        <p>Or enter Event Code manually:</p>
-        <label htmlFor={`${uid}-code`} className="block text-sm">Event Code Attendance</label>
-        <input
-          id={`${uid}-code`}
-          className={inputCls}
-          value={code}
-          onChange={(e) => setCode(e.target.value)}
-          autoComplete="off"
-          autoCapitalize="characters"
-          spellCheck={false}
-          enterKeyHint="go"
-          aria-invalid={!!fieldError}
-          aria-describedby={fieldError ? `${uid}-err` : undefined}
-        />
-        {fieldError && <p id={`${uid}-err`} className="text-sm text-red-300">Error: {fieldError}</p>}
-        <button type="submit" className={btnPrimary} disabled={busy} aria-busy={busy}>
-          {busy ? 'Verifying…' : 'Verify & Check In'}
-        </button>
-        {fixture && <p className="text-xs text-astra-gray">Fixture mode: the sample event code is <code>{FIXTURE_CHECKIN_CODE}</code>. Try it twice to see the repeat check-in message.</p>}
-        {result && (
-          <p role={result.ok ? 'status' : 'alert'} className={`border-2 p-3 text-sm ${result.ok ? 'border-emerald-400' : 'border-red-400'}`}>
-            {result.ok ? '✔ ' : '✖ '}{result.message}
-          </p>
-        )}
-        {result?.simulated && <SimulatedNote>No attendance was recorded and no real points were awarded.</SimulatedNote>}
+      <CameraScanner
+        paused={busy}
+        onDecode={(credential) =>
+          void submit('camera', {
+            eventId: event.id,
+            method: 'scan',
+            credential,
+          })
+        }
+      />
+
+      {samples.length > 0 && (
+        <section aria-labelledby="samples-title">
+          <div className="flex items-end justify-between">
+            <h2 id="samples-title" className="text-sm font-bold">
+              Demo IDs
+            </h2>
+            <p className="text-[10px] font-medium uppercase text-astra-gray">
+              Show a sample QR, then simulate the scan
+            </p>
+          </div>
+          <ul
+            aria-label="Sample IDs to scan"
+            className="mt-3 grid grid-cols-4 gap-3"
+          >
+            {samples.map((sample) => (
+              <li key={sample.id}>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setShownSampleId(
+                      shownSampleId === sample.id ? null : sample.id
+                    )
+                  }
+                  aria-pressed={shownSampleId === sample.id}
+                  aria-label={`Show QR for ${sample.label}, ${sample.hint}`}
+                  className={`flex w-full items-center gap-3 border bg-black/60 px-4 py-3 text-left transition-colors hover:border-astra-primary-light focus-visible:outline focus-visible:outline-2 focus-visible:outline-astra-primary-light ${
+                    shownSampleId === sample.id
+                      ? 'border-astra-primary-light'
+                      : 'border-astra-primary-dark'
+                  }`}
+                >
+                  <ScanLine
+                    className="h-5 w-5 shrink-0 text-astra-primary-light"
+                    aria-hidden="true"
+                  />
+                  <span>
+                    <span className="block text-sm font-bold">
+                      {sample.label}
+                    </span>
+                    <span className="block text-[10px] text-astra-gray">
+                      {sample.hint}
+                    </span>
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+          {shownSample && (
+            <SampleQrPanel
+              sample={shownSample}
+              busy={busy}
+              scanning={pending === shownSample.id}
+              onSimulate={() =>
+                void submit(shownSample.id, {
+                  eventId: event.id,
+                  method: 'scan',
+                  credential: shownSample.credential,
+                })
+              }
+              onClose={() => setShownSampleId(null)}
+            />
+          )}
+        </section>
+      )}
+
+      <form onSubmit={handleManual} noValidate>
+        <label htmlFor={manualId} className="block text-base font-bold">
+          Or enter Student ID manually
+        </label>
+        <div className="mt-4 flex gap-6">
+          <input
+            id={manualId}
+            value={studentId}
+            onChange={(changeEvent) => setStudentId(changeEvent.target.value)}
+            placeholder="2X-XXXXX"
+            autoComplete="off"
+            className="h-11 flex-1 border border-astra-white/15 bg-black/50 px-4 text-sm text-astra-white placeholder:text-astra-gray/70 focus:border-astra-primary-light focus:outline-none"
+          />
+          <button
+            type="submit"
+            disabled={busy || studentId.trim() === ''}
+            className="rounded-full bg-astra-primary-light px-6 text-base font-bold text-astra-white transition-colors hover:bg-[#19c0f7] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-astra-white disabled:cursor-not-allowed disabled:bg-astra-disabled disabled:text-astra-gray"
+          >
+            {pending === 'manual' ? 'Verifying…' : 'Verify & Check In'}
+          </button>
+        </div>
+        <p className="mt-2 text-[10px] text-astra-gray">
+          Student ID attendance
+        </p>
       </form>
 
-      <section aria-labelledby={`${uid}-recent`} className="space-y-2">
-        <h3 id={`${uid}-recent`}>Recent Scans</h3>
-        {scans.status === 'loading' && <LoadingState label="Loading recent scans" />}
-        {scans.status === 'ready' && scans.data?.length === 0 && <Panel><p className="text-sm text-astra-gray">No scans yet this session.</p></Panel>}
-        <ul className="space-y-2">
-          {scans.data?.map((s) => (
-            <li key={s.id} className="flex flex-wrap justify-between gap-2 border border-astra-primary-dark p-3 text-sm">
-              <span className="break-all">{s.label}</span>
-              <span>{s.outcome === 'Checked in' ? '✔' : '✖'} {s.outcome} · {new Date(s.at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</span>
-            </li>
-          ))}
-        </ul>
+      {outcome && (
+        <div
+          role={accepted ? 'status' : 'alert'}
+          className={`border px-6 py-4 text-sm ${
+            accepted
+              ? 'border-[#4ade80]/40 bg-[#123524]/60'
+              : 'border-amber-400/40 bg-amber-950/30'
+          }`}
+        >
+          <p className="font-bold">
+            {accepted
+              ? 'Check-in accepted'
+              : outcome.kind === 'error'
+                ? 'Check-in failed'
+                : 'Check-in rejected'}
+          </p>
+          <p className="mt-1">
+            {outcome.kind === 'error'
+              ? outcome.message
+              : outcome.result.message}
+          </p>
+        </div>
+      )}
+
+      <section aria-labelledby="roster-title">
+        <div className="flex items-end justify-between">
+          <h2 id="roster-title" className="text-lg font-bold">
+            Recent Scans
+          </h2>
+          <p className="text-[10px] font-medium uppercase text-astra-gray">
+            {roster.length} verified{' '}
+            {roster.length === 1 ? 'attendee' : 'attendees'}
+          </p>
+        </div>
+        {roster.length === 0 ? (
+          <div className="mt-4">
+            <EmptyState
+              title="No check-ins yet"
+              message="Accepted scans for this event appear here."
+            />
+          </div>
+        ) : (
+          <ul className="mt-4 space-y-2" aria-label="Checked-in members">
+            {roster.map((record) => (
+              <RosterRow key={record.id} record={record} />
+            ))}
+          </ul>
+        )}
       </section>
     </div>
   );

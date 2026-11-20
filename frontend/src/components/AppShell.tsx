@@ -1,41 +1,35 @@
-import React from 'react';
-import { Link, Outlet } from 'react-router-dom';
-import { BottomNav, type MoreLink } from './BottomNav.js';
+import React, { useState } from 'react';
+import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { ArrowUpRight } from 'lucide-react';
 import wordmark from '../assets/astra-home/wordmark.png';
-import { useMemberData, useMemberQuery } from '@/features/member/MemberDataContext';
+import { useAuth } from '../context/AuthContext.js';
+import { PortalBackdrop } from './portal/PortalBackdrop.js';
+import { destinationsFor } from './portal/navigation.js';
+import { BottomNav, type MoreLink } from './BottomNav.js';
 
-const FixtureBar: React.FC = () => {
-  const { duesPaid, role, setDuesPaid, setRole } = useMemberData();
-  const chip =
-    'inline-flex min-h-11 items-center gap-2 border border-amber-400/60 px-2 font-astra text-xs text-astra-white';
-  return (
-    <div role="region" aria-label="Fixture mode controls" className="border-b border-amber-400/60 bg-amber-400/10 px-4 py-2">
-      <p className="font-astra text-xs font-bold uppercase tracking-wide text-amber-300">
-        Fixture mode · sample data · nothing is saved or sent
-      </p>
-      <div className="mt-1 flex flex-wrap gap-2">
-        <label className={chip}>
-          <input type="checkbox" checked={duesPaid} onChange={(e) => setDuesPaid(e.target.checked)} className="h-5 w-5" />
-          Dues paid
-        </label>
-        <label className={chip}>
-          <input type="checkbox" checked={role === 'officer'} onChange={(e) => setRole(e.target.checked ? 'officer' : 'member')} className="h-5 w-5" />
-          Officer role
-        </label>
-      </div>
-    </div>
-  );
-};
+const frame = 'mx-auto w-full max-w-[1440px] px-4 sm:px-8 lg:px-[112px]';
 
-/** Shared member shell: logo, welcome row + role badge, scrolling content, six-item bottom navigation. */
 export const AppShell: React.FC = () => {
-  const { fixture } = useMemberData();
-  const profile = useMemberQuery((s) => s.getProfile());
-  const isOfficer = profile.data?.role === 'officer';
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+  const [signingOut, setSigningOut] = useState(false);
+
+  const isOfficer = user?.role === 'officer';
+  const verified = user?.membershipStatus === 'verified';
+  const destinations = user ? destinationsFor(user.role) : [];
+
+  async function handleSignOut() {
+    setSigningOut(true);
+    try {
+      await signOut();
+      navigate('/login', { replace: true });
+    } finally {
+      setSigningOut(false);
+    }
+  }
 
   const moreLinks: MoreLink[] = [
-    { to: '/vouchers', label: 'Claimed vouchers' },
-    ...(isOfficer ? [{ to: '/officer/grant-points', label: 'Grant points (officer)' }] : []),
+    { to: '/points', label: 'Points' },
     { to: '/opportunities', label: 'Opportunities' },
     { to: '/partner-instructions', label: 'Partner instructions' },
     { to: '/astrascend', label: 'ASTRAscend services' },
@@ -43,32 +37,141 @@ export const AppShell: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-dvh bg-astra-black font-astra text-astra-white">
-      {fixture && <FixtureBar />}
-      <header className="border-b border-astra-primary-dark">
-        <div className="mx-auto flex max-w-5xl flex-col gap-3 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] lg:flex-row lg:items-center lg:justify-between lg:gap-8">
-          <Link to="/member" aria-label="ASTRA Developers member home" className="flex min-h-11 shrink-0 items-center justify-center self-center lg:self-auto">
-            <img src={wordmark} alt="ASTRA Developers" className="h-auto w-36" />
-          </Link>
-          <div className="flex items-center justify-between gap-3 lg:order-3">
-            <p className="min-w-0 break-words font-astra text-base text-astra-white lg:whitespace-nowrap">
-              <span className="lg:hidden xl:inline">Welcome back, </span>{profile.data ? profile.data.name : 'member'}
-            </p>
-            <span className="shrink-0 border border-astra-primary-light px-3 py-2 font-astra text-sm font-bold uppercase">
-              {isOfficer ? 'Officer' : 'Member'}
-            </span>
+    <div className="relative flex min-h-screen flex-col bg-astra-black font-astra text-astra-white">
+      <PortalBackdrop />
+      <a
+        href="#portal-main"
+        className="fixed left-4 top-3 z-50 -translate-y-[200%] bg-astra-primary-light px-4 py-2 text-sm font-bold text-astra-white focus:translate-y-0"
+      >
+        Skip to content
+      </a>
+
+      <header className="relative z-10 border-b border-astra-primary-dark/60 bg-astra-black/40">
+        <div
+          className={`${frame} flex items-center justify-between py-4 sm:py-6`}
+        >
+          <div className="flex items-center gap-4 sm:gap-7">
+            <Link
+              to={user ? '/home' : '/'}
+              aria-label="ASTRA Developers portal"
+            >
+              <img
+                src={wordmark}
+                alt="ASTRA Developers"
+                className="w-36 sm:w-[220px]"
+              />
+            </Link>
+            {user && (
+              <div className="flex items-center gap-3 sm:gap-4">
+                <div>
+                  <p className="text-sm sm:text-base text-astra-white">
+                    Welcome back, {user.displayName}
+                  </p>
+                  <p className="text-[10px] font-medium uppercase tracking-wide text-astra-gray">
+                    ASTRA Developers / {isOfficer ? 'Officer' : 'Member'} Portal
+                  </p>
+                </div>
+                <span
+                  className={`rounded-full px-3 sm:px-5 py-1 sm:py-1.5 text-[10px] font-bold uppercase tracking-wide ${
+                    verified
+                      ? 'bg-[#0f2a3a] text-astra-primary-light'
+                      : 'bg-astra-white/15 text-astra-white'
+                  }`}
+                >
+                  {isOfficer ? 'Officer' : verified ? 'Member' : 'Unverified'}
+                </span>
+              </div>
+            )}
           </div>
-          <div className="hidden lg:order-2 lg:block">
-            <BottomNav moreLinks={moreLinks} />
+
+          <div className="flex items-center gap-3 sm:gap-6">
+            <Link
+              to="/astrascend"
+              className="hidden items-center gap-1.5 text-xs text-astra-gray transition-colors hover:text-astra-white md:inline-flex lg:hidden"
+            >
+              <span>ASTRAscend services</span>
+              <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
+            </Link>
+
+            {user && (
+              <button
+                type="button"
+                onClick={() => void handleSignOut()}
+                disabled={signingOut}
+                className="text-sm sm:text-base text-astra-gray transition-colors hover:text-astra-white disabled:opacity-60"
+              >
+                {signingOut ? 'Signing out…' : 'Logout'}
+              </button>
+            )}
+
+            <Link
+              to="/astrascend"
+              className="hidden items-center gap-1 rounded-full bg-astra-primary-light px-8 py-3 text-lg font-bold text-astra-white transition-transform hover:scale-105 lg:inline-flex"
+            >
+              ASTRAscend
+            </Link>
           </div>
         </div>
       </header>
-      <main className="mx-auto w-full max-w-2xl px-4 pb-[calc(5.5rem+env(safe-area-inset-bottom))] pt-6 lg:max-w-5xl lg:pb-12">
+
+      {destinations.length > 0 && (
+        <nav
+          aria-label="Portal"
+          className="relative z-10 border-b border-astra-primary-dark/60 bg-astra-black/20 hidden lg:block"
+        >
+          <ul className={`${frame} flex gap-2 overflow-x-auto`}>
+            {destinations.map((item) => (
+              <li key={item.path}>
+                <NavLink
+                  to={item.path}
+                  className={({ isActive }) =>
+                    `block border-b-2 px-2 py-5 text-sm font-bold transition-colors mx-2 whitespace-nowrap ${
+                      isActive
+                        ? 'border-astra-primary-light text-astra-primary-light'
+                        : 'border-transparent text-astra-gray hover:text-astra-white'
+                    }`
+                  }
+                >
+                  {item.label}
+                </NavLink>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      )}
+
+      <main
+        id="portal-main"
+        tabIndex={-1}
+        className={`${frame} relative z-20 flex-1 py-8 focus:outline-none`}
+      >
         <Outlet />
       </main>
-      <div className="lg:hidden">
-        <BottomNav moreLinks={moreLinks} />
-      </div>
+
+      {destinations.length > 0 && (
+        <div className="lg:hidden">
+          <BottomNav destinations={destinations} moreLinks={moreLinks} />
+        </div>
+      )}
+
+      <footer
+        className={`relative z-10 border-t border-astra-primary-dark/60 bg-astra-black/80 ${
+          destinations.length > 0
+            ? 'pb-[calc(4rem+env(safe-area-inset-bottom))] lg:pb-0'
+            : ''
+        }`}
+      >
+        <div
+          className={`${frame} flex flex-col gap-2 py-6 text-[10px] font-medium uppercase tracking-wide text-astra-gray sm:flex-row sm:items-center sm:justify-between lg:py-9`}
+        >
+          <span>ASTRA Developers / AY 2026–2027</span>
+          <span>
+            {isOfficer
+              ? 'Officer console · Secure session'
+              : 'Member console · Connected'}
+          </span>
+        </div>
+      </footer>
     </div>
   );
 };
