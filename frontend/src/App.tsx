@@ -4,6 +4,11 @@ import { AuthProvider } from './context/AuthContext.js';
 import { AppShell } from './components/AppShell.js';
 import { ProtectedRoute } from './components/ProtectedRoute.js';
 import { Login } from './pages/Login.js';
+import { ViewportScreen } from './components/ViewportScreen.js';
+import { MobileLogin } from './features/auth/mobile/MobileLogin.js';
+import { MobileDigitalID } from './features/member/mobile/MobileDigitalID.js';
+import { MobileNotValid } from './features/member/mobile/MobileNotValid.js';
+import { MobileOverview } from './features/member/mobile/MobileOverview.js';
 import { Home } from './pages/Home.js';
 import { Overview } from './pages/Overview.js';
 import { DigitalID } from './pages/DigitalID.js';
@@ -27,12 +32,17 @@ import { Opportunities } from './pages/Opportunities.js';
 // Vite strips the branch in production builds via import.meta.env.DEV dead-code elimination.
 import { DevTools } from './pages/DevTools.js';
 
+const RedirectToDigitalId: React.FC = () => <Navigate to="/id" replace />;
+
 export const App: React.FC = () => {
   return (
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          <Route path="/login" element={<Login />} />
+          <Route
+            path="/login"
+            element={<ViewportScreen mobile={MobileLogin} desktop={Login} />}
+          />
           <Route path="/events/:id" element={<EventDetail />} />
           <Route path="/astrascend" element={<AstrascendLayout />}>
             <Route index element={<LandingPage />} />
@@ -52,7 +62,7 @@ export const App: React.FC = () => {
               path="/home"
               element={
                 <ProtectedRoute>
-                  <Overview />
+                  <ViewportScreen mobile={MobileOverview} desktop={Overview} />
                 </ProtectedRoute>
               }
             />
@@ -68,7 +78,10 @@ export const App: React.FC = () => {
               path="/id"
               element={
                 <ProtectedRoute>
-                  <DigitalID />
+                  <ViewportScreen
+                    mobile={MobileDigitalID}
+                    desktop={DigitalID}
+                  />
                 </ProtectedRoute>
               }
             />
@@ -76,7 +89,10 @@ export const App: React.FC = () => {
               path="/not-valid"
               element={
                 <ProtectedRoute>
-                  <Navigate to="/id" replace />
+                  <ViewportScreen
+                    mobile={MobileNotValid}
+                    desktop={RedirectToDigitalId}
+                  />
                 </ProtectedRoute>
               }
             />

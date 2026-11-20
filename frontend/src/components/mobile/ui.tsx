@@ -1,12 +1,21 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { errorMessage } from '../../../lib/format.js';
+import { errorMessage } from '../../lib/format.js';
 
 export const panel = 'border border-astra-primary-dark bg-black/30 p-4 sm:p-6';
 export const btnBase =
   'inline-flex min-h-12 w-full items-center justify-center gap-2 px-4 py-2 font-astra text-base font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-astra-primary-light disabled:cursor-not-allowed disabled:opacity-50';
 export const btnPrimary = `${btnBase} border-2 border-astra-primary-light bg-astra-primary-light/10 text-astra-white hover:bg-astra-primary-light/25`;
 export const btnSecondary = `${btnBase} border border-astra-primary-dark text-astra-white hover:bg-astra-primary-dark/40`;
+
+export const inputCls =
+  'min-h-12 w-full border border-astra-primary-dark bg-astra-black px-3 py-2 font-astra text-base text-astra-white placeholder:text-astra-gray focus-visible:outline focus-visible:outline-2 focus-visible:outline-astra-primary-light';
+
+export const PageTitle: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => (
+  <h2 className="font-astra text-2xl font-bold text-astra-white">{children}</h2>
+);
 
 export const Panel: React.FC<{
   children: React.ReactNode;

@@ -1,7 +1,12 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
-import { ErrorState, LoadingState, btnSecondary, formatDate } from './ui.js';
+import {
+  ErrorState,
+  LoadingState,
+  btnSecondary,
+  formatDate,
+} from '../../../components/mobile/ui.js';
 import { isDataError, portalData, type Voucher } from '../../../data/index.js';
 import { scannableVoucherQr } from '../../../lib/vouchers.js';
 import { VOUCHER_STATUS, voucherTitle } from './voucherText.js';

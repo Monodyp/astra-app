@@ -1,5 +1,10 @@
 import React, { useState } from 'react';
-import { ErrorState, LoadingState, Panel, formatDate } from './ui.js';
+import {
+  ErrorState,
+  LoadingState,
+  Panel,
+  formatDate,
+} from '../../../components/mobile/ui.js';
 import { portalData, type PointsEntryType } from '../../../data/index.js';
 import { useResource } from '../../../lib/useResource.js';
 

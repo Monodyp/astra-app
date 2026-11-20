@@ -1,5 +1,5 @@
 import React from 'react';
-import { ViewportScreen } from '../features/rewards/ViewportScreen.js';
+import { ViewportScreen } from '../components/ViewportScreen.js';
 import { DesktopPoints } from '../features/rewards/desktop/DesktopPoints.js';
 import { MobilePoints } from '../features/rewards/mobile/MobilePoints.js';
 

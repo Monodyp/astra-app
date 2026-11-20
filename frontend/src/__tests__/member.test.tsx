@@ -89,6 +89,7 @@ async function openClaim(name: string) {
 
 beforeEach(() => {
   window.sessionStorage.clear();
+  useViewport(false);
 });
 
 afterEach(() => {
@@ -419,7 +420,7 @@ describe('mobile voucher wallet and receipts', () => {
 });
 
 describe('mobile points', () => {
-  it('opens the complete ledger from the overview points card', async () => {
+  it('shows the complete ledger opened from the More menu', async () => {
     await portalData.signIn({ method: 'shortcut', shortcutId: 'officer' });
     for (const referenceId of ['Booth', 'Stage']) {
       await portalData.grantPoints({
@@ -433,11 +434,17 @@ describe('mobile points', () => {
     await portalData.signOut();
 
     await signInAs(/Verified member/, '/home');
-    const activity = await screen.findByRole('list', {
-      name: 'Recent activity',
-    });
-    expect(within(activity).getAllByRole('listitem')).toHaveLength(5);
-    fireEvent.click(screen.getByRole('link', { name: /Total Points/ }));
+    expect(await screen.findByText('Total Points: 470 PTS')).toBeDefined();
+    fireEvent.click(
+      within(
+        screen.getByRole('navigation', { name: 'Member navigation' })
+      ).getByRole('button', { name: 'More' })
+    );
+    fireEvent.click(
+      within(screen.getByRole('dialog', { name: 'More' })).getByRole('link', {
+        name: 'Points',
+      })
+    );
     await waitFor(() => expect(window.location.pathname).toBe('/points'));
 
     expect(
@@ -587,6 +594,124 @@ describe('desktop rewards screens', () => {
     expect(window.location.pathname).toBe('/marketplace');
     expect(screen.queryByRole('dialog')).toBeNull();
     expect((await portalData.getPoints()).balance).toBe(400);
+  });
+});
+
+describe('mobile sign-in, overview, and digital ID', () => {
+  it('signs in from the mobile login and returns to the requested page', async () => {
+    window.history.pushState(
+      {},
+      '',
+      `/login?next=${encodeURIComponent('/id')}`
+    );
+    render(<App />);
+    expect(
+      await screen.findByRole('heading', { name: 'ASTRA Member Portal Login' })
+    ).toBeDefined();
+    fireEvent.click(screen.getByRole('button', { name: 'Sign In to Portal' }));
+    expect(
+      screen.getByText('Error: Enter your student ID or email address.')
+    ).toBeDefined();
+    expect(screen.getByText('Error: Enter your password.')).toBeDefined();
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Login with Google / Institutional SSO',
+      })
+    );
+    expect((await screen.findByRole('alert')).textContent).toContain(
+      'Google sign-in is not available'
+    );
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: /Verified member/ })
+    );
+    await waitFor(() => expect(window.location.pathname).toBe('/id'));
+  });
+
+  it('signs in with typed credentials on the mobile login', async () => {
+    window.history.pushState({}, '', '/login');
+    render(<App />);
+    fireEvent.change(
+      await screen.findByLabelText('Student ID or Email Address'),
+      { target: { value: '24-90001' } }
+    );
+    fireEvent.change(screen.getByLabelText('Password'), {
+      target: { value: 'any-password' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Sign In to Portal' }));
+    await waitFor(() => expect(window.location.pathname).toBe('/home'));
+    expect(await screen.findByText('Total Points: 450 PTS')).toBeDefined();
+  });
+
+  it('shows the member overview from the portal data', async () => {
+    await signInAs(/Verified member/, '/home');
+    expect(await screen.findByText('✔ Active Member')).toBeDefined();
+    expect(screen.getByText('Annual Dues Paid')).toBeDefined();
+    expect(screen.getByText('Student ID: 24-90001')).toBeDefined();
+    expect(screen.getByText('Events Attended: 2')).toBeDefined();
+    expect(screen.getByText('Last: Git Essentials')).toBeDefined();
+    expect(screen.getByText('Active Vouchers: 1')).toBeDefined();
+    expect(screen.getByText('15% Off at the Campus Bookstore')).toBeDefined();
+    expect(
+      screen
+        .getByRole('link', { name: 'Check In to Event' })
+        .getAttribute('href')
+    ).toBe('/id');
+  });
+
+  it('sends officers from the overview to event check-in', async () => {
+    await signInAs(/^Officer/, '/home');
+    expect(
+      (
+        await screen.findByRole('link', { name: 'Check In to Event' })
+      ).getAttribute('href')
+    ).toBe('/checkin');
+  });
+
+  it('shows an inactive membership on the overview', async () => {
+    await signInAs(/Unverified member/, '/home');
+    expect(await screen.findByText('✖ Membership not active')).toBeDefined();
+    expect(screen.getByText('Annual Dues Unpaid')).toBeDefined();
+  });
+
+  it('shows the verified card with the member QR', async () => {
+    await signInAs(/Verified member/, '/id');
+    expect(await screen.findByText('VALID / ACTIVE DUES')).toBeDefined();
+    expect(screen.getByText('Verified Doe')).toBeDefined();
+    expect(
+      screen.getAllByRole('img', { name: 'Member check-in QR' })
+    ).toHaveLength(1);
+    expect(screen.queryByText(/Refreshes in/)).toBeNull();
+    expect(screen.queryByText(/sample/i)).toBeNull();
+  });
+
+  it('shows an unverified card without a QR and opens the renewal notice', async () => {
+    await signInAs(/Unverified member/, '/id');
+    expect(
+      await screen.findByText('UNVERIFIED / INACTIVE FOR CHECK-IN')
+    ).toBeDefined();
+    expect(
+      screen.queryByRole('img', { name: 'Member check-in QR' })
+    ).toBeNull();
+    expect(screen.getByText('Payment Instructions')).toBeDefined();
+    fireEvent.click(
+      screen.getByRole('link', { name: 'Read renewal guidance' })
+    );
+    await waitFor(() => expect(window.location.pathname).toBe('/not-valid'));
+    expect(
+      await screen.findByRole('heading', { name: 'Membership not valid' })
+    ).toBeDefined();
+    fireEvent.click(screen.getByRole('link', { name: 'Back to Digital ID' }));
+    await waitFor(() => expect(window.location.pathname).toBe('/id'));
+  });
+
+  it('keeps the desktop redirect from the not-valid page', async () => {
+    useViewport(true);
+    await signInAs(/Unverified member/, '/id');
+    window.history.pushState({}, '', '/not-valid');
+    window.dispatchEvent(new PopStateEvent('popstate'));
+    await waitFor(() => expect(window.location.pathname).toBe('/id'));
   });
 });
 

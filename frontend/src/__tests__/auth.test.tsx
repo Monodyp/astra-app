@@ -76,16 +76,17 @@ describe('sign-in and route access', () => {
     expect(screen.queryByText('Officer access only')).toBeNull();
   });
 
-  it('opens the rewards pages after a reload', async () => {
+  it('opens the desktop rewards placeholders after a reload', async () => {
     const first = renderAt('/login');
     await chooseDemoAccount(/Verified member/);
     await waitFor(() => expect(window.location.pathname).toBe('/home'));
     first.unmount();
 
     const pages = [
-      ['/marketplace', 'Partner Perks & Rewards'],
+      ['/marketplace', 'Perks Marketplace'],
       ['/vouchers', 'Claimed Vouchers'],
-      ['/points', 'Points and ledger'],
+      ['/points', 'Points & Ledger'],
+      ['/vouchers/V-98214', 'Voucher Details'],
     ];
     for (const [path, heading] of pages) {
       const view = renderAt(path);
@@ -95,13 +96,6 @@ describe('sign-in and route access', () => {
       expect(window.location.pathname).toBe(path);
       view.unmount();
     }
-
-    renderAt('/vouchers/V-98214');
-    expect(
-      await screen.findByRole('dialog', {
-        name: '15% Off at the Campus Bookstore',
-      })
-    ).toBeDefined();
   });
 
   it('restores the session after a reload', async () => {

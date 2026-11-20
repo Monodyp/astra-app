@@ -6,7 +6,7 @@ import {
   Panel,
   btnPrimary,
   btnSecondary,
-} from './ui.js';
+} from '../../../components/mobile/ui.js';
 import {
   portalData,
   type Perk,

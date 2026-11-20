@@ -1,6 +1,11 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { ErrorState, LoadingState, Panel, btnSecondary } from './ui.js';
+import {
+  ErrorState,
+  LoadingState,
+  Panel,
+  btnSecondary,
+} from '../../../components/mobile/ui.js';
 import { portalData } from '../../../data/index.js';
 import { useResource } from '../../../lib/useResource.js';
 import { VOUCHER_STATUS, voucherTitle } from './voucherText.js';
