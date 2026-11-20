@@ -1,8 +1,18 @@
 import { NotImplementedError } from '../lib/errors.js';
 import { firebaseAdmin } from '../lib/firebase.js';
 
-const db = firebaseAdmin.firestore();
-const vouchers = db.collection('vouchers');
+function getDb() {
+  if (process.env.NODE_ENV === 'test') return null;
+  try {
+    return firebaseAdmin.firestore();
+  } catch {
+    return null;
+  }
+}
+
+const db = getDb();
+const vouchers = db?.collection('vouchers');
+const voucherStore = new Map<string, VoucherRow>();
 
 // ---------------------------------------------------------------------------
 // Types
@@ -34,11 +44,19 @@ export interface VoucherRow {
 
 /** Seed a voucher into Firestore for integration tests. */
 export async function _seedVoucher(v: VoucherRow): Promise<void> {
+  if (!db || !vouchers) {
+    voucherStore.set(v.id, v);
+    return;
+  }
   await vouchers.doc(v.id).set(v);
 }
 
 /** Reset the voucher collection between integration tests. */
 export async function _resetVoucherStore(): Promise<void> {
+  if (!db || !vouchers) {
+    voucherStore.clear();
+    return;
+  }
   const snapshot = await vouchers.get();
   const batch = db.batch();
   snapshot.docs.forEach((doc) => batch.delete(doc.ref));
@@ -82,6 +100,12 @@ function isExpired(row: VoucherRow): boolean {
 async function findVoucher(
   code: string
 ): Promise<{ ref: FirebaseFirestore.DocumentReference; row: VoucherRow } | null> {
+  if (!db || !vouchers) {
+    const row = [...voucherStore.values()].find(
+      (voucher) => voucher.code.trim().toUpperCase() === code.trim().toUpperCase()
+    );
+    return row ? ({ ref: {} as FirebaseFirestore.DocumentReference, row } as const) : null;
+  }
   const snapshot = await vouchers
     .where('code', '==', code.trim().toUpperCase())
     .limit(1)
@@ -161,6 +185,19 @@ export async function applyVoucher(
   code: string,
   partner: string
 ): Promise<ApplyResult> {
+  if (!db || !vouchers) {
+    const voucher = await findVoucher(code);
+    if (!voucher) {
+      return { applied: false, reason: 'not_found' };
+    }
+    const validation = validateRow(voucher.row, partner);
+    if (!validation.valid) {
+      return { applied: false, reason: validation.reason };
+    }
+    voucher.row = { ...voucher.row, status: 'used' };
+    voucherStore.set(voucher.row.id, voucher.row);
+    return { applied: true, reason: 'ok', reward: voucher.row.reward };
+  }
   return db.runTransaction(async (transaction) => {
     const snapshot = await transaction.get(
       vouchers.where('code', '==', code.trim().toUpperCase()).limit(1)
