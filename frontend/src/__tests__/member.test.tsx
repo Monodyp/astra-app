@@ -494,13 +494,28 @@ describe('portal navigation', () => {
     ]);
   });
 
-  it('links the header to the internal ASTRAscend pages', async () => {
+  it('puts Logout before the ASTRAscend pill on desktop', async () => {
     await signInAs(/Verified member/, '/home');
+    const header = screen.getByRole('banner');
+    const logout = within(header).getByRole('button', { name: 'Logout' });
+    const pill = within(header).getByRole('link', { name: 'ASTRAscend' });
+    expect(pill.textContent).toBe('ASTRAscend');
+    expect(pill.getAttribute('href')).toBe('/astrascend');
+    expect(pill.className).toContain('hidden');
+    expect(pill.className).toContain('lg:inline-flex');
     expect(
-      screen
-        .getByRole('link', { name: 'ASTRAscend services' })
-        .getAttribute('href')
-    ).toBe('/astrascend');
+      logout.compareDocumentPosition(pill) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+
+    const small = within(header).getByRole('link', {
+      name: 'ASTRAscend services',
+    });
+    expect(small.getAttribute('href')).toBe('/astrascend');
+    expect(small.className).toContain('md:inline-flex');
+    expect(small.className).toContain('lg:hidden');
+    expect(
+      small.compareDocumentPosition(logout) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
   });
 });
 

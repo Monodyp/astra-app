@@ -87,7 +87,7 @@ export const AppShell: React.FC = () => {
           <div className="flex items-center gap-3 sm:gap-6">
             <Link
               to="/astrascend"
-              className="hidden items-center gap-1.5 text-xs text-astra-gray transition-colors hover:text-astra-white md:inline-flex"
+              className="hidden items-center gap-1.5 text-xs text-astra-gray transition-colors hover:text-astra-white md:inline-flex lg:hidden"
             >
               <span>ASTRAscend services</span>
               <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
@@ -103,6 +103,13 @@ export const AppShell: React.FC = () => {
                 {signingOut ? 'Signing out…' : 'Logout'}
               </button>
             )}
+
+            <Link
+              to="/astrascend"
+              className="hidden items-center gap-1 rounded-full bg-astra-primary-light px-8 py-3 text-lg font-bold text-astra-white transition-transform hover:scale-105 lg:inline-flex"
+            >
+              ASTRAscend
+            </Link>
           </div>
         </div>
       </header>
