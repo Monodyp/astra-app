@@ -1,24 +1,24 @@
 @font-face {
     font-family: 'ASTRAscend Urbanist';
-    src: url('./assets/urbanist-400.ttf') format('truetype');
+    src: url('../assets/urbanist-400.ttf') format('truetype');
     font-weight: 400;
     font-display: swap;
 }
 @font-face {
     font-family: 'ASTRAscend Urbanist';
-    src: url('./assets/urbanist-500.ttf') format('truetype');
+    src: url('../assets/urbanist-500.ttf') format('truetype');
     font-weight: 500;
     font-display: swap;
 }
 @font-face {
     font-family: 'ASTRAscend Urbanist';
-    src: url('./assets/urbanist-600.ttf') format('truetype');
+    src: url('../assets/urbanist-600.ttf') format('truetype');
     font-weight: 600;
     font-display: swap;
 }
 @font-face {
     font-family: 'ASTRAscend Urbanist';
-    src: url('./assets/urbanist-700.ttf') format('truetype');
+    src: url('../assets/urbanist-700.ttf') format('truetype');
     font-weight: 700;
     font-display: swap;
 }
