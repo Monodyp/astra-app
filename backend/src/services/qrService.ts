@@ -37,6 +37,13 @@ function memberReference(memberId: string): string {
     .digest('base64url');
 }
 
+export function matchesMemberQrReference(
+  memberId: string,
+  reference: string
+): boolean {
+  return memberReference(memberId) === reference;
+}
+
 function isMemberQrPayload(value: unknown): value is MemberQrPayload {
   if (!value || typeof value !== 'object') {
     return false;

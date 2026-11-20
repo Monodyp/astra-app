@@ -1,5 +1,9 @@
 import { env } from '../config/env.js';
 import { firebaseAdmin } from '../lib/firebase.js';
+import {
+  matchesMemberQrReference,
+  verifyQrToken,
+} from './qrService.js';
 
 function getDb() {
   if (process.env.NODE_ENV === 'test') return null;
@@ -120,9 +124,41 @@ export function _resetStore(): void {
  * Currently trims whitespace and uppercases the code.
  */
 export async function resolveCheckInIdentity(input: {
-  srCode: string;
+  srCode?: string;
+  qrToken?: string;
 }): Promise<string> {
-  return input.srCode.trim().toUpperCase();
+  if (input.srCode) {
+    return input.srCode.trim().toUpperCase();
+  }
+
+  if (!input.qrToken) {
+    throw new TypeError('srCode or qrToken is required');
+  }
+
+  const payload = await verifyQrToken(input.qrToken);
+  const db = getDb();
+
+  if (db) {
+    const snapshot = await db.collection('members').get();
+    for (const document of snapshot.docs) {
+      const data = document.data();
+      const memberId = data.srCode || data.memberId || document.id;
+      if (
+        typeof memberId === 'string' &&
+        matchesMemberQrReference(memberId, payload.ref)
+      ) {
+        return memberId.trim().toUpperCase();
+      }
+    }
+  }
+
+  for (const member of _store.members.values()) {
+    if (matchesMemberQrReference(member.srCode, payload.ref)) {
+      return member.srCode;
+    }
+  }
+
+  return '';
 }
 
 // ---------------------------------------------------------------------------
