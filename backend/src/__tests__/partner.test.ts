@@ -19,6 +19,22 @@ import {
 const VALIDATE = '/partner/validate';
 const APPLY = '/partner/apply';
 
+const partnerUser = {
+  uid: 'partner-1',
+  srCode: 'PARTNER-001',
+  role: 'partner',
+};
+
+const memberUser = {
+  uid: 'member-1',
+  srCode: '24-90001',
+  role: 'member',
+};
+
+function asUser(user = partnerUser) {
+  return JSON.stringify(user);
+}
+
 function futureDate(daysFromNow = 365): Date {
   const d = new Date();
   d.setDate(d.getDate() + daysFromNow);
@@ -70,19 +86,20 @@ describe('Partner Redemption API', () => {
   });
 
   // -------------------------------------------------------------------------
-  // Auth stubs (TODO: update when real auth is wired)
+  // Auth checks
   // -------------------------------------------------------------------------
 
-  it('TODO: no token → 401 (currently pass-through, 400 for missing body)', async () => {
+  it('no token → 401', async () => {
     const res = await request(app).post(VALIDATE).send({});
-    expect([400, 401]).toContain(res.status);
+    expect(res.status).toBe(401);
   });
 
-  it('TODO: wrong role → 403 (currently pass-through, reaches handler)', async () => {
+  it('wrong role → 403', async () => {
     const res = await request(app)
       .post(VALIDATE)
+      .set('x-test-user', asUser(memberUser))
       .send({ code: 'NEXCAFE-001', partner: 'NexCafe' });
-    expect([200, 403]).toContain(res.status);
+    expect(res.status).toBe(403);
   });
 
   // -------------------------------------------------------------------------
@@ -90,19 +107,28 @@ describe('Partner Redemption API', () => {
   // -------------------------------------------------------------------------
 
   it('POST /partner/validate → 400 when code is missing', async () => {
-    const res = await request(app).post(VALIDATE).send({ partner: 'NexCafe' });
+    const res = await request(app)
+      .post(VALIDATE)
+      .set('x-test-user', asUser())
+      .send({ partner: 'NexCafe' });
     expect(res.status).toBe(400);
     expect(res.body).toHaveProperty('error');
   });
 
   it('POST /partner/validate → 400 when partner is missing', async () => {
-    const res = await request(app).post(VALIDATE).send({ code: 'NEXCAFE-001' });
+    const res = await request(app)
+      .post(VALIDATE)
+      .set('x-test-user', asUser())
+      .send({ code: 'NEXCAFE-001' });
     expect(res.status).toBe(400);
     expect(res.body).toHaveProperty('error');
   });
 
   it('POST /partner/apply → 400 when code is missing', async () => {
-    const res = await request(app).post(APPLY).send({ partner: 'NexCafe' });
+    const res = await request(app)
+      .post(APPLY)
+      .set('x-test-user', asUser())
+      .send({ partner: 'NexCafe' });
     expect(res.status).toBe(400);
   });
 
@@ -113,6 +139,7 @@ describe('Partner Redemption API', () => {
   it('validate active voucher → { valid: true, reason: "ok", reward: ... }', async () => {
     const res = await request(app)
       .post(VALIDATE)
+      .set('x-test-user', asUser())
       .send({ code: 'NEXCAFE-001', partner: 'NexCafe' });
 
     expect(res.status).toBe(200);
@@ -127,6 +154,7 @@ describe('Partner Redemption API', () => {
   it('validate unknown code → not_found', async () => {
     const res = await request(app)
       .post(VALIDATE)
+      .set('x-test-user', asUser())
       .send({ code: 'DOES-NOT-EXIST', partner: 'NexCafe' });
 
     expect(res.status).toBe(200);
@@ -137,6 +165,7 @@ describe('Partner Redemption API', () => {
   it('validate wrong partner → wrong_partner', async () => {
     const res = await request(app)
       .post(VALIDATE)
+      .set('x-test-user', asUser())
       .send({ code: 'NEXCAFE-001', partner: 'WrongCafe' });
 
     expect(res.status).toBe(200);
@@ -147,6 +176,7 @@ describe('Partner Redemption API', () => {
   it('validate expired voucher → expired', async () => {
     const res = await request(app)
       .post(VALIDATE)
+      .set('x-test-user', asUser())
       .send({ code: 'EXP-001', partner: 'NexCafe' });
 
     expect(res.status).toBe(200);
@@ -157,6 +187,7 @@ describe('Partner Redemption API', () => {
   it('validate used voucher → already_used', async () => {
     const res = await request(app)
       .post(VALIDATE)
+      .set('x-test-user', asUser())
       .send({ code: 'USED-001', partner: 'NexCafe' });
 
     expect(res.status).toBe(200);
@@ -171,6 +202,7 @@ describe('Partner Redemption API', () => {
   it('apply once → succeeds, returns reward', async () => {
     const res = await request(app)
       .post(APPLY)
+      .set('x-test-user', asUser())
       .send({ code: 'NEXCAFE-001', partner: 'NexCafe' });
 
     expect(res.status).toBe(200);
@@ -182,12 +214,14 @@ describe('Partner Redemption API', () => {
     // First apply
     const first = await request(app)
       .post(APPLY)
+      .set('x-test-user', asUser())
       .send({ code: 'NEXCAFE-001', partner: 'NexCafe' });
     expect(first.body.applied).toBe(true);
 
     // Second apply
     const second = await request(app)
       .post(APPLY)
+      .set('x-test-user', asUser())
       .send({ code: 'NEXCAFE-001', partner: 'NexCafe' });
     expect(second.status).toBe(200);
     expect(second.body.applied).toBe(false);
@@ -197,6 +231,7 @@ describe('Partner Redemption API', () => {
   it('apply wrong partner → fails, voucher stays active', async () => {
     const res = await request(app)
       .post(APPLY)
+      .set('x-test-user', asUser())
       .send({ code: 'NEXCAFE-001', partner: 'WrongCafe' });
 
     expect(res.status).toBe(200);
@@ -206,6 +241,7 @@ describe('Partner Redemption API', () => {
     // Voucher should still be valid for the correct partner
     const validate = await request(app)
       .post(VALIDATE)
+      .set('x-test-user', asUser())
       .send({ code: 'NEXCAFE-001', partner: 'NexCafe' });
     expect(validate.body.valid).toBe(true);
   });
@@ -213,6 +249,7 @@ describe('Partner Redemption API', () => {
   it('apply expired voucher → fails', async () => {
     const res = await request(app)
       .post(APPLY)
+      .set('x-test-user', asUser())
       .send({ code: 'EXP-001', partner: 'NexCafe' });
 
     expect(res.status).toBe(200);
@@ -223,8 +260,8 @@ describe('Partner Redemption API', () => {
   it('two simultaneous applies → exactly one succeeds', async () => {
     // Fire two requests at the same time
     const [r1, r2] = await Promise.all([
-      request(app).post(APPLY).send({ code: 'BEANB-001', partner: 'BeanBrew' }),
-      request(app).post(APPLY).send({ code: 'BEANB-001', partner: 'BeanBrew' }),
+      request(app).post(APPLY).set('x-test-user', asUser()).send({ code: 'BEANB-001', partner: 'BeanBrew' }),
+      request(app).post(APPLY).set('x-test-user', asUser()).send({ code: 'BEANB-001', partner: 'BeanBrew' }),
     ]);
 
     const successes = [r1, r2].filter((r) => r.body.applied === true);
