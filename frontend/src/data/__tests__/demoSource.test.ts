@@ -83,10 +83,10 @@ describe('demo data source', () => {
     await expectDataError(data.searchMembers('Verified Doe'), 'forbidden');
     await expectDataError(
       data.grantPoints({
-        memberId: 'ASTR1D-0001',
+        studentId: '24-90001',
         amount: 100,
         reason: 'Workshop Attendance',
-        note: '',
+        idempotencyKey: 'grant-1',
       }),
       'forbidden'
     );
@@ -95,10 +95,10 @@ describe('demo data source', () => {
   it('keeps records but clears the session on sign-out', async () => {
     await data.signIn({ method: 'shortcut', shortcutId: 'officer' });
     await data.grantPoints({
-      memberId: 'ASTR1D-0001',
+      studentId: '24-90001',
       amount: 120,
       reason: 'Project Contribution',
-      note: '',
+      idempotencyKey: 'grant-1',
     });
     await data.signOut();
     expect(await data.restoreSession()).toBeNull();
@@ -301,23 +301,78 @@ describe('demo data source', () => {
     await data.signIn({ method: 'shortcut', shortcutId: 'officer' });
     await expectDataError(
       data.grantPoints({
-        memberId: 'ASTR1D-0001',
+        studentId: '24-90001',
         amount: 0,
         reason: 'Workshop Attendance',
-        note: '',
+        idempotencyKey: 'grant-1',
       }),
       'invalid_input'
     );
     const result = await data.grantPoints({
-      memberId: 'ASTR1D-0004',
+      studentId: '24-90004',
       amount: 75,
       reason: 'Event Volunteer',
-      note: 'Registration desk',
+      referenceId: 'Registration desk',
+      idempotencyKey: 'grant-2',
     });
     expect(result).toMatchObject({
-      previousBalance: 350,
-      newBalance: 425,
+      studentId: '24-90004',
+      referenceId: 'Registration desk',
+      balance: { previous: 350, current: 425 },
       amount: 75,
     });
+  });
+
+  it('rejects grants to unknown and unpaid members', async () => {
+    await data.signIn({ method: 'shortcut', shortcutId: 'officer' });
+    const grant = (studentId: string) =>
+      data.grantPoints({
+        studentId,
+        amount: 10,
+        reason: 'Event Volunteer',
+        idempotencyKey: `grant-${studentId}`,
+      });
+    await expectDataError(grant('99-99999'), 'not_found');
+    await expectDataError(grant('24-90010'), 'not_found');
+    await expectDataError(grant('ASTR1D-0001'), 'not_found');
+    const [unverified] = await data.searchMembers('Unverified Doe');
+    expect(unverified.balance).toBe(50);
+  });
+
+  it('records one grant for each member and reference', async () => {
+    await data.signIn({ method: 'shortcut', shortcutId: 'officer' });
+    const grant = (studentId: string, idempotencyKey: string) =>
+      data.grantPoints({
+        studentId,
+        amount: 25,
+        reason: 'Event Volunteer',
+        referenceId: 'Hackathon 2026',
+        idempotencyKey,
+      });
+    await grant('24-90004', 'grant-1');
+    await expectDataError(grant('24-90004', 'grant-2'), 'conflict');
+    await expect(grant('25-90005', 'grant-3')).resolves.toMatchObject({
+      studentId: '25-90005',
+    });
+  });
+
+  it('names the officer of older and newer grants', async () => {
+    await data.signIn({ method: 'shortcut', shortcutId: 'officer' });
+    await data.grantPoints({
+      studentId: '24-90001',
+      amount: 10,
+      reason: 'Event Volunteer',
+      idempotencyKey: 'grant-1',
+    });
+    await data.signIn({ method: 'shortcut', shortcutId: 'verified-member' });
+    const { recentActivity } = await data.getOverview();
+    const grants = recentActivity.filter(
+      (entry) => entry.kind === 'points_granted'
+    );
+    expect(grants.map((entry) => entry.reference)).toEqual([
+      'Granted by Officer Doe',
+      'Granted by Officer Doe',
+      'Membership activated',
+    ]);
   });
 });

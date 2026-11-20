@@ -258,12 +258,12 @@ describe('demo records', () => {
       expect(match.memberId).toBe('ASTR1D-0001');
     }
     const grant = await data.grantPoints({
-      memberId: 'ASTR1D-0001',
+      studentId: '24-90001',
       amount: 120,
       reason: 'Event Volunteer',
-      note: '',
+      idempotencyKey: 'grant-1',
     });
-    expect(grant).toMatchObject({ previousBalance: 450, newBalance: 570 });
+    expect(grant.balance).toEqual({ previous: 450, current: 570 });
 
     await data.signOut();
     await data.signIn({ method: 'shortcut', shortcutId: 'verified-member' });
@@ -281,19 +281,11 @@ describe('demo records', () => {
     expect(entry).toMatchObject({
       memberId: '24-90001',
       type: 'grant',
-      createdBy: 'ASTR1D-0003',
+      createdBy: 'demo-auth-ASTR1D-0003',
     });
   });
 
   describe('retry keys', () => {
-    beforeEach(() => {
-      data = createDemoDataSource({
-        storage,
-        now: () => NOW,
-        newKey: () => 'retry-1',
-      });
-    });
-
     it('replays a claim that reuses its key', async () => {
       await data.signIn({ method: 'shortcut', shortcutId: 'verified-member' });
       const key = { idempotencyKey: 'retry-1' };
@@ -352,15 +344,16 @@ describe('demo records', () => {
     it('records a retried grant once', async () => {
       await data.signIn({ method: 'shortcut', shortcutId: 'officer' });
       const input = {
-        memberId: 'ASTR1D-0004',
+        studentId: '24-90004',
         amount: 40,
         reason: 'Event Volunteer',
-        note: '',
+        idempotencyKey: 'retry-1',
       };
       const first = await data.grantPoints(input);
-      const retried = await data.grantPoints(input);
-      expect(retried).toEqual(first);
-      expect(first).toMatchObject({ previousBalance: 350, newBalance: 390 });
+      await expect(data.grantPoints(input)).rejects.toMatchObject({
+        code: 'conflict',
+      });
+      expect(first.balance).toEqual({ previous: 350, current: 390 });
       const entries = storedRecords(storage).ledger.filter(
         (item) => item.idempotencyKey === 'retry-1'
       );

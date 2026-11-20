@@ -3,34 +3,38 @@ import { ChevronDown, IdCard } from 'lucide-react';
 import { PageHeading } from '../components/portal/PageHeading.js';
 import {
   GRANT_REASONS,
+  isDataError,
   portalData,
   type GrantPointsResult,
   type MemberSearchResult,
 } from '../data/index.js';
 import { errorMessage } from '../lib/format.js';
+import { isUncertainFailure, newIdempotencyKey } from '../lib/idempotency.js';
 
-export const MAX_GRANT = 1000;
+const MAX_GRANT = 1000;
+const MAX_REFERENCE = 200;
 const SEARCH_DELAY_MS = 200;
 
-export function validateGrant(v: { member: { studentId: string } | null; amount: string; reason: string }) {
-  const errors: { member?: string; amount?: string; reason?: string } = {};
-  if (!v.member) errors.member = 'Search for and select a member.';
-  const n = Number(v.amount);
-  if (!v.amount.trim()) errors.amount = 'Enter a points amount.';
-  else if (!Number.isInteger(n) || n < 1) errors.amount = 'Points must be a whole number of at least 1.';
-  else if (n > MAX_GRANT) errors.amount = `Points cannot exceed ${MAX_GRANT} per grant.`;
-  if (!v.reason.trim()) errors.reason = 'Enter a reason.';
-  return errors;
-}
-
 const fieldClass =
-  'w-full border border-astra-white/15 bg-black/50 px-4 text-sm text-astra-white placeholder:text-astra-gray/70 focus:border-astra-primary-light focus:outline-none';
+  'w-full border border-astra-white/15 bg-black/50 px-4 text-sm text-astra-white placeholder:text-astra-gray/70 focus:border-astra-primary-light focus:outline-none disabled:opacity-60';
 
 type Search =
   | { status: 'idle' }
   | { status: 'loading' }
   | { status: 'ready'; results: MemberSearchResult[] }
   | { status: 'error'; message: string };
+
+interface FrozenGrant {
+  recipient: MemberSearchResult;
+  amount: number;
+  reason: string;
+  referenceId: string;
+  idempotencyKey: string;
+}
+
+type GrantOutcome =
+  | { kind: 'recorded'; grant: FrozenGrant; result: GrantPointsResult }
+  | { kind: 'already_recorded'; grant: FrozenGrant };
 
 function memberIds(member: MemberSearchResult): string {
   return `ASTRA ID ${member.memberId} · Student ID ${member.studentId}`;
@@ -42,6 +46,37 @@ function memberStatus(member: MemberSearchResult): string {
     : 'Inactive member';
 }
 
+const outcomeClass =
+  'border border-[#4ade80]/40 bg-[#123524]/60 px-6 py-5 text-sm';
+
+const GrantOutcomeView: React.FC<{ outcome: GrantOutcome }> = ({ outcome }) => {
+  const name = outcome.grant.recipient.fullName;
+  if (outcome.kind === 'already_recorded') {
+    const { grant } = outcome;
+    return (
+      <section role="status" className={outcomeClass}>
+        <h2 className="font-bold">Grant already recorded</h2>
+        <p className="mt-1">
+          An earlier attempt already recorded +{grant.amount} points for {name}{' '}
+          for {grant.reason}. It was not recorded again.
+        </p>
+      </section>
+    );
+  }
+  const { result } = outcome;
+  return (
+    <section role="status" className={outcomeClass}>
+      <h2 className="font-bold">Points granted</h2>
+      <p className="mt-1">
+        {name} received +{result.amount} points for {result.reason}.{' '}
+        {result.balance
+          ? `Balance went from ${result.balance.previous} to ${result.balance.current} pts.`
+          : 'The grant is now in their ledger.'}
+      </p>
+    </section>
+  );
+};
+
 export const OfficerGrantPoints: React.FC = () => {
   const [query, setQuery] = useState('');
   const [search, setSearch] = useState<Search>({ status: 'idle' });
@@ -50,17 +85,20 @@ export const OfficerGrantPoints: React.FC = () => {
   const [activeIndex, setActiveIndex] = useState(-1);
   const [amount, setAmount] = useState('100');
   const [reason, setReason] = useState<string>(GRANT_REASONS[0]);
-  const [note, setNote] = useState('');
+  const [reference, setReference] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [granted, setGranted] = useState<GrantPointsResult | null>(null);
+  const [outcome, setOutcome] = useState<GrantOutcome | null>(null);
+  const [pending, setPending] = useState<FrozenGrant | null>(null);
 
   const searchId = useId();
   const listId = useId();
   const amountId = useId();
   const amountHelpId = useId();
   const reasonId = useId();
-  const noteId = useId();
+  const referenceId = useId();
+  const referenceHelpId = useId();
+  const inactiveId = useId();
 
   useEffect(() => {
     setActiveIndex(-1);
@@ -91,7 +129,11 @@ export const OfficerGrantPoints: React.FC = () => {
   const points = Number(amount);
   const amountValid =
     Number.isInteger(points) && points >= 1 && points <= MAX_GRANT;
-  const canGrant = selected !== null && amountValid && !submitting;
+  const recipientActive = selected?.membershipStatus === 'verified';
+  const frozen = pending !== null;
+  const canGrant =
+    !submitting &&
+    (frozen || (selected !== null && recipientActive && amountValid));
 
   const results = search.status === 'ready' ? search.results : [];
   const showList = listOpen && search.status !== 'idle';
@@ -101,7 +143,7 @@ export const OfficerGrantPoints: React.FC = () => {
     setSelected(member);
     setQuery(member.fullName);
     setListOpen(false);
-    setGranted(null);
+    setOutcome(null);
     setError(null);
   }
 
@@ -130,27 +172,88 @@ export const OfficerGrantPoints: React.FC = () => {
 
   function clearSelection() {
     setSelected(null);
-    setGranted(null);
+    setOutcome(null);
+  }
+
+  function refreshRecipient(
+    recipient: MemberSearchResult,
+    result: GrantPointsResult | null
+  ) {
+    const replace = (next: MemberSearchResult) =>
+      setSelected((current) =>
+        current?.memberId === next.memberId ? next : current
+      );
+    if (result?.balance) {
+      replace({ ...recipient, balance: result.balance.current });
+      return;
+    }
+    portalData
+      .searchMembers(recipient.studentId)
+      .then((matches) => {
+        const match = matches.find(
+          (item) => item.memberId === recipient.memberId
+        );
+        if (match) replace(match);
+      })
+      .catch(() => undefined);
+  }
+
+  function discardPending() {
+    setPending(null);
+    setError(null);
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!selected || !amountValid) return;
+    if (!canGrant) return;
+    const retry = pending;
+    const grant: FrozenGrant | null =
+      retry ??
+      (selected
+        ? {
+            recipient: selected,
+            amount: points,
+            reason,
+            referenceId: reference.trim(),
+            idempotencyKey: newIdempotencyKey(),
+          }
+        : null);
+    if (!grant) return;
     setSubmitting(true);
     setError(null);
-    setGranted(null);
+    setOutcome(null);
     try {
       const result = await portalData.grantPoints({
-        memberId: selected.memberId,
-        amount: points,
-        reason,
-        note,
+        studentId: grant.recipient.studentId,
+        amount: grant.amount,
+        reason: grant.reason,
+        referenceId: grant.referenceId || undefined,
+        idempotencyKey: grant.idempotencyKey,
       });
-      setGranted(result);
-      setSelected(result.recipient);
-      setNote('');
+      setPending(null);
+      setOutcome({ kind: 'recorded', grant, result });
+      setReference('');
+      refreshRecipient(grant.recipient, result);
     } catch (caught) {
-      setError(errorMessage(caught));
+      const conflict = isDataError(caught) && caught.code === 'conflict';
+      if (conflict && retry) {
+        setPending(null);
+        setOutcome({ kind: 'already_recorded', grant });
+        setReference('');
+        refreshRecipient(grant.recipient, null);
+      } else if (isUncertainFailure(caught)) {
+        setPending(grant);
+        setError(
+          `The portal could not confirm the grant to ${grant.recipient.fullName}. Retry to send the same grant again. It is recorded only once.`
+        );
+      } else {
+        setPending(null);
+        setError(
+          conflict
+            ? `A grant with this reference is already recorded for ${grant.recipient.fullName}. Use a different reference.`
+            : errorMessage(caught)
+        );
+      }
     } finally {
       setSubmitting(false);
     }
@@ -164,7 +267,7 @@ export const OfficerGrantPoints: React.FC = () => {
         description="Recognize a member's contribution. Review before you grant."
       />
 
-      <div className="grid grid-cols-[1fr_1fr] gap-x-[138px]">
+      <div className="grid gap-10 lg:grid-cols-2 lg:gap-x-[138px]">
         <form onSubmit={handleSubmit} noValidate className="space-y-5">
           <div>
             <label htmlFor={searchId} className="block text-sm font-bold">
@@ -183,6 +286,7 @@ export const OfficerGrantPoints: React.FC = () => {
                     : undefined
                 }
                 value={query}
+                disabled={frozen}
                 onChange={(event) => {
                   setQuery(event.target.value);
                   setListOpen(true);
@@ -250,7 +354,7 @@ export const OfficerGrantPoints: React.FC = () => {
           </div>
 
           {selected && (
-            <div className="flex items-center justify-between border border-astra-primary-dark bg-[#0f2a3a]/60 px-5 py-5">
+            <div className="flex flex-wrap items-center justify-between gap-4 border border-astra-primary-dark bg-[#0f2a3a]/60 px-5 py-5">
               <div className="flex items-center gap-4">
                 <IdCard
                   className="h-8 w-8 text-astra-white"
@@ -273,16 +377,27 @@ export const OfficerGrantPoints: React.FC = () => {
                 </span>
                 <button
                   type="button"
+                  disabled={frozen}
                   onClick={() => {
                     clearSelection();
                     setQuery('');
                   }}
-                  className="text-xs font-bold text-astra-gray underline underline-offset-2 hover:text-astra-white"
+                  className="text-xs font-bold text-astra-gray underline underline-offset-2 hover:text-astra-white disabled:opacity-50"
                 >
                   Change
                 </button>
               </div>
             </div>
+          )}
+
+          {selected && !recipientActive && (
+            <p
+              id={inactiveId}
+              className="border border-amber-400/40 bg-amber-950/30 px-4 py-3 text-sm text-amber-100"
+            >
+              {selected.fullName} cannot receive points because their membership
+              is inactive. Points go only to members who paid their annual dues.
+            </p>
           )}
 
           <div>
@@ -298,6 +413,7 @@ export const OfficerGrantPoints: React.FC = () => {
                 max={MAX_GRANT}
                 step={1}
                 value={amount}
+                disabled={frozen}
                 onChange={(event) => setAmount(event.target.value)}
                 aria-invalid={!amountValid}
                 aria-describedby={amountHelpId}
@@ -323,6 +439,7 @@ export const OfficerGrantPoints: React.FC = () => {
               <select
                 id={reasonId}
                 value={reason}
+                disabled={frozen}
                 onChange={(event) => setReason(event.target.value)}
                 className={`${fieldClass} h-11 appearance-none pr-12`}
               >
@@ -340,17 +457,23 @@ export const OfficerGrantPoints: React.FC = () => {
           </div>
 
           <div>
-            <label htmlFor={noteId} className="block text-sm font-bold">
-              Reference link / notes
+            <label htmlFor={referenceId} className="block text-sm font-bold">
+              Reference
             </label>
             <textarea
-              id={noteId}
-              value={note}
-              onChange={(event) => setNote(event.target.value)}
+              id={referenceId}
+              value={reference}
+              disabled={frozen}
+              maxLength={MAX_REFERENCE}
+              aria-describedby={referenceHelpId}
+              onChange={(event) => setReference(event.target.value)}
               rows={3}
               placeholder="Event name or a link to the contribution"
               className={`${fieldClass} mt-3 py-3`}
             />
+            <p id={referenceHelpId} className="mt-2 text-xs text-astra-gray">
+              Optional. A member gets one grant for each reference.
+            </p>
           </div>
 
           {error && (
@@ -362,21 +485,37 @@ export const OfficerGrantPoints: React.FC = () => {
             </p>
           )}
 
-          <div>
+          <div className="flex flex-wrap items-center gap-4">
             <button
               type="submit"
               disabled={!canGrant}
+              aria-describedby={
+                selected && !recipientActive ? inactiveId : undefined
+              }
               className="rounded-full bg-astra-primary-light px-6 py-3 text-base font-bold text-astra-white transition-colors hover:bg-[#19c0f7] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-astra-white disabled:cursor-not-allowed disabled:bg-astra-disabled disabled:text-astra-gray"
             >
-              {submitting ? 'Granting…' : 'Grant Points to Member'}
+              {submitting
+                ? 'Granting…'
+                : frozen
+                  ? 'Retry Grant'
+                  : 'Grant Points to Member'}
             </button>
-            <p className="mt-3 text-[10px] text-astra-gray">
+            {frozen && !submitting && (
+              <button
+                type="button"
+                onClick={discardPending}
+                className="text-xs font-bold text-astra-gray underline underline-offset-2 hover:text-astra-white"
+              >
+                Discard and edit
+              </button>
+            )}
+            <p className="w-full text-[10px] text-astra-gray">
               This grant will be recorded in the member's ledger.
             </p>
           </div>
         </form>
 
-        <div className="space-y-8 pt-[70px]">
+        <div className="space-y-8 lg:pt-[70px]">
           <section
             aria-labelledby="grant-preview-title"
             className="border border-astra-primary-dark bg-black/50 px-6 py-6"
@@ -419,7 +558,7 @@ export const OfficerGrantPoints: React.FC = () => {
               <div className="flex justify-between">
                 <dt className="text-astra-gray">Balance after grant</dt>
                 <dd className="text-sm font-bold text-[#4ade80]">
-                  {selected && amountValid
+                  {selected && amountValid && recipientActive
                     ? `${selected.balance + points} pts`
                     : '—'}
                 </dd>
@@ -427,18 +566,8 @@ export const OfficerGrantPoints: React.FC = () => {
             </dl>
           </section>
 
-          {granted ? (
-            <section
-              role="status"
-              className="border border-[#4ade80]/40 bg-[#123524]/60 px-6 py-5 text-sm"
-            >
-              <h2 className="font-bold">Points granted</h2>
-              <p className="mt-1">
-                {granted.recipient.fullName} received +{granted.amount} points
-                for {granted.reason}. Balance went from{' '}
-                {granted.previousBalance} to {granted.newBalance} pts.
-              </p>
-            </section>
+          {outcome ? (
+            <GrantOutcomeView outcome={outcome} />
           ) : (
             <section className="text-sm">
               <h2 className="text-xs font-bold uppercase text-astra-primary-light">

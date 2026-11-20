@@ -10,6 +10,7 @@ import { App } from '../App.js';
 import {
   DataError,
   portalData,
+  type GrantPointsInput,
   type MemberSearchResult,
 } from '../data/index.js';
 
@@ -236,6 +237,121 @@ describe('officer points', () => {
     expect(await optionTexts()).toEqual([
       'Officer DoeASTRA ID ASTR1D-0003 · Student ID 00-00000',
     ]);
+  });
+
+  it('sends the same grant again after a lost response and credits once', async () => {
+    const send = portalData.grantPoints;
+    const spy = vi
+      .spyOn(portalData, 'grantPoints')
+      .mockImplementationOnce(async (input) => {
+        await send(input);
+        throw new DataError('unavailable', 'The connection dropped.');
+      });
+    const view = await openAsOfficer('/officer/grant-points');
+    await search('24-90004');
+    fireEvent.click(await memberOption(/Iris Cruz/));
+    fireEvent.change(screen.getByLabelText('Reference'), {
+      target: { value: 'Booth shift' },
+    });
+    fireEvent.click(grantButton());
+
+    expect((await screen.findByRole('alert')).textContent).toContain(
+      'could not confirm the grant to Iris Cruz'
+    );
+    const retry = screen.getByRole('button', { name: 'Retry Grant' });
+    expect(
+      (screen.getByLabelText('Points Amount') as HTMLInputElement).disabled
+    ).toBe(true);
+    fireEvent.click(retry);
+
+    const status = await screen.findByRole('status');
+    expect(status.textContent).toContain('Grant already recorded');
+    expect(status.textContent).not.toMatch(/Balance went/);
+    expect(spy).toHaveBeenCalledTimes(2);
+    const [first, second] = spy.mock.calls.map(
+      ([input]) => input as GrantPointsInput
+    );
+    expect(second).toEqual(first);
+    expect(first).toMatchObject({
+      studentId: '24-90004',
+      amount: 100,
+      referenceId: 'Booth shift',
+    });
+    const [iris] = await portalData.searchMembers('24-90004');
+    expect(iris.balance).toBe(450);
+    expect(within(preview()).getByText('450 pts')).toBeDefined();
+    view.unmount();
+  });
+
+  it('uses a new key for each new grant', async () => {
+    const spy = vi.spyOn(portalData, 'grantPoints');
+    await openAsOfficer('/officer/grant-points');
+    await search('24-90004');
+    fireEvent.click(await memberOption(/Iris Cruz/));
+    fireEvent.click(grantButton());
+    await screen.findByRole('status');
+    fireEvent.click(grantButton());
+    await waitFor(() => expect(spy).toHaveBeenCalledTimes(2));
+    await waitFor(() =>
+      expect(screen.getByRole('status').textContent).toContain(
+        'Balance went from 450 to 550 pts.'
+      )
+    );
+    const keys = spy.mock.calls.map(
+      ([input]) => (input as GrantPointsInput).idempotencyKey
+    );
+    expect(new Set(keys).size).toBe(2);
+  });
+
+  it('reports a reference that is already recorded for a new grant', async () => {
+    await openAsOfficer('/officer/grant-points');
+    await search('24-90004');
+    fireEvent.click(await memberOption(/Iris Cruz/));
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      fireEvent.change(screen.getByLabelText('Reference'), {
+        target: { value: 'Hackathon 2026' },
+      });
+      fireEvent.click(grantButton());
+      await waitFor(() => expect(screen.queryByText('Granting…')).toBeNull());
+    }
+    expect((await screen.findByRole('alert')).textContent).toContain(
+      'A grant with this reference is already recorded for Iris Cruz.'
+    );
+    expect(grantButton().hasAttribute('disabled')).toBe(false);
+  });
+
+  it('explains why an inactive member cannot receive points', async () => {
+    const spy = vi.spyOn(portalData, 'grantPoints');
+    await openAsOfficer('/officer/grant-points');
+    await search('Unverified Doe');
+    fireEvent.click(await memberOption(/Unverified Doe/));
+    expect(
+      screen.getByText(
+        /cannot receive points because their membership is inactive/
+      )
+    ).toBeDefined();
+    expect(grantButton().hasAttribute('disabled')).toBe(true);
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it('shows a recorded grant when the service returns no balances', async () => {
+    vi.spyOn(portalData, 'grantPoints').mockResolvedValueOnce({
+      entryId: 'entry-1',
+      studentId: '24-90004',
+      amount: 100,
+      reason: 'Workshop Attendance',
+      referenceId: 'key',
+      balance: null,
+    });
+    await openAsOfficer('/officer/grant-points');
+    await search('24-90004');
+    fireEvent.click(await memberOption(/Iris Cruz/));
+    fireEvent.click(grantButton());
+    const status = await screen.findByRole('status');
+    expect(status.textContent).toContain(
+      'Iris Cruz received +100 points for Workshop Attendance. The grant is now in their ledger.'
+    );
+    expect(status.textContent).not.toMatch(/Balance went/);
   });
 
   it('blocks an invalid amount', async () => {

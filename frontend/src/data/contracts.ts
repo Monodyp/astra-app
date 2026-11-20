@@ -188,19 +188,20 @@ export interface MemberSearchResult {
 }
 
 export interface GrantPointsInput {
-  memberId: string;
+  studentId: string;
   amount: number;
   reason: string;
-  note: string;
+  referenceId?: string;
+  idempotencyKey: string;
 }
 
 export interface GrantPointsResult {
   entryId: string;
-  recipient: MemberSearchResult;
+  studentId: string;
   amount: number;
   reason: string;
-  previousBalance: number;
-  newBalance: number;
+  referenceId: string;
+  balance: { previous: number; current: number } | null;
 }
 
 export const GRANT_REASONS = [
@@ -211,6 +212,7 @@ export const GRANT_REASONS = [
 ] as const;
 
 export type DataErrorCode =
+  | 'conflict'
   | 'unauthenticated'
   | 'forbidden'
   | 'not_found'

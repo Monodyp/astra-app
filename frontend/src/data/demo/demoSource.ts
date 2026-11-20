@@ -38,18 +38,10 @@ export interface DemoSourceOptions {
   storage?: KeyValueStorage;
   latencyMs?: number;
   now?: () => Date;
-  newKey?: () => string;
 }
 
-export interface DemoGrantInput extends GrantPointsInput {
-  idempotencyKey: string;
-}
-
-function randomKey(): string {
-  if (typeof globalThis.crypto?.randomUUID === 'function') {
-    return globalThis.crypto.randomUUID();
-  }
-  return `key-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+export function demoAuthUid(member: Pick<DemoMember, 'memberId'>): string {
+  return `demo-auth-${member.memberId}`;
 }
 
 const CATEGORY_LABELS: Record<PerkCategory, string> = {
@@ -104,7 +96,9 @@ function activityReference(
     return entry.referenceId;
   }
   const officer = records.members.find(
-    (member) => member.memberId === entry.createdBy
+    (member) =>
+      member.memberId === entry.createdBy ||
+      demoAuthUid(member) === entry.createdBy
   );
   return `Granted by ${officer?.fullName ?? entry.createdBy}`;
 }
@@ -166,7 +160,6 @@ export function createDemoDataSource(
   const store = new DemoStore(options.storage ?? createTabStorage());
   const latencyMs = options.latencyMs ?? 0;
   const now = options.now ?? (() => new Date());
-  const newKey = options.newKey ?? randomKey;
 
   async function settle(): Promise<void> {
     if (latencyMs > 0) {
@@ -664,31 +657,13 @@ export function createDemoDataSource(
         .map((member) => toSearchResult(records, member));
     },
 
-    async grantPoints(
-      grantInput: GrantPointsInput
-    ): Promise<GrantPointsResult> {
+    async grantPoints(input: GrantPointsInput): Promise<GrantPointsResult> {
       await settle();
-      const input: DemoGrantInput = { ...grantInput, idempotencyKey: newKey() };
       return store.update((records) => {
         const officer = currentOfficer(records);
-        const replayed = records.ledger.find(
-          (entry) =>
-            entry.type === 'grant' &&
-            entry.idempotencyKey === input.idempotencyKey
-        );
-        if (replayed) {
-          const recipient = records.members.find(
-            (member) => member.studentId === replayed.memberId
-          )!;
-          const balance = balanceOf(records, replayed.memberId);
-          return {
-            entryId: replayed.id,
-            recipient: toSearchResult(records, recipient),
-            amount: replayed.amount,
-            reason: replayed.reason,
-            previousBalance: balance - replayed.amount,
-            newBalance: balance,
-          };
+        const idempotencyKey = input.idempotencyKey.trim();
+        if (!idempotencyKey) {
+          throw new DataError('invalid_input', 'A grant needs a retry key.');
         }
         if (
           !Number.isInteger(input.amount) ||
@@ -700,33 +675,56 @@ export function createDemoDataSource(
             `Enter a whole number of points from 1 to ${MAX_GRANT}.`
           );
         }
-        if (!input.reason.trim()) {
+        const reason = input.reason.trim();
+        if (!reason) {
           throw new DataError(
             'invalid_input',
             'Choose a reason for the grant.'
           );
         }
-        const member = findMember(records, input.memberId);
-        const previousBalance = balanceOf(records, member.studentId);
+        const studentId = input.studentId.trim();
+        const member = records.members.find(
+          (item) => item.studentId === studentId
+        );
+        if (!member) {
+          throw new DataError('not_found', 'No member has that student ID.');
+        }
+        if (!member.duesPaid) {
+          throw new DataError(
+            'not_found',
+            `${member.fullName} does not have an active membership, so they cannot receive points.`
+          );
+        }
+        const referenceId = input.referenceId?.trim() || idempotencyKey;
+        const recorded = records.ledger.some(
+          (entry) =>
+            entry.type === 'grant' &&
+            entry.memberId === member.studentId &&
+            entry.referenceId === referenceId
+        );
+        if (recorded) {
+          throw new DataError('conflict', 'Ledger entry already exists.');
+        }
+        const previous = balanceOf(records, member.studentId);
         const entryId = nextId(records, 'L');
         records.ledger.push({
           id: entryId,
           memberId: member.studentId,
           amount: input.amount,
           type: 'grant',
-          reason: input.reason.trim(),
-          referenceId: input.idempotencyKey,
-          createdBy: officer.memberId,
+          reason,
+          referenceId,
+          createdBy: demoAuthUid(officer),
           createdAt: now().toISOString(),
-          idempotencyKey: input.idempotencyKey,
+          idempotencyKey,
         });
         return {
           entryId,
-          recipient: toSearchResult(records, member),
+          studentId: member.studentId,
           amount: input.amount,
-          reason: input.reason.trim(),
-          previousBalance,
-          newBalance: previousBalance + input.amount,
+          reason,
+          referenceId,
+          balance: { previous, current: previous + input.amount },
         };
       });
     },
