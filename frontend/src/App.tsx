@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext.js';
+import { MemberDataProvider } from './features/member/MemberDataContext.js';
 import { AppShell } from './components/AppShell.js';
 import { ProtectedRoute } from './components/ProtectedRoute.js';
 import { Login } from './pages/Login.js';
@@ -13,6 +14,7 @@ import { CheckIn } from './pages/CheckIn.js';
 import { Marketplace } from './pages/Marketplace.js';
 import { VoucherDetails } from './pages/VoucherDetails.js';
 import { Vouchers } from './pages/Vouchers.js';
+import { EventDetail } from './pages/EventDetail.js';
 import { PartnerInstructions } from './pages/PartnerInstructions.js';
 import { AstrascendLayout } from './features/astrascend/components/AstrascendLayout.js';
 import { LandingPage } from './features/astrascend/pages/LandingPage.js';
@@ -29,112 +31,123 @@ import { DevTools } from './pages/DevTools.js';
 export const App: React.FC = () => {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/astrascend" element={<AstrascendLayout />}>
-            <Route index element={<LandingPage />} />
-            <Route path="request" element={<RequestPage />} />
-            <Route path="request/success" element={<SuccessPage />} />
-            <Route
-              path="service/:serviceId"
-              element={<LegacyServiceRedirect />}
-            />
-          </Route>
-          {/* Dev-only test page — not registered in production */}
-          {import.meta.env.DEV && (
-            <Route path="/dev/test" element={<DevTools />} />
-          )}
-          <Route element={<AppShell />}>
-            <Route
-              path="/home"
-              element={
-                <ProtectedRoute>
-                  <Overview />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/id"
-              element={
-                <ProtectedRoute>
-                  <DigitalID />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/not-valid"
-              element={
-                <ProtectedRoute>
-                  <Navigate to="/id" replace />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/points"
-              element={
-                <ProtectedRoute>
-                  <Points />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/officer/grant-points"
-              element={
-                <ProtectedRoute role="officer">
-                  <OfficerGrantPoints />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/checkin"
-              element={
-                <ProtectedRoute role="officer">
-                  <CheckIn />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/marketplace"
-              element={
-                <ProtectedRoute>
-                  <Marketplace />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/vouchers"
-              element={
-                <ProtectedRoute>
-                  <Vouchers />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/vouchers/:id"
-              element={
-                <ProtectedRoute>
-                  <VoucherDetails />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/partner-instructions"
-              element={<PartnerInstructions />}
-            />
-            <Route
-              path="/opportunities"
-              element={
-                <ProtectedRoute>
-                  <Opportunities />
-                </ProtectedRoute>
-              }
-            />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Route>
-          <Route path="/" element={<Home />} />
-        </Routes>
-      </BrowserRouter>
+      <MemberDataProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/events/:id" element={<EventDetail />} />
+            <Route path="/astrascend" element={<AstrascendLayout />}>
+              <Route index element={<LandingPage />} />
+              <Route path="request" element={<RequestPage />} />
+              <Route path="request/success" element={<SuccessPage />} />
+              <Route
+                path="service/:serviceId"
+                element={<LegacyServiceRedirect />}
+              />
+            </Route>
+            {/* Dev-only test page — not registered in production */}
+            {import.meta.env.DEV && (
+              <Route path="/dev/test" element={<DevTools />} />
+            )}
+            <Route element={<AppShell />}>
+              <Route
+                path="/home"
+                element={
+                  <ProtectedRoute>
+                    <Overview />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/member"
+                element={
+                  <ProtectedRoute>
+                    <Navigate to="/home" replace />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/id"
+                element={
+                  <ProtectedRoute>
+                    <DigitalID />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/not-valid"
+                element={
+                  <ProtectedRoute>
+                    <Navigate to="/id" replace />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/points"
+                element={
+                  <ProtectedRoute>
+                    <Points />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/officer/grant-points"
+                element={
+                  <ProtectedRoute role="officer">
+                    <OfficerGrantPoints />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/checkin"
+                element={
+                  <ProtectedRoute role="officer">
+                    <CheckIn />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/marketplace"
+                element={
+                  <ProtectedRoute>
+                    <Marketplace />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/vouchers"
+                element={
+                  <ProtectedRoute>
+                    <Vouchers />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/vouchers/:id"
+                element={
+                  <ProtectedRoute>
+                    <VoucherDetails />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/partner-instructions"
+                element={<PartnerInstructions />}
+              />
+              <Route
+                path="/opportunities"
+                element={
+                  <ProtectedRoute>
+                    <Opportunities />
+                  </ProtectedRoute>
+                }
+              />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Route>
+            <Route path="/" element={<Home />} />
+          </Routes>
+        </BrowserRouter>
+      </MemberDataProvider>
     </AuthProvider>
   );
 };

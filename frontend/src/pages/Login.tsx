@@ -109,6 +109,16 @@ export const Login: React.FC = () => {
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    // Validate fields before submitting
+    if (!identifier.trim()) {
+      setError('Enter your student ID or email address.');
+      return;
+    }
+    if (!password) {
+      setError('Enter your password.');
+      return;
+    }
+    setError(null);
     void attempt('credentials', {
       method: 'credentials',
       identifier,

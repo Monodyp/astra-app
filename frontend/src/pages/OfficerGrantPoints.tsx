@@ -9,8 +9,19 @@ import {
 } from '../data/index.js';
 import { errorMessage } from '../lib/format.js';
 
-const MAX_GRANT = 1000;
+export const MAX_GRANT = 1000;
 const SEARCH_DELAY_MS = 200;
+
+export function validateGrant(v: { member: { studentId: string } | null; amount: string; reason: string }) {
+  const errors: { member?: string; amount?: string; reason?: string } = {};
+  if (!v.member) errors.member = 'Search for and select a member.';
+  const n = Number(v.amount);
+  if (!v.amount.trim()) errors.amount = 'Enter a points amount.';
+  else if (!Number.isInteger(n) || n < 1) errors.amount = 'Points must be a whole number of at least 1.';
+  else if (n > MAX_GRANT) errors.amount = `Points cannot exceed ${MAX_GRANT} per grant.`;
+  if (!v.reason.trim()) errors.reason = 'Enter a reason.';
+  return errors;
+}
 
 const fieldClass =
   'w-full border border-astra-white/15 bg-black/50 px-4 text-sm text-astra-white placeholder:text-astra-gray/70 focus:border-astra-primary-light focus:outline-none';

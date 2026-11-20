@@ -1,4 +1,8 @@
 import { NotImplementedError } from '../lib/errors.js';
+import { firebaseAdmin } from '../lib/firebase.js';
+
+const db = firebaseAdmin.firestore();
+const vouchers = db.collection('vouchers');
 
 // ---------------------------------------------------------------------------
 // Types
@@ -19,13 +23,6 @@ export interface ApplyResult {
   reward?: string;
 }
 
-// ---------------------------------------------------------------------------
-// In-memory voucher store
-// Used in tests and development when Firebase Data Connect is not available.
-// Replace with real Data Connect SDK calls once the emulator + SDK generate
-// workflow is set up.
-// ---------------------------------------------------------------------------
-
 export interface VoucherRow {
   id: string;
   code: string;
@@ -35,95 +32,67 @@ export interface VoucherRow {
   expiresAt?: Date;
 }
 
-// Exported so tests can seed / inspect state
-export const _voucherStore = new Map<string, VoucherRow>();
-
-/** Seed a voucher into the in-memory store (used by tests). */
-export function _seedVoucher(v: VoucherRow): void {
-  _voucherStore.set(v.code, { ...v });
+/** Seed a voucher into Firestore for integration tests. */
+export async function _seedVoucher(v: VoucherRow): Promise<void> {
+  await vouchers.doc(v.id).set(v);
 }
 
-/** Reset voucher store between tests. */
-export function _resetVoucherStore(): void {
-  _voucherStore.clear();
+/** Reset the voucher collection between integration tests. */
+export async function _resetVoucherStore(): Promise<void> {
+  const snapshot = await vouchers.get();
+  const batch = db.batch();
+  snapshot.docs.forEach((doc) => batch.delete(doc.ref));
+  await batch.commit();
 }
-
-/** Seed default vouchers for live dev testing */
-export function _seedDefaultVouchers(): void {
-  _seedVoucher({
-    id: 'v1',
-    code: 'NEXCAFE-001',
-    status: 'active',
-    partnerName: 'NexCafe',
-    reward: 'Free Cold Brew',
-    expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
-  });
-  _seedVoucher({
-    id: 'v2',
-    code: 'BEANB-001',
-    status: 'active',
-    partnerName: 'BeanBrew',
-    reward: '20% Off Pastry',
-    expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
-  });
-  _seedVoucher({
-    id: 'v3',
-    code: 'USED-001',
-    status: 'used',
-    partnerName: 'NexCafe',
-    reward: 'Free Cold Brew',
-  });
-  _seedVoucher({
-    id: 'v4',
-    code: 'EXP-001',
-    status: 'expired',
-    partnerName: 'NexCafe',
-    reward: 'Free Cold Brew',
-    expiresAt: new Date(Date.now() - 86400000),
-  });
-}
-
-// Initialize default vouchers for server startup
-_seedDefaultVouchers();
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+function toVoucherRow(
+  id: string,
+  data: FirebaseFirestore.DocumentData
+): VoucherRow {
+  const status =
+    data.status ?? (data.isRedeemed === true ? 'used' : 'active');
+  const expiresAt = data.expiresAt;
+
+  return {
+    id,
+    code: String(data.code),
+    status,
+    partnerName: String(data.partnerName),
+    reward: String(data.reward),
+    expiresAt:
+      expiresAt instanceof Date
+        ? expiresAt
+        : expiresAt?.toDate
+          ? expiresAt.toDate()
+          : expiresAt
+            ? new Date(expiresAt)
+            : undefined,
+  };
+}
 
 function isExpired(row: VoucherRow): boolean {
   if (!row.expiresAt) return false;
   return row.expiresAt < new Date();
 }
 
-// ---------------------------------------------------------------------------
-// Partner Redemption: Validate
-// ---------------------------------------------------------------------------
+async function findVoucher(
+  code: string
+): Promise<{ ref: FirebaseFirestore.DocumentReference; row: VoucherRow } | null> {
+  const snapshot = await vouchers
+    .where('code', '==', code.trim().toUpperCase())
+    .limit(1)
+    .get();
+  const document = snapshot.docs[0];
+  return document
+    ? { ref: document.ref, row: toVoucherRow(document.id, document.data()) }
+    : null;
+}
 
-/**
- * Validate a voucher code for a given partner.
- *
- * NEVER returns member personal data (name, email, studentId).
- *
- * Business rules (all return HTTP 200):
- * - `not_found`:     code does not exist in the system
- * - `wrong_partner`: code exists but belongs to a different partner
- * - `expired`:       code is past its expiresAt even if status is 'active'
- * - `already_used`:  status is 'used'
- * - `ok`:            code is active, unexpired, and belongs to this partner
- *
- * TODO: replace _voucherStore lookup with real Data Connect `GetVoucherByCode` query.
- * TODO: add partner-specific validation rules (e.g., only during business hours).
- */
-export async function validateVoucher(
-  code: string,
-  partner: string
-): Promise<ValidationResult> {
-  const row = _voucherStore.get(code.toUpperCase());
-
-  if (!row) {
-    return { valid: false, reason: 'not_found' };
-  }
-
+function validateRow(row: VoucherRow, partner: string): ValidationResult {
   if (row.partnerName.toLowerCase() !== partner.toLowerCase()) {
     return { valid: false, reason: 'wrong_partner' };
   }
@@ -145,56 +114,76 @@ export async function validateVoucher(
 }
 
 // ---------------------------------------------------------------------------
+// Partner Redemption: Validate
+// ---------------------------------------------------------------------------
+
+/**
+ * Validate a voucher code for a given partner.
+ *
+ * NEVER returns member personal data (name, email, studentId).
+ *
+ * Business rules (all return HTTP 200):
+ * - `not_found`:     code does not exist in the system
+ * - `wrong_partner`: code exists but belongs to a different partner
+ * - `expired`:       code is past its expiresAt even if status is 'active'
+ * - `already_used`:  status is 'used'
+ * - `ok`:            code is active, unexpired, and belongs to this partner
+ *
+ * TODO: add partner-specific validation rules (e.g., only during business hours).
+ */
+export async function validateVoucher(
+  code: string,
+  partner: string
+): Promise<ValidationResult> {
+  const voucher = await findVoucher(code);
+  if (!voucher) {
+    return { valid: false, reason: 'not_found' };
+  }
+
+  return validateRow(voucher.row, partner);
+}
+
+// ---------------------------------------------------------------------------
 // Partner Redemption: Apply
 // ---------------------------------------------------------------------------
 
 /**
  * Apply a voucher — atomically mark it as used for the given partner.
  *
- * Checks all validation conditions again at apply time (validate-then-apply
- * pattern prevents TOCTOU races at the service layer; production PostgreSQL
- * should use `UPDATE ... WHERE status = 'active' RETURNING *` for true
- * atomicity — see TODO below).
+ * Checks all validation conditions again at apply time in a Firestore
+ * transaction, so concurrent applies cannot both mark the voucher as used.
  *
  * Returns HTTP 200 for all business failures.
  *
- * TODO: replace in-memory conditional update with a true atomic SQL update:
- *   `UPDATE vouchers SET status='used', redeemed_at=NOW()
- *    WHERE code=$1 AND status='active' RETURNING id`
- *   Then check rowCount === 1 to detect concurrent applies.
  * TODO: add partner-specific post-redemption webhooks/notifications.
  */
 export async function applyVoucher(
   code: string,
   partner: string
 ): Promise<ApplyResult> {
-  const row = _voucherStore.get(code.toUpperCase());
+  return db.runTransaction(async (transaction) => {
+    const snapshot = await transaction.get(
+      vouchers.where('code', '==', code.trim().toUpperCase()).limit(1)
+    );
+    const document = snapshot.docs[0];
+    if (!document) {
+      return { applied: false, reason: 'not_found' };
+    }
 
-  if (!row) {
-    return { applied: false, reason: 'not_found' };
-  }
+    const row = toVoucherRow(document.id, document.data());
+    const validation = validateRow(row, partner);
+    if (!validation.valid) {
+      return { applied: false, reason: validation.reason };
+    }
 
-  if (row.partnerName.toLowerCase() !== partner.toLowerCase()) {
-    return { applied: false, reason: 'wrong_partner' };
-  }
+    transaction.update(document.ref, {
+      status: 'used',
+      isRedeemed: true,
+      redeemedAt: firebaseAdmin.firestore.FieldValue.serverTimestamp(),
+    });
 
-  if (row.status === 'used') {
-    return { applied: false, reason: 'already_used' };
-  }
-
-  if (isExpired(row)) {
-    return { applied: false, reason: 'expired' };
-  }
-
-  // Conditional update — check status is still 'active' before mutating
-  // In a real implementation this check + write would be one atomic SQL statement.
-  if (row.status !== 'active') {
-    return { applied: false, reason: 'already_used' };
-  }
-
-  row.status = 'used';
-
-  return { applied: true, reason: 'ok', reward: row.reward };
+    return { applied: true, reason: 'ok', reward: row.reward };
+  });
 }
 
 // ---------------------------------------------------------------------------

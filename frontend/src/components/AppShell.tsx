@@ -5,8 +5,9 @@ import wordmark from '../assets/astra-home/wordmark.png';
 import { useAuth } from '../context/AuthContext.js';
 import { PortalBackdrop } from './portal/PortalBackdrop.js';
 import { destinationsFor } from './portal/navigation.js';
+import { BottomNav, NAV_ITEMS, type MoreLink } from './BottomNav.js';
 
-const frame = 'mx-auto w-full max-w-[1440px] px-[112px]';
+const frame = 'mx-auto w-full max-w-[1440px] px-4 sm:px-8 lg:px-[112px]';
 
 export const AppShell: React.FC = () => {
   const { user, signOut } = useAuth();
@@ -17,6 +18,11 @@ export const AppShell: React.FC = () => {
   const verified = user?.membershipStatus === 'verified';
   const destinations = user ? destinationsFor(user.role) : [];
 
+  // Filter bottom-nav items: only officers see the /checkin shortcut
+  const bottomNavItems = NAV_ITEMS.filter(
+    (item) => item.path !== '/checkin' || isOfficer
+  );
+
   async function handleSignOut() {
     setSigningOut(true);
     try {
@@ -26,6 +32,15 @@ export const AppShell: React.FC = () => {
       setSigningOut(false);
     }
   }
+
+  const moreLinks: MoreLink[] = [
+    { to: '/vouchers', label: 'Claimed vouchers' },
+    ...(isOfficer ? [{ to: '/officer/grant-points', label: 'Grant points (officer)' }] : []),
+    { to: '/opportunities', label: 'Opportunities' },
+    { to: '/partner-instructions', label: 'Partner instructions' },
+    { to: '/astrascend', label: 'ASTRAscend services' },
+    { to: '/', label: 'Public homepage' },
+  ];
 
   return (
     <div className="relative flex min-h-screen flex-col bg-astra-black font-astra text-astra-white">
@@ -38,8 +53,8 @@ export const AppShell: React.FC = () => {
       </a>
 
       <header className="relative z-10 border-b border-astra-primary-dark/60 bg-astra-black/40">
-        <div className={`${frame} flex items-center justify-between py-6`}>
-          <div className="flex items-center gap-7">
+        <div className={`${frame} flex items-center justify-between py-4 sm:py-6`}>
+          <div className="flex items-center gap-4 sm:gap-7">
             <Link
               to={user ? '/home' : '/'}
               aria-label="ASTRA Developers portal"
@@ -47,13 +62,13 @@ export const AppShell: React.FC = () => {
               <img
                 src={wordmark}
                 alt="ASTRA Developers"
-                className="w-[220px]"
+                className="w-36 sm:w-[220px]"
               />
             </Link>
             {user && (
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3 sm:gap-4">
                 <div>
-                  <p className="text-base text-astra-white">
+                  <p className="text-sm sm:text-base text-astra-white">
                     Welcome back, {user.displayName}
                   </p>
                   <p className="text-[10px] font-medium uppercase tracking-wide text-astra-gray">
@@ -61,7 +76,7 @@ export const AppShell: React.FC = () => {
                   </p>
                 </div>
                 <span
-                  className={`rounded-full px-5 py-1.5 text-[10px] font-bold uppercase tracking-wide ${
+                  className={`rounded-full px-3 sm:px-5 py-1 sm:py-1.5 text-[10px] font-bold uppercase tracking-wide ${
                     verified
                       ? 'bg-[#0f2a3a] text-astra-primary-light'
                       : 'bg-astra-white/15 text-astra-white'
@@ -72,20 +87,24 @@ export const AppShell: React.FC = () => {
               </div>
             )}
           </div>
-          <div className="flex items-center gap-6">
+
+          <div className="flex items-center gap-3 sm:gap-6">
             <a
-              href="/astrascend"
-              className="inline-flex items-center gap-1 rounded-full bg-astra-primary-light px-8 py-3 text-lg font-bold text-astra-white transition-transform hover:scale-105"
+              href="https://astrascend.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hidden items-center gap-1.5 text-xs text-astra-gray transition-colors hover:text-astra-white md:inline-flex"
             >
-              ASTRAscend
-              <ArrowUpRight className="h-5 w-5" aria-hidden="true" />
+              <span>ASTRAscend services</span>
+              <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
             </a>
+
             {user && (
               <button
                 type="button"
                 onClick={() => void handleSignOut()}
                 disabled={signingOut}
-                className="text-base text-astra-gray transition-colors hover:text-astra-white disabled:opacity-60"
+                className="text-sm sm:text-base text-astra-gray transition-colors hover:text-astra-white disabled:opacity-60"
               >
                 {signingOut ? 'Signing out…' : 'Logout'}
               </button>
@@ -97,15 +116,15 @@ export const AppShell: React.FC = () => {
       {destinations.length > 0 && (
         <nav
           aria-label="Portal"
-          className="relative z-10 border-b border-astra-primary-dark/60 bg-astra-black/20"
+          className="relative z-10 border-b border-astra-primary-dark/60 bg-astra-black/20 hidden lg:block"
         >
-          <ul className={`${frame} flex gap-2`}>
+          <ul className={`${frame} flex gap-2 overflow-x-auto`}>
             {destinations.map((item) => (
               <li key={item.path}>
                 <NavLink
                   to={item.path}
                   className={({ isActive }) =>
-                    `block border-b-2 px-2 py-5 text-sm font-bold transition-colors mx-2 ${
+                    `block border-b-2 px-2 py-5 text-sm font-bold transition-colors mx-2 whitespace-nowrap ${
                       isActive
                         ? 'border-astra-primary-light text-astra-primary-light'
                         : 'border-transparent text-astra-gray hover:text-astra-white'
@@ -123,12 +142,17 @@ export const AppShell: React.FC = () => {
       <main
         id="portal-main"
         tabIndex={-1}
-        className={`${frame} relative z-10 flex-1 py-8 focus:outline-none`}
+        className={`${frame} relative z-10 flex-1 py-8 pb-24 lg:pb-8 focus:outline-none`}
       >
         <Outlet />
       </main>
 
-      <footer className="relative z-10 border-t border-astra-primary-dark/60 bg-astra-black/80">
+      {/* Mobile bottom nav */}
+      <div className="lg:hidden">
+        <BottomNav moreLinks={moreLinks} navItems={bottomNavItems} />
+      </div>
+
+      <footer className="relative z-10 border-t border-astra-primary-dark/60 bg-astra-black/80 hidden lg:block">
         <div
           className={`${frame} flex items-center justify-between py-9 text-[10px] font-medium uppercase tracking-wide text-astra-gray`}
         >
