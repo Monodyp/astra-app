@@ -21,6 +21,11 @@ describe('Landing Page Partners and Footer Social Links', () => {
         expect(nexImg).toBeTruthy();
         expect(nexImg.getAttribute('src')).toMatch(/Nex_logo_dark/);
 
+        // Placeholders 2, 3, 4, 5 are present
+        expect(screen.getByText('Partner 2')).toBeTruthy();
+        expect(screen.getByText('Partner 3')).toBeTruthy();
+        expect(screen.getByText('Partner 4')).toBeTruthy();
+        expect(screen.getByText('Partner 5')).toBeTruthy();
     });
 
     it('renders Facebook and Discord icons in the footer', () => {
