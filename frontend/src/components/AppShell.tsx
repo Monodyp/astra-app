@@ -143,7 +143,7 @@ export const AppShell: React.FC = () => {
       <main
         id="portal-main"
         tabIndex={-1}
-        className={`${frame} relative z-10 flex-1 py-8 focus:outline-none`}
+        className={`${frame} relative z-20 flex-1 py-8 focus:outline-none`}
       >
         <Outlet />
       </main>
