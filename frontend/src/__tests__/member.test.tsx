@@ -389,6 +389,121 @@ describe('points history', () => {
   });
 });
 
+describe('portal navigation', () => {
+  function bottomNav() {
+    return screen.getByRole('navigation', { name: 'Member navigation' });
+  }
+
+  function names(nav: HTMLElement) {
+    return within(nav)
+      .getAllByRole('link')
+      .map((link) => link.getAttribute('aria-label'));
+  }
+
+  it('builds the mobile navigation from the role destinations', async () => {
+    const member = await signInAs(/Verified member/, '/home');
+    expect(names(bottomNav())).toEqual([
+      'Overview',
+      'Digital ID',
+      'Perks Marketplace',
+      'My Vouchers',
+    ]);
+    expect(
+      within(bottomNav())
+        .getByRole('link', { name: 'Overview' })
+        .getAttribute('aria-current')
+    ).toBe('page');
+    member.unmount();
+    window.sessionStorage.clear();
+
+    await signInAs(/^Officer/, '/home');
+    expect(names(bottomNav())).toEqual([
+      'Overview',
+      'Digital ID',
+      'Officer Points',
+      'Perks Marketplace',
+      'Event Check-in',
+      'My Vouchers',
+    ]);
+    expect(
+      within(bottomNav()).getByRole('button', { name: 'More' })
+    ).toBeDefined();
+  });
+
+  it('marks My Vouchers active on a voucher receipt', async () => {
+    await signInAs(/Verified member/, '/vouchers/V-98214');
+    await screen.findByRole('dialog', {
+      name: '15% Off at the Campus Bookstore',
+    });
+    const desktop = screen.getByRole('navigation', { name: 'Portal' });
+    for (const nav of [desktop, bottomNav()]) {
+      expect(
+        within(nav)
+          .getByRole('link', { name: 'My Vouchers' })
+          .getAttribute('aria-current')
+      ).toBe('page');
+      expect(
+        within(nav)
+          .getByRole('link', { name: 'Overview' })
+          .getAttribute('aria-current')
+      ).toBeNull();
+    }
+  });
+
+  it('opens Points from the mobile More menu and closes the menu with Escape', async () => {
+    await signInAs(/Verified member/, '/home');
+    const more = within(bottomNav()).getByRole('button', { name: 'More' });
+    fireEvent.click(more);
+    const sheet = screen.getByRole('dialog', { name: 'More' });
+    expect(document.activeElement).toBe(
+      within(sheet).getByRole('button', { name: 'Close more menu' })
+    );
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.queryByRole('dialog', { name: 'More' })).toBeNull();
+    expect(document.activeElement).toBe(more);
+
+    fireEvent.click(more);
+    fireEvent.click(
+      within(screen.getByRole('dialog', { name: 'More' })).getByRole('link', {
+        name: 'Points',
+      })
+    );
+    await waitFor(() => expect(window.location.pathname).toBe('/points'));
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Points' })
+    ).toBeDefined();
+    expect(
+      within(bottomNav()).getByRole('button', { name: 'More' }).className
+    ).toContain('text-astra-primary-light');
+  });
+
+  it('keeps the officer tools out of the member More menu', async () => {
+    await signInAs(/Verified member/, '/home');
+    fireEvent.click(within(bottomNav()).getByRole('button', { name: 'More' }));
+    const sheet = screen.getByRole('dialog', { name: 'More' });
+    expect(
+      within(sheet)
+        .getAllByRole('link')
+        .map((link) => link.textContent)
+    ).toEqual([
+      'Points',
+      'Opportunities',
+      'Partner instructions',
+      'ASTRAscend services',
+      'Public homepage',
+    ]);
+  });
+
+  it('links the header to the internal ASTRAscend pages', async () => {
+    await signInAs(/Verified member/, '/home');
+    expect(
+      screen
+        .getByRole('link', { name: 'ASTRAscend services' })
+        .getAttribute('href')
+    ).toBe('/astrascend');
+  });
+});
+
 describe('public pages', () => {
   it('event registration link target is honest about registration', () => {
     window.history.pushState({}, '', '/events/html-css-lab');

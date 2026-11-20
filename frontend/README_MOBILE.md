@@ -16,3 +16,10 @@ To go live, add a `PortalDataSource` for the API and select it in
 `src/data/index.ts`. Pages, routes, and components need no changes. The backend
 must still check every role and membership rule. The role checks in the portal
 only hide screens.
+
+## Layout
+
+- Below the `lg` breakpoint the portal shows a fixed bottom navigation. It uses
+  the same role destinations as the desktop navigation and adds a More menu
+  with Points and the other pages.
+- The portal footer stays visible on phones above the bottom navigation.

@@ -5,7 +5,7 @@ import wordmark from '../assets/astra-home/wordmark.png';
 import { useAuth } from '../context/AuthContext.js';
 import { PortalBackdrop } from './portal/PortalBackdrop.js';
 import { destinationsFor } from './portal/navigation.js';
-import { BottomNav, NAV_ITEMS, type MoreLink } from './BottomNav.js';
+import { BottomNav, type MoreLink } from './BottomNav.js';
 
 const frame = 'mx-auto w-full max-w-[1440px] px-4 sm:px-8 lg:px-[112px]';
 
@@ -18,11 +18,6 @@ export const AppShell: React.FC = () => {
   const verified = user?.membershipStatus === 'verified';
   const destinations = user ? destinationsFor(user.role) : [];
 
-  // Filter bottom-nav items: only officers see the /checkin shortcut
-  const bottomNavItems = NAV_ITEMS.filter(
-    (item) => item.path !== '/checkin' || isOfficer
-  );
-
   async function handleSignOut() {
     setSigningOut(true);
     try {
@@ -34,8 +29,7 @@ export const AppShell: React.FC = () => {
   }
 
   const moreLinks: MoreLink[] = [
-    { to: '/vouchers', label: 'Claimed vouchers' },
-    ...(isOfficer ? [{ to: '/officer/grant-points', label: 'Grant points (officer)' }] : []),
+    { to: '/points', label: 'Points' },
     { to: '/opportunities', label: 'Opportunities' },
     { to: '/partner-instructions', label: 'Partner instructions' },
     { to: '/astrascend', label: 'ASTRAscend services' },
@@ -53,7 +47,9 @@ export const AppShell: React.FC = () => {
       </a>
 
       <header className="relative z-10 border-b border-astra-primary-dark/60 bg-astra-black/40">
-        <div className={`${frame} flex items-center justify-between py-4 sm:py-6`}>
+        <div
+          className={`${frame} flex items-center justify-between py-4 sm:py-6`}
+        >
           <div className="flex items-center gap-4 sm:gap-7">
             <Link
               to={user ? '/home' : '/'}
@@ -89,15 +85,13 @@ export const AppShell: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-3 sm:gap-6">
-            <a
-              href="https://astrascend.com"
-              target="_blank"
-              rel="noopener noreferrer"
+            <Link
+              to="/astrascend"
               className="hidden items-center gap-1.5 text-xs text-astra-gray transition-colors hover:text-astra-white md:inline-flex"
             >
               <span>ASTRAscend services</span>
               <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
-            </a>
+            </Link>
 
             {user && (
               <button
@@ -142,19 +136,26 @@ export const AppShell: React.FC = () => {
       <main
         id="portal-main"
         tabIndex={-1}
-        className={`${frame} relative z-10 flex-1 py-8 pb-24 lg:pb-8 focus:outline-none`}
+        className={`${frame} relative z-10 flex-1 py-8 focus:outline-none`}
       >
         <Outlet />
       </main>
 
-      {/* Mobile bottom nav */}
-      <div className="lg:hidden">
-        <BottomNav moreLinks={moreLinks} navItems={bottomNavItems} />
-      </div>
+      {destinations.length > 0 && (
+        <div className="lg:hidden">
+          <BottomNav destinations={destinations} moreLinks={moreLinks} />
+        </div>
+      )}
 
-      <footer className="relative z-10 border-t border-astra-primary-dark/60 bg-astra-black/80 hidden lg:block">
+      <footer
+        className={`relative z-10 border-t border-astra-primary-dark/60 bg-astra-black/80 ${
+          destinations.length > 0
+            ? 'pb-[calc(4rem+env(safe-area-inset-bottom))] lg:pb-0'
+            : ''
+        }`}
+      >
         <div
-          className={`${frame} flex items-center justify-between py-9 text-[10px] font-medium uppercase tracking-wide text-astra-gray`}
+          className={`${frame} flex flex-col gap-2 py-6 text-[10px] font-medium uppercase tracking-wide text-astra-gray sm:flex-row sm:items-center sm:justify-between lg:py-9`}
         >
           <span>ASTRA Developers / AY 2026–2027</span>
           <span>
