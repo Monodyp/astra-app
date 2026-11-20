@@ -26,6 +26,7 @@ export const portalData: PortalDataSource = {
   signOut: () => source.signOut(),
   getOverview: () => source.getOverview(),
   getDigitalId: () => source.getDigitalId(),
+  getPoints: () => source.getPoints(),
   listPerks: () => source.listPerks(),
   claimPerk: (perkId, options) => source.claimPerk(perkId, options),
   listVouchers: () => source.listVouchers(),

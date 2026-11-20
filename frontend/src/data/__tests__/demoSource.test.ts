@@ -113,6 +113,35 @@ describe('demo data source', () => {
     });
   });
 
+  it('reads the complete signed points ledger, newest first', async () => {
+    await expectDataError(data.getPoints(), 'unauthenticated');
+    await data.signIn({ method: 'shortcut', shortcutId: 'verified-member' });
+    const history = await data.getPoints();
+    expect(history.balance).toBe(450);
+    expect(history.entries).toHaveLength(5);
+    expect(history.entries.map((entry) => entry.amount)).toEqual([
+      100, 100, 100, 200, -50,
+    ]);
+    expect(history.entries.map((entry) => entry.type)).toEqual([
+      'attendance',
+      'grant',
+      'attendance',
+      'grant',
+      'redemption',
+    ]);
+    expect(history.entries[1].reference).toBe('Granted by Officer Doe');
+    expect(
+      history.entries.reduce((total, entry) => total + entry.amount, 0)
+    ).toBe(history.balance);
+  });
+
+  it('keeps the points ledger of each member separate', async () => {
+    await data.signIn({ method: 'shortcut', shortcutId: 'unverified-member' });
+    const history = await data.getPoints();
+    expect(history).toMatchObject({ balance: 50 });
+    expect(history.entries.map((entry) => entry.id)).toEqual(['L-006']);
+  });
+
   it('reports the unverified state from the current record', async () => {
     await data.signIn({ method: 'shortcut', shortcutId: 'unverified-member' });
     const id = await data.getDigitalId();

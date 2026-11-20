@@ -60,6 +60,26 @@ export interface MemberOverview {
   activityCount: number;
 }
 
+export type PointsEntryType =
+  | 'grant'
+  | 'attendance'
+  | 'redemption'
+  | 'adjustment';
+
+export interface PointsEntry {
+  id: string;
+  type: PointsEntryType;
+  amount: number;
+  reason: string;
+  reference: string;
+  createdAt: string;
+}
+
+export interface PointsHistory {
+  balance: number;
+  entries: PointsEntry[];
+}
+
 export interface DigitalId {
   fullName: string;
   studentId: string;
@@ -250,6 +270,7 @@ export interface PortalDataSource {
 
   getOverview(): Promise<MemberOverview>;
   getDigitalId(): Promise<DigitalId>;
+  getPoints(): Promise<PointsHistory>;
 
   listPerks(): Promise<PerkCatalog>;
   claimPerk(perkId: string, options: ClaimPerkOptions): Promise<ClaimResult>;

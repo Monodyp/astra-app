@@ -15,6 +15,7 @@ import {
   type MemberSearchResult,
   type Perk,
   type PerkCatalog,
+  type PointsHistory,
   type PortalDataSource,
   type ScanSample,
   type Session,
@@ -386,6 +387,26 @@ export function createDemoDataSource(
         membershipStatus: verified ? 'verified' : 'unverified',
         qrValue: member.qrToken,
         statusNote: verified ? 'Annual dues paid' : 'Membership inactive',
+      };
+    },
+
+    async getPoints(): Promise<PointsHistory> {
+      await settle();
+      const records = store.read();
+      const member = currentMember(records);
+      return {
+        balance: balanceOf(records, member.studentId),
+        entries: records.ledger
+          .filter((entry) => entry.memberId === member.studentId)
+          .sort((a, b) => newestFirst(a.createdAt, b.createdAt))
+          .map((entry) => ({
+            id: entry.id,
+            type: entry.type,
+            amount: entry.amount,
+            reason: entry.reason,
+            reference: activityReference(records, entry),
+            createdAt: entry.createdAt,
+          })),
       };
     },
 

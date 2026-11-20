@@ -79,6 +79,7 @@ function testAdapter(
     signOut: async () => undefined,
     getOverview: unexpected,
     getDigitalId: unexpected,
+    getPoints: unexpected,
     listPerks: unexpected,
     claimPerk: unexpected,
     listVouchers: unexpected,
