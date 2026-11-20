@@ -133,9 +133,7 @@ export const Overview: React.FC = () => {
       aria-labelledby="overview-heading"
       className="flex flex-col gap-[32px] pt-[8px]"
     >
-      {/* Hero HUD Grid */}
       <div className="grid grid-cols-1 gap-x-[48px] gap-y-[16px] lg:grid-cols-[minmax(0,3fr)_minmax(0,1fr)] lg:gap-x-[64px]">
-        {/* Main Member Card Panel (spans 3 metric rows on lg) */}
         <div className="relative flex flex-col justify-between gap-12 border border-[#224573] bg-[rgba(10,12,13,0.4)] px-[24px] py-[36px] shadow-[0px_0px_16px_rgba(0,140,204,0.07)] backdrop-blur-[4px] sm:px-[32px] sm:py-[48px] lg:row-span-3">
           <HudFrameAccents />
 
@@ -191,10 +189,8 @@ export const Overview: React.FC = () => {
             </div>
           </div>
         </div>
-
-        {/* Stat 1: Total Points */}
         <Link
-          to="/marketplace"
+          to="/points"
           className="relative flex flex-col justify-center border border-[#224573] bg-[rgba(10,12,13,0.4)] px-[24px] py-[16px] shadow-[0px_0px_32px_0px_rgba(0,140,204,0.07)] backdrop-blur-[4px] transition-colors hover:border-[#00b1ed]/70"
         >
           <HudFrameAccents />
@@ -223,8 +219,6 @@ export const Overview: React.FC = () => {
         ) : (
           <div className={statCardClass}>{eventsBody}</div>
         )}
-
-        {/* Stat 3: Active Vouchers */}
         <Link to="/vouchers" className={statLinkClass}>
           <HudFrameAccents />
           <div className="flex flex-col gap-[8px]">
@@ -242,8 +236,6 @@ export const Overview: React.FC = () => {
           </div>
         </Link>
       </div>
-
-      {/* Recent Activity */}
       <div className="flex flex-col gap-[10px]">
         <div className="flex items-center justify-between">
           <h2 className="text-[20px] font-bold leading-[28px] tracking-[-0.4px] text-[#fdfcf9]">

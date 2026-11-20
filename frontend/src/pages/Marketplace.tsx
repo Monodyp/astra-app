@@ -1,152 +1,330 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ErrorState, LoadingState, Panel, SimulatedNote, btnPrimary, btnSecondary } from '@/components/member/ui';
-import { useMemberData, useMemberQuery } from '@/features/member/MemberDataContext';
-import type { Perk } from '@/features/member/types';
+import { PageHeading } from '../components/portal/PageHeading.js';
+import { Panel } from '../components/portal/Panel.js';
+import {
+  EmptyState,
+  ErrorState,
+  LoadingState,
+} from '../components/portal/StatusViews.js';
+import {
+  primaryButton,
+  secondaryButton,
+} from '../components/portal/buttons.js';
+import {
+  PERK_CATEGORY_LABELS,
+  isDataError,
+  portalData,
+  type Perk,
+  type PerkCategory,
+} from '../data/index.js';
+import { errorMessage } from '../lib/format.js';
+import { isUncertainFailure, newIdempotencyKey } from '../lib/idempotency.js';
+import { useResource } from '../lib/useResource.js';
 
-const CATEGORIES = ['All Perks', 'Discounts', 'Merch', 'Partner Workshops'] as const;
+const loadCatalog = () => portalData.listPerks();
 
-/** Accessible confirm dialog: focus trap, Escape to close, focus restore. */
-const ConfirmClaim: React.FC<{
+const CATEGORY_ORDER = Object.keys(PERK_CATEGORY_LABELS) as PerkCategory[];
+
+type Filter = 'all' | PerkCategory;
+
+interface PendingClaim {
   perk: Perk;
+  idempotencyKey: string | null;
+  submitting: boolean;
+  uncertain: boolean;
+  message: string | null;
+}
+
+const ConfirmClaim: React.FC<{
+  claim: PendingClaim;
   balance: number;
-  busy: boolean;
-  error: string | null;
   onConfirm: () => void;
   onCancel: () => void;
-}> = ({ perk, balance, busy, error, onConfirm, onCancel }) => {
+}> = ({ claim, balance, onConfirm, onCancel }) => {
   const ref = useRef<HTMLDivElement>(null);
+  const { perk, submitting, uncertain, message } = claim;
+
   useEffect(() => {
-    const el = ref.current;
-    el?.querySelector<HTMLElement>('button')?.focus();
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !busy) onCancel();
-      if (e.key === 'Tab' && el) {
-        const f = Array.from(el.querySelectorAll<HTMLButtonElement>('button:not([disabled])'));
-        const first = f[0], last = f[f.length - 1];
-        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
-        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    const dialog = ref.current;
+    dialog?.querySelector<HTMLElement>('button')?.focus();
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !submitting) onCancel();
+      if (event.key === 'Tab' && dialog) {
+        const buttons = Array.from(
+          dialog.querySelectorAll<HTMLButtonElement>('button:not([disabled])')
+        );
+        if (buttons.length === 0) return;
+        const first = buttons[0];
+        const last = buttons[buttons.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first.focus();
+        }
       }
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, [busy, onCancel]);
+  }, [submitting, onCancel]);
+
   return (
     <div className="fixed inset-0 z-[70] flex items-end justify-center bg-black/70 p-4 sm:items-center">
-      <div ref={ref} role="dialog" aria-modal="true" aria-labelledby="claim-h" className="max-h-[90dvh] w-full max-w-md space-y-3 overflow-y-auto border border-astra-primary-dark bg-astra-black p-5">
-        <h2 id="claim-h" className="text-lg font-bold">Claim this voucher?</h2>
-        <p className="break-words">{perk.title}</p>
-        <p className="text-sm text-astra-gray">Cost: {perk.cost} PTS · Balance after: {balance - perk.cost} PTS</p>
-        {error && <p role="alert" className="text-sm text-red-300">Error: {error}</p>}
-        <button type="button" className={btnPrimary} onClick={onConfirm} disabled={busy}>
-          {busy ? 'Claiming…' : 'Confirm claim'}
-        </button>
-        <button type="button" className={btnSecondary} onClick={onCancel} disabled={busy}>Cancel</button>
+      <div
+        ref={ref}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="claim-title"
+        className="max-h-[90dvh] w-full max-w-md space-y-4 overflow-y-auto border border-astra-primary-dark bg-astra-black p-6 font-astra"
+      >
+        <h2 id="claim-title" className="text-lg font-bold">
+          Claim this voucher?
+        </h2>
+        <p className="break-words">{perk.name}</p>
+        <p className="text-sm text-astra-gray">
+          Cost: {perk.cost} PTS · Balance after: {balance - perk.cost} PTS
+        </p>
+        {message && (
+          <p
+            role="alert"
+            className="border border-red-400/40 bg-red-950/30 px-4 py-3 text-sm text-red-200"
+          >
+            {message}
+          </p>
+        )}
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <button
+            type="button"
+            className={primaryButton}
+            onClick={onConfirm}
+            disabled={submitting}
+          >
+            {submitting
+              ? 'Claiming…'
+              : uncertain
+                ? 'Retry claim'
+                : 'Confirm claim'}
+          </button>
+          <button
+            type="button"
+            className={secondaryButton}
+            onClick={onCancel}
+            disabled={submitting}
+          >
+            Cancel
+          </button>
+        </div>
       </div>
     </div>
   );
 };
 
-export const Marketplace: React.FC = () => {
-  const perks = useMemberQuery((s) => s.getPerks());
-  const points = useMemberQuery((s) => s.getPoints());
-  const vouchers = useMemberQuery((s) => s.getVouchers());
-  const [cat, setCat] = useState<(typeof CATEGORIES)[number]>('All Perks');
-  const [pending, setPending] = useState<Perk | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const claimBtnRef = useRef<HTMLElement | null>(null);
-  const navigate = useNavigate();
-  const { source, fixture } = useMemberData();
-
-  if (perks.status === 'error') return <ErrorState error={perks.error} onRetry={perks.reload} />;
-  if (perks.status === 'loading' || !perks.data) return <LoadingState label="Loading perks" />;
-
-  const balance = points.data?.balance ?? 0;
-  const list = perks.data.filter((p) => cat === 'All Perks' || p.category === cat);
-  const activeCount = (vouchers.data ?? []).filter((v) => v.status === 'Active').length;
-
-  const confirm = async () => {
-    if (!pending || busy) return; // blocks repeat submissions
-    setBusy(true);
-    setError(null);
-    try {
-      const res = await source.claimPerk(pending.id);
-      setPending(null);
-      navigate(`/vouchers/${res.voucher.id}`, { state: { from: '/marketplace', simulated: res.simulated, message: res.message } });
-    } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  };
+const PerkCard: React.FC<{
+  perk: Perk;
+  balance: number;
+  onClaim: (perk: Perk, button: HTMLButtonElement) => void;
+}> = ({ perk, balance, onClaim }) => {
+  const shortBy = perk.cost - balance;
+  const soldOut = perk.remainingStock !== null && perk.remainingStock <= 0;
+  const limitReached = perk.remainingClaims <= 0;
+  const blocked = soldOut
+    ? 'This perk is out of stock.'
+    : limitReached
+      ? 'You reached the claim limit for this perk.'
+      : shortBy > 0
+        ? `Not enough points: you need ${shortBy} more PTS.`
+        : null;
+  const noteId = `perk-note-${perk.id}`;
 
   return (
-    <div className="space-y-4">
-      <h2 className="text-2xl font-bold">Perks Marketplace</h2>
-      <div className="grid grid-cols-2 gap-3">
-        <p className="flex min-h-12 items-center justify-center border border-astra-primary-dark px-2 text-center font-bold" aria-live="polite">
-          {points.data ? `${balance} PTS Available` : '— PTS'}
+    <Panel as="article" className="flex flex-col gap-4 p-6">
+      <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] font-bold uppercase tracking-wide">
+        <span className="text-astra-primary-light">{perk.eyebrow}</span>
+        <span className="text-astra-gray">{perk.categoryLabel}</span>
+      </div>
+      <div className="border border-astra-primary-dark/80 bg-[#0c2633]/60 px-5 py-6">
+        <p className="text-2xl font-bold">{perk.headline}</p>
+        <p className="mt-1 text-sm text-astra-gray">{perk.subline}</p>
+      </div>
+      <div className="flex-1">
+        <h2 className="break-words text-base font-bold">{perk.name}</h2>
+        <p className="mt-1 text-sm text-astra-gray">{perk.partner}</p>
+        <p className="mt-2 text-sm text-astra-white/80">{perk.description}</p>
+      </div>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-lg font-bold">{perk.cost} PTS</p>
+        {perk.featured && (
+          <span className="rounded-full bg-[#0f2a3a] px-3 py-1 text-[10px] font-bold uppercase text-astra-primary-light">
+            Featured
+          </span>
+        )}
+      </div>
+      <button
+        type="button"
+        className={primaryButton}
+        disabled={blocked !== null}
+        aria-describedby={blocked ? noteId : undefined}
+        aria-label={`Claim ${perk.name}`}
+        onClick={(event) => onClaim(perk, event.currentTarget)}
+      >
+        Claim Voucher
+      </button>
+      {blocked && (
+        <p id={noteId} className="text-sm text-amber-300">
+          {blocked}
         </p>
-        <Link to="/vouchers" className="flex min-h-12 items-center justify-center border border-astra-primary-dark px-2 text-center font-bold hover:bg-astra-primary-dark/40">
-          My Vouchers{vouchers.data ? ` (${activeCount})` : ''}
+      )}
+    </Panel>
+  );
+};
+
+export const Marketplace: React.FC = () => {
+  const catalog = useResource(loadCatalog);
+  const navigate = useNavigate();
+  const [filter, setFilter] = useState<Filter>('all');
+  const [claim, setClaim] = useState<PendingClaim | null>(null);
+  const opener = useRef<HTMLButtonElement | null>(null);
+
+  if (catalog.status === 'loading') {
+    return <LoadingState label="Loading perks" />;
+  }
+  if (catalog.status === 'error') {
+    return (
+      <ErrorState
+        message={errorMessage(catalog.error)}
+        onRetry={catalog.reload}
+      />
+    );
+  }
+
+  const { perks, balance } = catalog.data;
+  const shown = perks.filter(
+    (perk) => filter === 'all' || perk.category === filter
+  );
+
+  function open(perk: Perk, button: HTMLButtonElement) {
+    opener.current = button;
+    setClaim({
+      perk,
+      idempotencyKey: null,
+      submitting: false,
+      uncertain: false,
+      message: null,
+    });
+  }
+
+  function cancel() {
+    setClaim(null);
+    window.setTimeout(() => opener.current?.focus(), 0);
+  }
+
+  async function confirm() {
+    if (!claim || claim.submitting) return;
+    const idempotencyKey = claim.idempotencyKey ?? newIdempotencyKey();
+    const perk = claim.perk;
+    setClaim({ ...claim, idempotencyKey, submitting: true, message: null });
+    try {
+      const result = await portalData.claimPerk(perk.id, { idempotencyKey });
+      if (result.status === 'claimed') {
+        navigate(`/vouchers/${result.voucher.id}`, {
+          state: { from: '/marketplace', voucher: result.voucher },
+        });
+        return;
+      }
+      setClaim({
+        perk,
+        idempotencyKey: null,
+        submitting: false,
+        uncertain: false,
+        message: result.message,
+      });
+    } catch (caught) {
+      const uncertain = isUncertainFailure(caught);
+      setClaim({
+        perk,
+        idempotencyKey: uncertain ? idempotencyKey : null,
+        submitting: false,
+        uncertain,
+        message: uncertain
+          ? 'The portal could not confirm your claim. Retry to check it. You are charged only once.'
+          : isDataError(caught)
+            ? caught.message
+            : errorMessage(caught),
+      });
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <PageHeading
+        eyebrow="Rewards"
+        title="Perks Marketplace"
+        description="Spend your points on partner perks. Each claim adds a voucher to your wallet."
+      />
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <p
+          aria-live="polite"
+          className="flex min-h-12 items-center justify-center border border-astra-primary-dark bg-black/40 px-4 text-center font-bold"
+        >
+          {balance} PTS Available
+        </p>
+        <Link
+          to="/vouchers"
+          className="flex min-h-12 items-center justify-center border border-astra-primary-dark bg-black/40 px-4 text-center font-bold transition-colors hover:border-astra-primary-light"
+        >
+          My Vouchers
         </Link>
       </div>
 
-      <div role="group" aria-label="Perk categories" className="flex gap-1 overflow-x-auto border-b border-astra-primary-dark [scrollbar-width:none]">
-        {CATEGORIES.map((c) => (
+      <div
+        role="group"
+        aria-label="Perk categories"
+        className="flex gap-1 overflow-x-auto border-b border-astra-primary-dark [scrollbar-width:none]"
+      >
+        {(['all', ...CATEGORY_ORDER] as Filter[]).map((item) => (
           <button
-            key={c}
+            key={item}
             type="button"
-            aria-pressed={cat === c}
-            onClick={() => setCat(c)}
-            className={`min-h-11 shrink-0 px-3 text-sm ${cat === c ? 'font-bold text-astra-primary-light underline underline-offset-8' : 'text-astra-gray hover:text-astra-white'}`}
+            aria-pressed={filter === item}
+            onClick={() => setFilter(item)}
+            className={`min-h-11 shrink-0 border-b-2 px-3 text-sm font-bold transition-colors ${
+              filter === item
+                ? 'border-astra-primary-light text-astra-primary-light'
+                : 'border-transparent text-astra-gray hover:text-astra-white'
+            }`}
           >
-            {c}
+            {item === 'all' ? 'All Perks' : PERK_CATEGORY_LABELS[item]}
           </button>
         ))}
       </div>
 
-      {list.length === 0 && <Panel><p role="status">No perks in this category yet.</p></Panel>}
-      <ul className="space-y-4">
-        {list.map((p) => {
-          const short = p.cost > balance;
-          return (
-            <li key={p.id} className="space-y-3 border border-astra-primary-dark bg-black/30 p-4">
-              <p className="inline-block border border-astra-primary-dark px-3 py-2 text-sm">{p.partner} <span className="text-astra-gray">(sample)</span></p>
-              {p.featured && <p className="border border-astra-primary-dark px-3 py-2 text-center text-sm">Featured Partner Perk</p>}
-              <div role="img" aria-label="Perk image placeholder" className="grid aspect-[2/1] place-items-center border border-dashed border-astra-primary-dark text-sm text-astra-gray">
-                Perk image placeholder
-              </div>
-              <h3 className="break-words text-base">{p.title}</h3>
-              <p className="text-lg font-bold">{p.cost} PTS</p>
-              <button
-                type="button"
-                className={btnPrimary}
-                disabled={short}
-                aria-describedby={short ? `short-${p.id}` : undefined}
-                onClick={(e) => { claimBtnRef.current = e.currentTarget; setError(null); setPending(p); }}
-              >
-                Claim Voucher
-              </button>
-              {short && (
-                <p id={`short-${p.id}`} className="text-sm text-amber-300">
-                  Not enough points: you need {p.cost - balance} more PTS.
-                </p>
-              )}
-            </li>
-          );
-        })}
-      </ul>
-      {fixture && <SimulatedNote>Perk titles, partners and terms are sample content. Claims do not change real points.</SimulatedNote>}
-      {pending && (
+      {shown.length === 0 ? (
+        <EmptyState
+          title="No perks here yet"
+          message="No perks are in this category right now."
+        />
+      ) : (
+        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+          {shown.map((perk) => (
+            <PerkCard
+              key={perk.id}
+              perk={perk}
+              balance={balance}
+              onClaim={open}
+            />
+          ))}
+        </div>
+      )}
+
+      {claim && (
         <ConfirmClaim
-          perk={pending}
+          claim={claim}
           balance={balance}
-          busy={busy}
-          error={error}
-          onConfirm={confirm}
-          onCancel={() => { setPending(null); setTimeout(() => claimBtnRef.current?.focus(), 0); }}
+          onConfirm={() => void confirm()}
+          onCancel={cancel}
         />
       )}
     </div>

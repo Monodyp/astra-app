@@ -76,24 +76,32 @@ describe('sign-in and route access', () => {
     expect(screen.queryByText('Officer access only')).toBeNull();
   });
 
-  it('keeps the placeholder screens for the rewards pages', async () => {
+  it('opens the rewards pages after a reload', async () => {
     const first = renderAt('/login');
     await chooseDemoAccount(/Verified member/);
     await waitFor(() => expect(window.location.pathname).toBe('/home'));
     first.unmount();
 
-    const placeholders = [
+    const pages = [
       ['/marketplace', 'Perks Marketplace'],
-      ['/vouchers/V-1', 'Voucher Details'],
+      ['/vouchers', 'Claimed Vouchers'],
+      ['/points', 'Points'],
     ];
-    for (const [path, heading] of placeholders) {
+    for (const [path, heading] of pages) {
       const view = renderAt(path);
       expect(
-        await screen.findByRole('heading', { level: 2, name: heading })
+        await screen.findByRole('heading', { level: 1, name: heading })
       ).toBeDefined();
       expect(window.location.pathname).toBe(path);
       view.unmount();
     }
+
+    renderAt('/vouchers/V-98214');
+    expect(
+      await screen.findByRole('dialog', {
+        name: '15% Off at the Campus Bookstore',
+      })
+    ).toBeDefined();
   });
 
   it('restores the session after a reload', async () => {

@@ -1,78 +1,161 @@
 import React, { useState } from 'react';
-import { ErrorState, LoadingState, Panel, formatDate } from '@/components/member/ui';
-import { useMemberQuery } from '@/features/member/MemberDataContext';
-import type { LedgerEntry } from '@/features/member/types';
+import { PageHeading } from '../components/portal/PageHeading.js';
+import { Panel } from '../components/portal/Panel.js';
+import {
+  EmptyState,
+  ErrorState,
+  LoadingState,
+} from '../components/portal/StatusViews.js';
+import {
+  portalData,
+  type PointsEntry,
+  type PointsEntryType,
+} from '../data/index.js';
+import {
+  errorMessage,
+  formatActivityDate,
+  formatPointsDelta,
+} from '../lib/format.js';
+import { useResource } from '../lib/useResource.js';
 
-const FILTERS = ['All', 'Check-in', 'Grant', 'Redemption'] as const;
-type Filter = (typeof FILTERS)[number];
+const loadPoints = () => portalData.getPoints();
 
-const statusMark: Record<LedgerEntry['status'], string> = { Verified: '✔', Pending: '…', Reversed: '↺' };
+type Filter = 'all' | PointsEntryType;
+
+const FILTERS: Array<[Filter, string]> = [
+  ['all', 'All'],
+  ['attendance', 'Check-ins'],
+  ['grant', 'Grants'],
+  ['redemption', 'Redemptions'],
+  ['adjustment', 'Adjustments'],
+];
+
+const TYPE_LABELS: Record<PointsEntryType, string> = {
+  attendance: 'Check-in',
+  grant: 'Grant',
+  redemption: 'Redemption',
+  adjustment: 'Adjustment',
+};
+
+function totals(entries: PointsEntry[]) {
+  let earned = 0;
+  let spent = 0;
+  for (const entry of entries) {
+    if (entry.type === 'redemption') {
+      spent -= entry.amount;
+    } else if (entry.amount > 0) {
+      earned += entry.amount;
+    }
+  }
+  return { earned, spent };
+}
+
+const Stat: React.FC<{ label: string; value: number }> = ({ label, value }) => (
+  <Panel className="px-6 py-5">
+    <p className="text-sm font-bold text-astra-gray">{label}</p>
+    <p className="mt-2 flex items-baseline gap-1 font-bold">
+      <span className="text-2xl">{value}</span>
+      <span className="text-sm">PTS</span>
+    </p>
+  </Panel>
+);
+
+const EntryRow: React.FC<{ entry: PointsEntry }> = ({ entry }) => (
+  <li className="grid grid-cols-2 items-center gap-x-4 gap-y-2 border border-[#1c303f] bg-[rgba(12,19,24,0.4)] p-4 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)] sm:gap-x-8">
+    <div className="min-w-0">
+      <p className="truncate font-bold">{entry.reason}</p>
+      <p className="truncate text-xs text-astra-gray">{entry.reference}</p>
+    </div>
+    <p className="text-right text-sm text-[#9ab5c1] sm:text-left">
+      {TYPE_LABELS[entry.type]}
+    </p>
+    <p
+      className={`font-bold sm:text-right ${
+        entry.amount > 0 ? 'text-[#67ff7f]' : 'text-astra-white'
+      }`}
+    >
+      {formatPointsDelta(entry.amount)}
+    </p>
+    <p className="text-right text-xs text-astra-gray">
+      {formatActivityDate(entry.createdAt)}
+    </p>
+  </li>
+);
 
 export const Points: React.FC = () => {
-  const summary = useMemberQuery((s) => s.getPoints());
-  const ledger = useMemberQuery((s) => s.getLedger());
-  const [filter, setFilter] = useState<Filter>('All');
+  const points = useResource(loadPoints);
+  const [filter, setFilter] = useState<Filter>('all');
 
-  if (summary.status === 'error') return <ErrorState error={summary.error} onRetry={summary.reload} />;
-  if (summary.status === 'loading' || !summary.data) return <LoadingState label="Loading points" />;
-  const s = summary.data;
-  const rows = (ledger.data ?? []).filter((l) => filter === 'All' || l.type === filter);
+  if (points.status === 'loading') {
+    return <LoadingState label="Loading your points" />;
+  }
+  if (points.status === 'error') {
+    return (
+      <ErrorState
+        message={errorMessage(points.error)}
+        onRetry={points.reload}
+      />
+    );
+  }
 
-  const stat = (label: string, value: number) => (
-    <Panel className="min-h-20">
-      <p className="text-sm text-astra-gray">{label}</p>
-      <p className="mt-1 text-2xl font-bold">{value} <span className="text-base">PTS</span></p>
-    </Panel>
+  const { balance, entries } = points.data;
+  const { earned, spent } = totals(entries);
+  const shown = entries.filter(
+    (entry) => filter === 'all' || entry.type === filter
   );
 
   return (
-    <div className="space-y-4">
-      <h2 className="sr-only">Points and ledger</h2>
+    <div className="space-y-6">
+      <PageHeading
+        eyebrow="Rewards"
+        title="Points"
+        description="Every point you earned and spent, newest first."
+      />
+
       <div className="grid gap-4 sm:grid-cols-3">
-        {stat('Current Balance', s.balance)}
-        {stat('Lifetime Earned', s.lifetimeEarned)}
-        {stat('Lifetime Redeemed', s.lifetimeRedeemed)}
+        <Stat label="Current Balance" value={balance} />
+        <Stat label="Lifetime Earned" value={earned} />
+        <Stat label="Spent on Perks" value={spent} />
       </div>
 
-      <div role="group" aria-label="Filter ledger by type" className="flex flex-wrap gap-2 border border-astra-primary-dark p-2">
-        {FILTERS.map((f) => (
+      <div
+        role="group"
+        aria-label="Filter the ledger by type"
+        className="flex gap-1 overflow-x-auto border-b border-astra-primary-dark [scrollbar-width:none]"
+      >
+        {FILTERS.map(([value, label]) => (
           <button
-            key={f}
+            key={value}
             type="button"
-            aria-pressed={filter === f}
-            onClick={() => setFilter(f)}
-            className={`min-h-11 flex-1 whitespace-nowrap px-3 text-sm font-bold ${filter === f ? 'bg-astra-primary-light/20 text-astra-primary-light underline underline-offset-4' : 'text-astra-gray hover:text-astra-white'}`}
+            aria-pressed={filter === value}
+            onClick={() => setFilter(value)}
+            className={`min-h-11 shrink-0 border-b-2 px-3 text-sm font-bold transition-colors ${
+              filter === value
+                ? 'border-astra-primary-light text-astra-primary-light'
+                : 'border-transparent text-astra-gray hover:text-astra-white'
+            }`}
           >
-            {f === 'Redemption' ? 'Redeemed' : f === 'Grant' ? 'Grants' : f}
+            {label}
           </button>
         ))}
       </div>
 
-      {ledger.status === 'loading' && <LoadingState label="Loading ledger" />}
-      {ledger.status === 'error' && <ErrorState error={ledger.error} onRetry={ledger.reload} />}
-      {ledger.status === 'ready' && rows.length === 0 && (
-        <Panel><p role="status">No ledger entries match this filter.</p></Panel>
+      {shown.length === 0 ? (
+        <EmptyState
+          title="No entries"
+          message={
+            entries.length === 0
+              ? 'Check in to an event or receive a grant to earn points.'
+              : 'No ledger entries match this filter.'
+          }
+        />
+      ) : (
+        <ul aria-label="Points ledger" className="flex flex-col gap-[10px]">
+          {shown.map((entry) => (
+            <EntryRow key={entry.id} entry={entry} />
+          ))}
+        </ul>
       )}
-      <ul className="space-y-3">
-        {rows.map((l) => (
-          <li key={l.id} className="border border-astra-primary-dark bg-black/30">
-            <dl className="divide-y divide-astra-primary-dark/60">
-              {[
-                ['Date', formatDate(l.date)],
-                ['Activity / Event', l.activity],
-                ['Type', l.type],
-                ['Points', `${l.points > 0 ? '+' : '−'}${Math.abs(l.points)} PTS`],
-                ['Status', `${statusMark[l.status]} ${l.status}`],
-              ].map(([k, v]) => (
-                <div key={k} className="grid grid-cols-[8.5rem_1fr] gap-2 px-3 py-2 sm:grid-cols-[12rem_1fr]">
-                  <dt className="text-astra-gray">{k}</dt>
-                  <dd className="min-w-0 break-words">{v}</dd>
-                </div>
-              ))}
-            </dl>
-          </li>
-        ))}
-      </ul>
     </div>
   );
 };

@@ -1,295 +1,410 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import {
+  act,
+  fireEvent,
   render,
   screen,
   waitFor,
   within,
-  fireEvent,
 } from '@testing-library/react';
-import { MemoryRouter, Routes, Route } from 'react-router-dom';
-import { AppShell } from '../components/AppShell';
-import { MemberDataProvider } from '../features/member/MemberDataContext';
-import { createFixtureSource } from '../features/member/fixtures';
-import { unavailableSource } from '../features/member/unavailableSource';
-import type { MemberDataSource, Role } from '../features/member/types';
-import { Login } from '../pages/Login';
-import { Marketplace } from '../pages/Marketplace';
-import { VoucherDetails } from '../pages/VoucherDetails';
-import { ClaimedVouchers } from '../pages/ClaimedVouchers';
-import { CheckIn } from '../pages/CheckIn';
-import { OfficerGrantPoints } from '../pages/OfficerGrantPoints';
-import { DigitalID } from '../pages/DigitalID';
-import { EventDetail } from '../pages/EventDetail';
+import { App } from '../App.js';
 import EventsCalendar from '../components/home/events-calendar';
+import {
+  DataError,
+  portalData,
+  setPortalDataSource,
+  type ClaimPerkOptions,
+  type PortalDataSource,
+} from '../data/index.js';
+import { createDemoDataSource } from '../data/demo/demoSource.js';
+import { RECORDS_KEY } from '../data/demo/store.js';
 
-// Minimal stand-in for @testing-library/user-event (not a dependency of this project).
-const userEvent = {
-  setup: () => ({
-    click: async (el: Element) => {
-      fireEvent.click(el);
-    },
-    type: async (el: Element, text: string) => {
-      const input = el as HTMLInputElement;
-      fireEvent.change(input, { target: { value: input.value + text } });
-    },
-    clear: async (el: Element) => {
-      fireEvent.change(el, { target: { value: '' } });
-    },
-    keyboard: async (k: string) => {
-      fireEvent.keyDown(document, { key: k.replace(/[{}]/g, '') });
-    },
-  }),
-};
+let previous: PortalDataSource | null = null;
 
-function fixture(role: Role = 'member', duesPaid = true): MemberDataSource {
-  return createFixtureSource(() => ({ role, duesPaid }));
+function useAdapter(
+  overrides: (base: PortalDataSource) => Partial<PortalDataSource>
+) {
+  const base = createDemoDataSource();
+  const replaced = setPortalDataSource({ ...base, ...overrides(base) });
+  previous ??= replaced;
 }
 
-function renderAt(path: string, source: MemberDataSource) {
-  return render(
-    <MemberDataProvider source={source}>
-      <MemoryRouter initialEntries={[path]}>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/events/:id" element={<EventDetail />} />
-          <Route element={<AppShell />}>
-            <Route path="/id" element={<DigitalID />} />
-            <Route path="/marketplace" element={<Marketplace />} />
-            <Route path="/vouchers" element={<ClaimedVouchers />} />
-            <Route path="/vouchers/:id" element={<VoucherDetails />} />
-            <Route path="/checkin" element={<CheckIn />} />
-            <Route
-              path="/officer/grant-points"
-              element={<OfficerGrantPoints />}
-            />
-          </Route>
-        </Routes>
-      </MemoryRouter>
-    </MemberDataProvider>
-  );
+async function signInAs(label: RegExp, path: string) {
+  window.history.pushState({}, '', `/login?next=${encodeURIComponent(path)}`);
+  const view = render(<App />);
+  fireEvent.click(await screen.findByRole('button', { name: label }));
+  await waitFor(() => expect(window.location.pathname).toBe(path));
+  return view;
+}
+
+function goTo(path: string) {
+  act(() => {
+    window.history.pushState({}, '', path);
+    window.dispatchEvent(new PopStateEvent('popstate'));
+  });
+}
+
+async function openClaim(name: string) {
+  fireEvent.click(await screen.findByRole('button', { name: `Claim ${name}` }));
+  return screen.getByRole('dialog', { name: 'Claim this voucher?' });
 }
 
 beforeEach(() => {
-  Object.defineProperty(navigator, 'mediaDevices', {
-    value: undefined,
-    configurable: true,
-  });
+  window.sessionStorage.clear();
 });
 
-describe('member navigation', () => {
-  it('shows the six bottom-nav items and marks the active one', async () => {
-    renderAt('/marketplace', fixture());
-    const nav = screen.getAllByRole('navigation', {
-      name: 'Member navigation',
-    })[0];
-    for (const l of [
-      'Digital ID',
-      'Points',
-      'Home',
-      'Perks',
-      'Check-in',
-      'More',
-    ]) {
-      expect(within(nav).getByText(l)).toBeTruthy();
-    }
-    expect(
-      within(nav)
-        .getByRole('link', { name: /Perks/ })
-        .getAttribute('aria-current')
-    ).toBe('page');
-  });
-
-  it('More menu hides officer tools from members, shows them to officers, and closes on Escape', async () => {
-    const user = userEvent.setup();
-    const { unmount } = renderAt('/id', fixture('member'));
-    await user.click(screen.getAllByRole('button', { name: /More/ })[0]);
-    expect(screen.getByRole('dialog', { name: 'More' })).toBeTruthy();
-    expect(screen.queryByText(/Grant points/)).toBeNull();
-    await user.keyboard('{Escape}');
-    expect(screen.queryByRole('dialog')).toBeNull();
-    unmount();
-    renderAt('/id', fixture('officer'));
-    await waitFor(() =>
-      expect(screen.getAllByText('Officer').length).toBeGreaterThan(0)
-    );
-    await user.click(screen.getAllByRole('button', { name: /More/ })[0]);
-    expect(screen.getByText(/Grant points/)).toBeTruthy();
-  });
+afterEach(() => {
+  if (previous) setPortalDataSource(previous);
+  previous = null;
 });
 
-describe('login', () => {
-  it('validates, toggles Show/Hide and never pretends to sign in', async () => {
-    const user = userEvent.setup();
-    renderAt('/login', unavailableSource);
-    await user.click(screen.getByRole('button', { name: 'Sign In to Portal' }));
-    expect(screen.getByText(/Enter your student ID/)).toBeTruthy();
-    const pw = screen.getByLabelText('Password') as HTMLInputElement;
-    await user.type(pw, 'secret');
-    expect(pw.type).toBe('password');
-    await user.click(screen.getByRole('button', { name: /Show/ }));
-    expect(pw.type).toBe('text');
-    await user.type(
-      screen.getByLabelText('Student ID or Email Address'),
-      '2024-00001'
-    );
-    await user.click(screen.getByRole('button', { name: 'Sign In to Portal' }));
-    expect(screen.getByRole('alert').textContent).toMatch(
-      /not available yet.*not signed in/
-    );
-  });
-});
-
-describe('digital ID states', () => {
-  it('valid member gets a labeled sample QR; unpaid member gets no QR', async () => {
-    const { unmount } = renderAt('/id', fixture('member', true));
-    expect(await screen.findByText('VALID / ACTIVE DUES')).toBeTruthy();
-    expect(screen.getByText(/Sample pattern/)).toBeTruthy();
-    unmount();
-    renderAt('/id', fixture('member', false));
-    expect(await screen.findByText('UNPAID / NOT VALID')).toBeTruthy();
-    expect(screen.queryByText(/Sample pattern/)).toBeNull();
-    expect(screen.getByText('Payment Instructions')).toBeTruthy();
-  });
-
-  it('shows an honest unavailable state when the service is not connected', async () => {
-    renderAt('/id', unavailableSource);
-    expect(await screen.findByText('Not available yet')).toBeTruthy();
-  });
-});
-
-describe('marketplace → claim → voucher', () => {
-  it('confirms a claim, shows the simulated receipt, and Escape returns', async () => {
-    const user = userEvent.setup();
-    renderAt('/marketplace', fixture());
-    const claims = await screen.findAllByRole('button', {
-      name: 'Claim Voucher',
+describe('perks marketplace', () => {
+  it('builds the filters from the portal categories', async () => {
+    await signInAs(/Verified member/, '/marketplace');
+    const filters = await screen.findByRole('group', {
+      name: 'Perk categories',
     });
-    // 450 PTS: the 800 PTS mug is disabled with a reason
-    expect(claims.some((b) => (b as HTMLButtonElement).disabled)).toBe(true);
-    expect(screen.getAllByText(/Not enough points/).length).toBeGreaterThan(0);
-    await user.click(claims[0]);
-    const dlg = screen.getByRole('dialog', { name: 'Claim this voucher?' });
-    await user.click(
-      within(dlg).getByRole('button', { name: 'Confirm claim' })
-    );
-    await waitFor(() =>
-      expect(
-        screen.queryByRole('dialog', { name: 'Claim this voucher?' })
-      ).toBeNull()
-    );
-  });
-
-  it('shows voucher not found for an unknown id', async () => {
-    renderAt('/vouchers/does-not-exist', fixture());
-    expect(await screen.findByText('Voucher not found')).toBeTruthy();
-  });
-
-  it('shows expired status and no QR for an expired voucher', async () => {
-    renderAt('/vouchers/v-00001', fixture());
-    expect(await screen.findByText(/EXPIRED/)).toBeTruthy();
-    expect(screen.queryByText(/Sample pattern/)).toBeNull();
-  });
-
-  it('lists claimed vouchers with View Details links', async () => {
-    renderAt('/vouchers', fixture());
-    expect(await screen.findByText('ASTR-PRK-98214')).toBeTruthy();
     expect(
-      screen
+      within(filters)
+        .getAllByRole('button')
+        .map((button) => button.textContent)
+    ).toEqual([
+      'All Perks',
+      'Discounts',
+      'Merch / Collectibles',
+      'Partner Workshops',
+      'Food & Drink',
+    ]);
+    fireEvent.click(
+      within(filters).getByRole('button', { name: 'Food & Drink' })
+    );
+    expect(
+      screen.getByRole('button', { name: 'Claim Campus Cafe Free Beverage' })
+    ).toBeDefined();
+    expect(
+      screen.queryByRole('button', { name: /Claim ASTRA Mission Hoodie/ })
+    ).toBeNull();
+  });
+
+  it('explains why a perk cannot be claimed', async () => {
+    await signInAs(/Verified member/, '/marketplace');
+    expect(await screen.findByText('450 PTS Available')).toBeDefined();
+    const hoodie = screen.getByRole('button', {
+      name: 'Claim ASTRA Mission Hoodie',
+    });
+    expect(hoodie.hasAttribute('disabled')).toBe(true);
+    expect(
+      screen.getByText('Not enough points: you need 750 more PTS.')
+    ).toBeDefined();
+    expect(screen.getByText('This perk is out of stock.')).toBeDefined();
+  });
+
+  it('claims a perk, opens the receipt, and keeps it in the wallet', async () => {
+    await signInAs(/Verified member/, '/marketplace');
+    const dialog = await openClaim('Campus Cafe Free Beverage');
+    expect(
+      within(dialog).getByText('Cost: 50 PTS · Balance after: 400 PTS')
+    ).toBeDefined();
+    fireEvent.click(
+      within(dialog).getByRole('button', { name: 'Confirm claim' })
+    );
+
+    const receipt = await screen.findByRole('dialog', {
+      name: 'Campus Cafe Free Beverage',
+    });
+    expect(window.location.pathname).toMatch(/^\/vouchers\/V-/);
+    expect(within(receipt).getByText('Voucher claimed')).toBeDefined();
+    const code = within(receipt).getByLabelText(/^Voucher code/).textContent!;
+    expect(code).toMatch(/^ASTR-PRK-/);
+    expect(
+      within(receipt).getByRole('img', { name: 'Voucher QR' })
+    ).toBeDefined();
+
+    fireEvent.click(within(receipt).getByRole('button', { name: 'Close' }));
+    await waitFor(() => expect(window.location.pathname).toBe('/marketplace'));
+    expect(await screen.findByText('400 PTS Available')).toBeDefined();
+
+    fireEvent.click(
+      within(screen.getByRole('main')).getByRole('link', {
+        name: 'My Vouchers',
+      })
+    );
+    await waitFor(() => expect(window.location.pathname).toBe('/vouchers'));
+    const wallet = await screen.findByRole('list', {
+      name: 'Claimed vouchers',
+    });
+    expect(within(wallet).getByText(code)).toBeDefined();
+    expect(within(wallet).getAllByRole('listitem')).toHaveLength(4);
+  });
+
+  it('retries a lost claim response with the same key and charges once', async () => {
+    const keys: string[] = [];
+    useAdapter((base) => ({
+      claimPerk: async (perkId: string, options: ClaimPerkOptions) => {
+        keys.push(options.idempotencyKey);
+        const result = await base.claimPerk(perkId, options);
+        if (keys.length === 1) {
+          throw new DataError('unavailable', 'The connection dropped.');
+        }
+        return result;
+      },
+    }));
+    await signInAs(/Verified member/, '/marketplace');
+    const dialog = await openClaim('Campus Cafe Free Beverage');
+    fireEvent.click(
+      within(dialog).getByRole('button', { name: 'Confirm claim' })
+    );
+    expect((await within(dialog).findByRole('alert')).textContent).toContain(
+      'could not confirm your claim'
+    );
+    fireEvent.click(
+      within(dialog).getByRole('button', { name: 'Retry claim' })
+    );
+    await screen.findByRole('dialog', { name: 'Campus Cafe Free Beverage' });
+
+    expect(keys).toHaveLength(2);
+    expect(keys[1]).toBe(keys[0]);
+    const vouchers = await portalData.listVouchers();
+    expect(
+      vouchers.filter((item) => item.perkId === 'perk-cafe-beverage')
+    ).toHaveLength(2);
+    expect((await portalData.getPoints()).balance).toBe(400);
+  });
+
+  it('gives each new claim a new key', async () => {
+    const keys: string[] = [];
+    useAdapter((base) => ({
+      claimPerk: (perkId: string, options: ClaimPerkOptions) => {
+        keys.push(options.idempotencyKey);
+        return base.claimPerk(perkId, options);
+      },
+    }));
+    await signInAs(/Verified member/, '/marketplace');
+    for (let round = 0; round < 2; round += 1) {
+      const dialog = await openClaim('ASTRA Official Dev Sticker Pack');
+      fireEvent.click(
+        within(dialog).getByRole('button', { name: 'Confirm claim' })
+      );
+      const receipt = await screen.findByRole('dialog', {
+        name: 'ASTRA Official Dev Sticker Pack',
+      });
+      fireEvent.click(within(receipt).getByRole('button', { name: 'Close' }));
+      await waitFor(() =>
+        expect(window.location.pathname).toBe('/marketplace')
+      );
+    }
+    expect(new Set(keys).size).toBe(2);
+  });
+
+  it('shows a key that was used for another perk', async () => {
+    useAdapter(() => ({
+      claimPerk: () =>
+        Promise.reject(
+          new DataError(
+            'key_reused',
+            'That claim key was already used for a different perk.'
+          )
+        ),
+    }));
+    await signInAs(/Verified member/, '/marketplace');
+    const dialog = await openClaim('Campus Cafe Free Beverage');
+    fireEvent.click(
+      within(dialog).getByRole('button', { name: 'Confirm claim' })
+    );
+    expect((await within(dialog).findByRole('alert')).textContent).toBe(
+      'That claim key was already used for a different perk.'
+    );
+    expect(
+      within(dialog).getByRole('button', { name: 'Confirm claim' })
+    ).toBeDefined();
+  });
+
+  it('keeps the receipt when the balance cannot load again', async () => {
+    let fail = false;
+    useAdapter((base) => ({
+      listPerks: () =>
+        fail
+          ? Promise.reject(new DataError('unavailable', 'Perks are offline.'))
+          : base.listPerks(),
+      claimPerk: async (perkId: string, options: ClaimPerkOptions) => {
+        const result = await base.claimPerk(perkId, options);
+        fail = true;
+        return result;
+      },
+    }));
+    await signInAs(/Verified member/, '/marketplace');
+    const dialog = await openClaim('Campus Cafe Free Beverage');
+    fireEvent.click(
+      within(dialog).getByRole('button', { name: 'Confirm claim' })
+    );
+    const receipt = await screen.findByRole('dialog', {
+      name: 'Campus Cafe Free Beverage',
+    });
+    expect(within(receipt).getByLabelText(/^Voucher code/)).toBeDefined();
+    fireEvent.click(within(receipt).getByRole('button', { name: 'Close' }));
+    expect((await screen.findByRole('alert')).textContent).toContain(
+      'Perks are offline.'
+    );
+    expect((await portalData.getPoints()).balance).toBe(400);
+  });
+});
+
+describe('voucher wallet and receipts', () => {
+  it('shows each voucher state with its code', async () => {
+    await signInAs(/Verified member/, '/vouchers');
+    const wallet = await screen.findByRole('list', {
+      name: 'Claimed vouchers',
+    });
+    expect(within(wallet).getByText('ASTR-PRK-98214')).toBeDefined();
+    expect(within(wallet).getByText('Ready')).toBeDefined();
+    expect(within(wallet).getByText('Redeemed')).toBeDefined();
+    expect(within(wallet).getByText('Expired')).toBeDefined();
+    expect(
+      within(wallet)
         .getAllByRole('link', { name: /View Details/ })[0]
         .getAttribute('href')
-    ).toBe('/vouchers/v-98214');
+    ).toBe('/vouchers/V-98214');
+  });
+
+  it('closes a direct link to the wallet with Close or Escape', async () => {
+    await signInAs(/Verified member/, '/vouchers/V-98214');
+    const receipt = await screen.findByRole('dialog', {
+      name: '15% Off at the Campus Bookstore',
+    });
+    expect(
+      within(receipt).getByRole('img', { name: 'Voucher QR' })
+    ).toBeDefined();
+    fireEvent.click(within(receipt).getByRole('button', { name: 'Close' }));
+    await waitFor(() => expect(window.location.pathname).toBe('/vouchers'));
+
+    goTo('/vouchers/V-98214');
+    await screen.findByRole('dialog', {
+      name: '15% Off at the Campus Bookstore',
+    });
+    fireEvent.keyDown(document, { key: 'Escape' });
+    await waitFor(() => expect(window.location.pathname).toBe('/vouchers'));
+  });
+
+  it('loads the new receipt when the voucher id changes', async () => {
+    await signInAs(/Verified member/, '/vouchers/V-98214');
+    await screen.findByRole('dialog', {
+      name: '15% Off at the Campus Bookstore',
+    });
+    goTo('/vouchers/V-50412');
+    const expired = await screen.findByRole('dialog', {
+      name: 'Campus Cafe Free Beverage',
+    });
+    expect(
+      within(expired).getByText('Expired · cannot be redeemed')
+    ).toBeDefined();
+    expect(
+      within(expired).queryByRole('img', { name: 'Voucher QR' })
+    ).toBeNull();
+    goTo('/vouchers/V-66319');
+    const used = await screen.findByRole('dialog', {
+      name: 'ASTRA Official Dev Sticker Pack',
+    });
+    expect(within(used).getByText('Already redeemed')).toBeDefined();
+  });
+
+  it('hides vouchers that belong to another account', async () => {
+    await signInAs(/^Officer/, '/vouchers/V-98214');
+    expect(await screen.findByText('Voucher not found')).toBeDefined();
+    fireEvent.click(
+      screen.getByRole('link', { name: 'Back to claimed vouchers' })
+    );
+    await waitFor(() => expect(window.location.pathname).toBe('/vouchers'));
+    expect(await screen.findByText('No vouchers yet')).toBeDefined();
+  });
+
+  it('shows an unknown voucher as not found', async () => {
+    await signInAs(/Verified member/, '/vouchers/does-not-exist');
+    expect(await screen.findByText('Voucher not found')).toBeDefined();
+  });
+
+  it('opens the wallet after a perk was renamed or removed', async () => {
+    const first = await signInAs(/Verified member/, '/vouchers');
+    await screen.findByRole('list', { name: 'Claimed vouchers' });
+    first.unmount();
+
+    const records = JSON.parse(window.sessionStorage.getItem(RECORDS_KEY)!);
+    records.perks = records.perks
+      .filter((perk: { id: string }) => perk.id !== 'perk-bookstore')
+      .map((perk: { id: string; title: string }) =>
+        perk.id === 'perk-sticker-pack'
+          ? { ...perk, title: 'Renamed Stickers' }
+          : perk
+      );
+    records.vouchers[0].reward = null;
+    records.vouchers[0].partnerName = null;
+    records.vouchers[0].instructions = null;
+    window.sessionStorage.setItem(RECORDS_KEY, JSON.stringify(records));
+
+    window.history.pushState({}, '', '/vouchers');
+    render(<App />);
+    const wallet = await screen.findByRole('list', {
+      name: 'Claimed vouchers',
+    });
+    expect(within(wallet).getByText('Perk details unavailable')).toBeDefined();
+    expect(
+      within(wallet).getByText('ASTRA Official Dev Sticker Pack')
+    ).toBeDefined();
+    expect(within(wallet).getByText('ASTR-PRK-98214')).toBeDefined();
   });
 });
 
-describe('check-in', () => {
-  it('handles invalid, success and repeat submissions', async () => {
-    const user = userEvent.setup();
-    renderAt('/checkin', fixture());
-    const field = screen.getByLabelText('Event Code Attendance');
-    const go = screen.getByRole('button', { name: 'Verify & Check In' });
-    await user.click(go);
-    expect(screen.getByText(/Enter the event code/)).toBeTruthy();
-    await user.type(field, 'WRONG-CODE');
-    await user.click(go);
-    expect((await screen.findByRole('alert')).textContent).toMatch(
-      /not recognized/
-    );
-    await user.clear(field);
-    await user.type(field, 'astra-demo');
-    await user.click(go);
-    expect(
-      (await screen.findByRole('status', { name: '' })).textContent
-    ).toBeTruthy();
-    await waitFor(() =>
-      expect(screen.getAllByText(/Simulated check-in/).length).toBeGreaterThan(
-        0
-      )
-    );
-    await user.type(field, 'ASTRA-DEMO');
-    await user.click(go);
-    expect(await screen.findByText(/already checked in/)).toBeTruthy();
-  });
+describe('points history', () => {
+  it('opens the complete ledger from the overview points card', async () => {
+    await portalData.signIn({ method: 'shortcut', shortcutId: 'officer' });
+    for (const referenceId of ['Booth', 'Stage']) {
+      await portalData.grantPoints({
+        studentId: '24-90001',
+        amount: 10,
+        reason: 'Event Volunteer',
+        referenceId,
+        idempotencyKey: referenceId,
+      });
+    }
+    await portalData.signOut();
 
-  it('says the scanner is unsupported when there is no camera API', () => {
-    renderAt('/checkin', fixture());
-    expect(screen.getByText(/No camera or scanner is available/)).toBeTruthy();
-  });
+    await signInAs(/Verified member/, '/home');
+    const activity = await screen.findByRole('list', {
+      name: 'Recent activity',
+    });
+    expect(within(activity).getAllByRole('listitem')).toHaveLength(5);
+    fireEvent.click(screen.getByRole('link', { name: /Total Points/ }));
+    await waitFor(() => expect(window.location.pathname).toBe('/points'));
 
-  it('real (unavailable) source reports the service is not connected', async () => {
-    const user = userEvent.setup();
-    renderAt('/checkin', unavailableSource);
-    await user.type(
-      screen.getByLabelText('Event Code Attendance'),
-      'ASTRA-DEMO'
+    const ledger = await screen.findByRole('list', { name: 'Points ledger' });
+    expect(within(ledger).getAllByRole('listitem')).toHaveLength(7);
+    expect(screen.getByText('Current Balance').nextSibling?.textContent).toBe(
+      '470PTS'
     );
-    await user.click(screen.getByRole('button', { name: 'Verify & Check In' }));
-    expect((await screen.findByRole('alert')).textContent).toMatch(
-      /not connected/
+    expect(screen.getByText('Spent on Perks').nextSibling?.textContent).toBe(
+      '50PTS'
     );
-  });
-});
-
-describe('officer grant points', () => {
-  it('is blocked for non-officers', async () => {
-    renderAt('/officer/grant-points', fixture('member'));
-    expect(await screen.findByText('Officer access required')).toBeTruthy();
-  });
-
-  it('officers can search, select, validate, and submit a simulated grant', async () => {
-    const user = userEvent.setup();
-    renderAt('/officer/grant-points', fixture('officer'));
-    await user.click(
-      await screen.findByRole('button', { name: 'Grant Points to Member' })
-    );
-    expect(screen.getByText(/Search for and select a member/)).toBeTruthy();
-    await user.type(screen.getByLabelText(/Search by Student ID/), 'jane');
-    await user.click(await screen.findByRole('button', { name: /Jane Doe/ }));
-    await user.type(screen.getByLabelText('Points Amount'), '25');
-    await user.click(
-      screen.getByRole('button', { name: 'Grant Points to Member' })
-    );
-    expect(
-      (await screen.findAllByText(/Simulated grant/)).length
-    ).toBeGreaterThan(0);
+    fireEvent.click(screen.getByRole('button', { name: 'Redemptions' }));
+    expect(within(ledger).getAllByRole('listitem')).toHaveLength(1);
+    expect(within(ledger).getByText('-50 pts')).toBeDefined();
   });
 });
 
 describe('public pages', () => {
   it('event registration link target is honest about registration', () => {
-    renderAt('/events/html-css-lab', fixture());
-    expect(screen.getByText(/registration is not open yet/i)).toBeTruthy();
+    window.history.pushState({}, '', '/events/html-css-lab');
+    render(<App />);
+    expect(screen.getByText(/registration is not open yet/i)).toBeDefined();
   });
 
-  it('events calendar navigates months and does not invent events', async () => {
-    const user = userEvent.setup();
+  it('events calendar navigates months and does not invent events', () => {
     render(<EventsCalendar initialMonth={new Date(2026, 10, 1)} />);
-    expect(screen.getByText('November 2026')).toBeTruthy();
+    expect(screen.getByText('November 2026')).toBeDefined();
     expect(
       screen.getByText(/No events are published for November 2026/)
-    ).toBeTruthy();
-    await user.click(screen.getByRole('button', { name: 'Next month' }));
-    expect(screen.getByText('December 2026')).toBeTruthy();
+    ).toBeDefined();
+    fireEvent.click(screen.getByRole('button', { name: 'Next month' }));
+    expect(screen.getByText('December 2026')).toBeDefined();
     fireEvent.click(screen.getByRole('button', { name: 'Previous month' }));
-    expect(screen.getByText('November 2026')).toBeTruthy();
+    expect(screen.getByText('November 2026')).toBeDefined();
   });
 });
