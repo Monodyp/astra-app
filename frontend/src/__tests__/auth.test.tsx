@@ -83,14 +83,14 @@ describe('sign-in and route access', () => {
     first.unmount();
 
     const pages = [
-      ['/marketplace', 'Perks Marketplace'],
+      ['/marketplace', 'Partner Perks & Rewards'],
       ['/vouchers', 'Claimed Vouchers'],
-      ['/points', 'Points'],
+      ['/points', 'Points and ledger'],
     ];
     for (const [path, heading] of pages) {
       const view = renderAt(path);
       expect(
-        await screen.findByRole('heading', { level: 1, name: heading })
+        await screen.findByRole('heading', { level: 2, name: heading })
       ).toBeDefined();
       expect(window.location.pathname).toBe(path);
       view.unmount();

@@ -57,8 +57,8 @@ describe('portal shell', () => {
     const nav = screen.getByRole('navigation', { name: 'Portal' });
     const tabs: Array<[string, string, number, string]> = [
       ['Digital ID', '/id', 1, 'Digital ID'],
-      ['Perks Marketplace', '/marketplace', 1, 'Perks Marketplace'],
-      ['My Vouchers', '/vouchers', 1, 'Claimed Vouchers'],
+      ['Perks Marketplace', '/marketplace', 2, 'Partner Perks & Rewards'],
+      ['My Vouchers', '/vouchers', 2, 'Claimed Vouchers'],
       ['Overview', '/home', 1, 'Verified Doe'],
     ];
     for (const [label, path, level, heading] of tabs) {
