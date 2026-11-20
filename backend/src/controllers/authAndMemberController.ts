@@ -1,7 +1,9 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
 import { firebaseAdmin } from '../lib/firebase.js';
+import { getConfiguredMemberService } from '../config/members.js';
 import {
+  generateMemberQrToken,
   InvalidQrTokenError,
   verifyQrToken,
 } from '../services/qrService.js';
@@ -45,12 +47,34 @@ export async function loginStub(req: Request, res: Response): Promise<void> {
   }
 }
 
-// TODO(AI/Backend): Fetch authenticated member profile from Firebase/DataConnect
-export async function getAuthMeStub(_req: Request, res: Response): Promise<void> {
-  res.status(501).json({ error: 'GET /auth/me not implemented', member: null });
+export async function getAuthMeStub(req: Request, res: Response): Promise<void> {
+  if (!req.user) {
+    res.status(401).json({ error: 'Authentication required' });
+    return;
+  }
+
+  try {
+    const members = getConfiguredMemberService();
+    const member = await members.findMember(req.user.srCode);
+    if (!member) {
+      res.status(404).json({ error: 'Member not found' });
+      return;
+    }
+
+    res.status(200).json({
+      member: {
+        uid: req.user.uid,
+        srCode: member.srCode,
+        fullName: member.fullName,
+        isPaid: await members.isPaid(member.srCode),
+        role: req.user.role,
+      },
+    });
+  } catch {
+    res.status(503).json({ error: 'Member source unavailable' });
+  }
 }
 
-// TODO(AI/Backend): Return member digital ID card payload and QR signed token
 export async function getMemberIdCardStub(_req: Request, res: Response): Promise<void> {
   res.status(501).json({
     error: 'GET /members/me/id not implemented',
