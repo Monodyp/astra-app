@@ -1,8 +1,10 @@
+import { env } from '../config/env.js';
 import { NotImplementedError } from '../lib/errors.js';
 import { firebaseAdmin } from '../lib/firebase.js';
 
 const db = firebaseAdmin.firestore();
 const vouchers = db.collection('vouchers');
+const inMemoryVouchers = new Map<string, VoucherRow>();
 
 // ---------------------------------------------------------------------------
 // Types
@@ -32,13 +34,21 @@ export interface VoucherRow {
   expiresAt?: Date;
 }
 
-/** Seed a voucher into Firestore for integration tests. */
+/** Seed a voucher into Firestore (or in-memory store in test mode). */
 export async function _seedVoucher(v: VoucherRow): Promise<void> {
+  if (env.NODE_ENV === 'test' || env.POINTS_LEDGER_STORAGE === 'memory') {
+    inMemoryVouchers.set(v.code.trim().toUpperCase(), { ...v });
+    return;
+  }
   await vouchers.doc(v.id).set(v);
 }
 
 /** Reset the voucher collection between integration tests. */
 export async function _resetVoucherStore(): Promise<void> {
+  if (env.NODE_ENV === 'test' || env.POINTS_LEDGER_STORAGE === 'memory') {
+    inMemoryVouchers.clear();
+    return;
+  }
   const snapshot = await vouchers.get();
   const batch = db.batch();
   snapshot.docs.forEach((doc) => batch.delete(doc.ref));
@@ -81,9 +91,15 @@ function isExpired(row: VoucherRow): boolean {
 
 async function findVoucher(
   code: string
-): Promise<{ ref: FirebaseFirestore.DocumentReference; row: VoucherRow } | null> {
+): Promise<{ ref?: FirebaseFirestore.DocumentReference; row: VoucherRow } | null> {
+  const normalized = code.trim().toUpperCase();
+  if (env.NODE_ENV === 'test' || env.POINTS_LEDGER_STORAGE === 'memory') {
+    const row = inMemoryVouchers.get(normalized);
+    return row ? { row: { ...row } } : null;
+  }
+
   const snapshot = await vouchers
-    .where('code', '==', code.trim().toUpperCase())
+    .where('code', '==', normalized)
     .limit(1)
     .get();
   const document = snapshot.docs[0];
@@ -161,6 +177,22 @@ export async function applyVoucher(
   code: string,
   partner: string
 ): Promise<ApplyResult> {
+  const normalized = code.trim().toUpperCase();
+  if (env.NODE_ENV === 'test' || env.POINTS_LEDGER_STORAGE === 'memory') {
+    const row = inMemoryVouchers.get(normalized);
+    if (!row) {
+      return { applied: false, reason: 'not_found' };
+    }
+
+    const validation = validateRow(row, partner);
+    if (!validation.valid) {
+      return { applied: false, reason: validation.reason };
+    }
+
+    row.status = 'used';
+    return { applied: true, reason: 'ok', reward: row.reward };
+  }
+
   return db.runTransaction(async (transaction) => {
     const snapshot = await transaction.get(
       vouchers.where('code', '==', code.trim().toUpperCase()).limit(1)

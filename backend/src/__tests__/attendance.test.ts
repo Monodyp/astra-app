@@ -17,28 +17,43 @@ import { _seedMember, _resetStore } from '../services/attendanceService.js';
 
 const BASE = '/attendance';
 
+const officer = {
+  uid: 'officer-1',
+  srCode: '24-90001',
+  role: 'officer',
+};
+
+const member = {
+  uid: 'member-1',
+  srCode: '24-90002',
+  role: 'member',
+};
+
+function asUser(user = officer) {
+  return JSON.stringify(user);
+}
+
 describe('Attendance Check-In API', () => {
   beforeEach(() => {
     _resetStore();
   });
 
   // -------------------------------------------------------------------------
-  // Auth stubs (TODO: update when real auth is wired)
+  // Auth checks
   // -------------------------------------------------------------------------
 
-  it('TODO: no token → 401 (currently pass-through, returns 400 for missing body)', async () => {
+  it('no token → 401', async () => {
     const res = await request(app).post(`${BASE}/checkin`).send({});
-    // With stub auth: 400 because srCode/eventId are required
-    expect([400, 401]).toContain(res.status);
+    expect(res.status).toBe(401);
   });
 
-  it('TODO: wrong role → 403 (currently pass-through, reaches handler)', async () => {
+  it('wrong role → 403', async () => {
     _seedMember('S1001');
     const res = await request(app)
       .post(`${BASE}/checkin`)
+      .set('x-test-user', asUser(member))
       .send({ srCode: 'S1001', eventId: 'EVT-001' });
-    // With stub requireRole: passes through to handler → 200
-    expect([200, 403]).toContain(res.status);
+    expect(res.status).toBe(403);
   });
 
   // -------------------------------------------------------------------------
@@ -48,6 +63,7 @@ describe('Attendance Check-In API', () => {
   it('POST /attendance/checkin → 400 when srCode is missing', async () => {
     const res = await request(app)
       .post(`${BASE}/checkin`)
+      .set('x-test-user', asUser())
       .send({ eventId: 'EVT-001' });
     expect(res.status).toBe(400);
     expect(res.body).toHaveProperty('error');
@@ -56,6 +72,7 @@ describe('Attendance Check-In API', () => {
   it('POST /attendance/checkin → 400 when eventId is missing', async () => {
     const res = await request(app)
       .post(`${BASE}/checkin`)
+      .set('x-test-user', asUser())
       .send({ srCode: 'S1001' });
     expect(res.status).toBe(400);
     expect(res.body).toHaveProperty('error');
@@ -70,6 +87,7 @@ describe('Attendance Check-In API', () => {
 
     const res = await request(app)
       .post(`${BASE}/checkin`)
+      .set('x-test-user', asUser())
       .send({ srCode: 'S1001', eventId: 'EVT-001' });
 
     expect(res.status).toBe(200);
@@ -86,6 +104,7 @@ describe('Attendance Check-In API', () => {
     // First check-in
     const first = await request(app)
       .post(`${BASE}/checkin`)
+      .set('x-test-user', asUser())
       .send({ srCode: 'S1001', eventId: 'EVT-001' });
     expect(first.body.awarded).toBe(true);
     const balanceAfterFirst = first.body.newBalance;
@@ -93,6 +112,7 @@ describe('Attendance Check-In API', () => {
     // Duplicate check-in
     const second = await request(app)
       .post(`${BASE}/checkin`)
+      .set('x-test-user', asUser())
       .send({ srCode: 'S1001', eventId: 'EVT-001' });
     expect(second.status).toBe(200);
     expect(second.body.awarded).toBe(false);
@@ -101,10 +121,12 @@ describe('Attendance Check-In API', () => {
     // Balance should not have changed
     const thirdGet = await request(app)
       .post(`${BASE}/checkin`)
+      .set('x-test-user', asUser())
       .send({ srCode: 'S1002', eventId: 'EVT-999' }); // different member unknown → invalid
     // Confirm original member's points unchanged
     const fourthCheck = await request(app)
       .post(`${BASE}/checkin`)
+      .set('x-test-user', asUser())
       .send({ srCode: 'S1001', eventId: 'EVT-001' });
     expect(fourthCheck.body.awarded).toBe(false);
     expect(fourthCheck.body.reason).toBe('already_checked_in');
@@ -117,11 +139,13 @@ describe('Attendance Check-In API', () => {
 
     const res1 = await request(app)
       .post(`${BASE}/checkin`)
+      .set('x-test-user', asUser())
       .send({ srCode: 'S1001', eventId: 'EVT-001' });
     expect(res1.body.awarded).toBe(true);
 
     const res2 = await request(app)
       .post(`${BASE}/checkin`)
+      .set('x-test-user', asUser())
       .send({ srCode: 'S1001', eventId: 'EVT-002' });
     expect(res2.status).toBe(200);
     expect(res2.body.awarded).toBe(true);
@@ -134,6 +158,7 @@ describe('Attendance Check-In API', () => {
 
     const res = await request(app)
       .post(`${BASE}/checkin`)
+      .set('x-test-user', asUser())
       .send({ srCode: 'UNKNOWN-999', eventId: 'EVT-001' });
 
     expect(res.status).toBe(200);
@@ -146,6 +171,7 @@ describe('Attendance Check-In API', () => {
 
     const res = await request(app)
       .post(`${BASE}/checkin`)
+      .set('x-test-user', asUser())
       .send({ srCode: '  sr-001 ', eventId: 'EVT-001' });
 
     expect(res.status).toBe(200);
@@ -162,19 +188,25 @@ describe('Attendance Check-In API', () => {
 
     await request(app)
       .post(`${BASE}/checkin`)
+      .set('x-test-user', asUser())
       .send({ srCode: 'S1001', eventId: 'EVT-001' });
     await request(app)
       .post(`${BASE}/checkin`)
+      .set('x-test-user', asUser())
       .send({ srCode: 'S1002', eventId: 'EVT-001' });
 
-    const res = await request(app).get(`${BASE}/EVT-001`);
+    const res = await request(app)
+      .get(`${BASE}/EVT-001`)
+      .set('x-test-user', asUser());
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body.attendance)).toBe(true);
     expect(res.body.attendance).toHaveLength(2);
   });
 
   it('GET /attendance/:eventId returns empty array for unknown event', async () => {
-    const res = await request(app).get(`${BASE}/NO-SUCH-EVENT`);
+    const res = await request(app)
+      .get(`${BASE}/NO-SUCH-EVENT`)
+      .set('x-test-user', asUser());
     expect(res.status).toBe(200);
     expect(res.body.attendance).toEqual([]);
   });
