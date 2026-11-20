@@ -1,4 +1,7 @@
-import React, { useRef, useEffect, useCallback } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
+import { clamp, ease } from '../home/ui-util';
+
+const DESKTOP_QUERY = '(min-width: 1024px)';
 
 type TiltCardProps = {
   children: React.ReactNode;
@@ -11,7 +14,6 @@ type TiltCardProps = {
   disabled?: boolean;
   desktopInteractionOnly?: boolean;
   className?: string;
-  // Click / keyboard / accessibility passthrough onto the hover-area div
   onClick?: () => void;
   onKeyDown?: (e: React.KeyboardEvent<HTMLDivElement>) => void;
   role?: React.AriaRole;
@@ -23,9 +25,9 @@ type TiltCardProps = {
 
 export const TiltCard: React.FC<TiltCardProps> = ({
   children,
-  rotateX = 0,
-  rotateY = 0,
-  rotateZ = 0,
+  rotateX = 20,
+  rotateY = 12,
+  rotateZ = -20,
   perspective = 700,
   thickness = 14,
   intensity = 9,
@@ -43,18 +45,13 @@ export const TiltCard: React.FC<TiltCardProps> = ({
   const tiltRef = useRef<HTMLDivElement>(null);
   const glintRef = useRef<HTMLDivElement>(null);
 
-  const clamp = (val: number, min = -1, max = 1) =>
-    Math.min(Math.max(val, min), max);
-
   const transformFor = useCallback(
-    (nx: number, ny: number) => {
-      const rx = rotateX - ny * intensity;
-      const ry = rotateY + nx * intensity;
-      return `rotateX(${rx}deg) rotateY(${ry}deg) rotateZ(${rotateZ}deg)`;
-    },
-    [rotateX, rotateY, rotateZ, intensity]
+    (nx: number, ny: number) =>
+      `perspective(${perspective}px) rotateX(${rotateX - ease(ny) * intensity}deg) rotateY(${rotateY + ease(nx) * intensity}deg) rotateZ(${rotateZ}deg)`,
+    [perspective, rotateX, rotateY, rotateZ, intensity]
   );
 
+  // Pointer and sensor updates write CSS variables directly so React renders do not reset them.
   const apply = useCallback(
     (nx: number, ny: number, transition: string) => {
       const tilt = tiltRef.current;
@@ -65,7 +62,6 @@ export const TiltCard: React.FC<TiltCardProps> = ({
       tilt.style.setProperty('--tilt-transform', transformFor(nx, ny));
 
       const mag = Math.min(1, Math.hypot(nx, ny));
-      glint.style.setProperty('--gp', `${50 - nx * 40 - ny * 20}%`);
       glint.style.transform = `translateX(${-nx * 40 - ny * 20}%)`;
       glint.style.opacity = String(0.15 + 0.85 * mag);
     },
@@ -73,15 +69,19 @@ export const TiltCard: React.FC<TiltCardProps> = ({
   );
 
   const reset = useCallback(() => {
-    apply(0, 0, 'transform 300ms ease-out');
-    if (glintRef.current) {
-      glintRef.current.style.opacity = '0';
-    }
-  }, [apply]);
+    const tilt = tiltRef.current;
+    const glint = glintRef.current;
+    if (!tilt || !glint) return;
+    tilt.style.setProperty('--tilt-transition', 'transform 500ms ease-out');
+    tilt.style.setProperty('--tilt-transform', transformFor(0, 0));
+    glint.style.opacity = '0';
+  }, [transformFor]);
 
   const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!isInteractable || disabled || e.pointerType !== 'mouse') return;
-    if (desktopInteractionOnly && !window.matchMedia('(min-width: 1024px)').matches) return;
+    if (desktopInteractionOnly && !window.matchMedia(DESKTOP_QUERY).matches) {
+      return;
+    }
     const rect = e.currentTarget.getBoundingClientRect();
     const nx = clamp(((e.clientX - rect.left) / rect.width) * 2 - 1);
     const ny = clamp(((e.clientY - rect.top) / rect.height) * 2 - 1);
@@ -89,17 +89,13 @@ export const TiltCard: React.FC<TiltCardProps> = ({
   };
 
   useEffect(() => {
-    if (!tiltRef.current) return;
-    if (disabled) {
-      tiltRef.current.style.transform = 'none';
-      tiltRef.current.style.transition = 'transform 300ms ease-out';
-      if (glintRef.current) glintRef.current.style.opacity = '0';
-    } else {
-      // Set the resting pose imperatively on mount and whenever disabled toggles off.
-      tiltRef.current.style.setProperty('--tilt-transform', transformFor(0, 0));
-      tiltRef.current.style.setProperty('--tilt-transition', '');
-    }
-  }, [disabled, transformFor]);
+    if (!disabled) return;
+    tiltRef.current?.style.setProperty(
+      '--tilt-transition',
+      'transform 300ms ease-out'
+    );
+    if (glintRef.current) glintRef.current.style.opacity = '0';
+  }, [disabled]);
 
   // Gyroscope on touch devices. Skipped on iOS, which needs a permission prompt.
   useEffect(() => {
@@ -112,32 +108,42 @@ export const TiltCard: React.FC<TiltCardProps> = ({
     )
       return;
     const needsPermission =
-      typeof (DeviceOrientationEvent as unknown as { requestPermission?: unknown })
-        .requestPermission === 'function';
-    if (needsPermission) return;
+      typeof (
+        DeviceOrientationEvent as unknown as { requestPermission?: unknown }
+      ).requestPermission === 'function';
+    if (needsPermission || !window.matchMedia('(hover: none)').matches) return;
 
+    let base: { beta: number; gamma: number } | null = null;
     const onOrientation = (e: DeviceOrientationEvent) => {
-      const gamma = clamp((e.gamma ?? 0) / 45);
-      const beta = clamp(((e.beta ?? 0) - 45) / 45);
-      apply(gamma, beta, 'transform 100ms ease-out');
+      if (e.beta == null || e.gamma == null) return;
+      if (!base) base = { beta: e.beta, gamma: e.gamma };
+      apply(
+        clamp((e.gamma - base.gamma) / 30),
+        clamp((e.beta - base.beta) / 30),
+        'transform 100ms linear'
+      );
     };
     window.addEventListener('deviceorientation', onOrientation);
     return () => window.removeEventListener('deviceorientation', onOrientation);
   }, [apply, desktopInteractionOnly, disabled, isInteractable]);
 
+  const rest = disabled ? 'none' : transformFor(0, 0);
+
   return (
-    <div
-      className={`relative ${className}`}
-      style={{ perspective: `${perspective}px` }}
-    >
-      {/* 
-        Pointer layer: sits above the card, captures pointer moves, 
-        absorbs clicks if not interactable, handles hover states.
-      */}
+    <div className={`relative ${className}`}>
+      {/* Hover area: untransformed and only as big as the card, so it never moves while tilting */}
       <div
-        className={`relative h-full w-full ${isInteractable ? (cursorClass || 'cursor-pointer') : 'pointer-events-none'}`}
+        className={`relative -m-3 p-3${cursorClass ? ` ${cursorClass}` : ''}`}
         onPointerMove={onPointerMove}
-        onPointerLeave={reset}
+        onPointerLeave={(e) => {
+          if (
+            e.relatedTarget instanceof Node &&
+            e.currentTarget.contains(e.relatedTarget)
+          ) {
+            return;
+          }
+          reset();
+        }}
         onClick={onClick}
         onKeyDown={onKeyDown}
         role={role}
@@ -152,22 +158,20 @@ export const TiltCard: React.FC<TiltCardProps> = ({
               : '[transform:var(--tilt-transform)] [transition:var(--tilt-transition)]'
           }`}
           style={{
-            ['--tilt-rest-transform' as string]: transformFor(0, 0),
-            ['--tilt-transform' as string]: transformFor(0, 0),
-            ['--tilt-transition' as string]: 'none',
+            ['--tilt-rest-transform' as string]: rest,
+            ['--tilt-transform' as string]: rest,
             transformStyle: 'preserve-3d',
           }}
         >
           {thickness > 0 && (
             <div
               aria-hidden
-              className="pointer-events-none absolute inset-0 rounded-2xl bg-[#097aaa]"
+              className="absolute -inset-2 rounded-[1.25rem] border border-white/30 bg-white/10"
               style={{ transform: `translateZ(-${thickness}px)` }}
             />
           )}
           <div className="relative rounded-2xl shadow-[0_20px_50px_rgba(0,177,237,0.24)]">
             {children}
-            {/* Glint overlay: sits on top of the card, so the card design is untouched */}
             <div
               aria-hidden
               className={`pointer-events-none absolute inset-0 overflow-hidden rounded-2xl ${
@@ -179,10 +183,10 @@ export const TiltCard: React.FC<TiltCardProps> = ({
                 className="absolute inset-0"
                 style={{
                   opacity: 0,
-                  ['--gp' as string]: '50%',
                   background:
-                    'linear-gradient(115deg, transparent calc(var(--gp) - 18%), rgba(255,255,255,0.55) var(--gp), transparent calc(var(--gp) + 18%))',
-                  transition: 'opacity 300ms ease-out, transform 120ms ease-out',
+                    'linear-gradient(115deg, transparent 32%, rgba(255,255,255,0.55) 50%, transparent 68%)',
+                  transition:
+                    'opacity 300ms ease-out, transform 120ms ease-out',
                   willChange: 'transform, opacity',
                 }}
               />
@@ -190,6 +194,11 @@ export const TiltCard: React.FC<TiltCardProps> = ({
           </div>
         </div>
       </div>
+
+      <div
+        aria-hidden
+        className="pointer-events-none absolute bottom-3 left-1/2 h-10 w-64 -translate-x-1/2 rounded-[50%] bg-cyan-400/10 blur-2xl"
+      />
     </div>
   );
 };
