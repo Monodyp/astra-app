@@ -7,7 +7,12 @@ function loadServiceAccount() {
   const value = env.FIREBASE_SERVICE_ACCOUNT_JSON;
   if (!value) return null;
   if (value.trim().startsWith('{')) return JSON.parse(value);
-  return JSON.parse(readFileSync(path.resolve(value), 'utf8'));
+  try {
+    return JSON.parse(readFileSync(path.resolve(value), 'utf8'));
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
+    throw error;
+  }
 }
 
 if (!admin.apps.length) {
