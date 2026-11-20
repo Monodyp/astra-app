@@ -10,6 +10,7 @@ import { MobileCheckIn } from './features/checkin/mobile/MobileCheckIn.js';
 import { MobileDigitalID } from './features/member/mobile/MobileDigitalID.js';
 import { MobileNotValid } from './features/member/mobile/MobileNotValid.js';
 import { MobileOverview } from './features/member/mobile/MobileOverview.js';
+import { MobileGrantPoints } from './features/officer/mobile/MobileGrantPoints.js';
 import { Home } from './pages/Home.js';
 import { Overview } from './pages/Overview.js';
 import { DigitalID } from './pages/DigitalID.js';
@@ -109,7 +110,10 @@ export const App: React.FC = () => {
               path="/officer/grant-points"
               element={
                 <ProtectedRoute role="officer">
-                  <OfficerGrantPoints />
+                  <ViewportScreen
+                    mobile={MobileGrantPoints}
+                    desktop={OfficerGrantPoints}
+                  />
                 </ProtectedRoute>
               }
             />
