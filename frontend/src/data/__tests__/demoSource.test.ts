@@ -123,7 +123,9 @@ describe('demo data source', () => {
   it('claims a perk and updates balance, wallet, and activity together', async () => {
     await data.signIn({ method: 'shortcut', shortcutId: 'verified-member' });
     const before = await data.getOverview();
-    const result = await data.claimPerk('perk-cafe-beverage');
+    const result = await data.claimPerk('perk-cafe-beverage', {
+      idempotencyKey: 'claim-1',
+    });
     expect(result.status).toBe('claimed');
     if (result.status !== 'claimed') return;
 
@@ -139,12 +141,16 @@ describe('demo data source', () => {
     const before = await data.getOverview();
     const vouchersBefore = await data.listVouchers();
 
-    const tooExpensive = await data.claimPerk('perk-hoodie');
+    const tooExpensive = await data.claimPerk('perk-hoodie', {
+      idempotencyKey: 'claim-2',
+    });
     expect(tooExpensive).toMatchObject({
       status: 'declined',
       reason: 'insufficient_points',
     });
-    const soldOut = await data.claimPerk('perk-mentor-session');
+    const soldOut = await data.claimPerk('perk-mentor-session', {
+      idempotencyKey: 'claim-3',
+    });
     expect(soldOut).toMatchObject({
       status: 'declined',
       reason: 'out_of_stock',
@@ -156,7 +162,9 @@ describe('demo data source', () => {
 
   it('declines claims from an unverified member', async () => {
     await data.signIn({ method: 'shortcut', shortcutId: 'unverified-member' });
-    expect(await data.claimPerk('perk-cafe-beverage')).toMatchObject({
+    expect(
+      await data.claimPerk('perk-cafe-beverage', { idempotencyKey: 'claim-4' })
+    ).toMatchObject({
       status: 'declined',
       reason: 'membership_inactive',
     });

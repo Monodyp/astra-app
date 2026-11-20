@@ -5,6 +5,7 @@ import {
   type CheckInInput,
   type CheckInResult,
   type CheckInStation,
+  type ClaimPerkOptions,
   type ClaimResult,
   type DigitalId,
   type GrantPointsInput,
@@ -38,11 +39,6 @@ export interface DemoSourceOptions {
   latencyMs?: number;
   now?: () => Date;
   newKey?: () => string;
-}
-
-export interface DemoClaimInput {
-  perkId: string;
-  idempotencyKey: string;
 }
 
 export interface DemoGrantInput extends GrantPointsInput {
@@ -420,35 +416,41 @@ export function createDemoDataSource(
       };
     },
 
-    async claimPerk(perkId: string): Promise<ClaimResult> {
+    async claimPerk(
+      perkId: string,
+      options: ClaimPerkOptions
+    ): Promise<ClaimResult> {
       await settle();
-      const input: DemoClaimInput = { perkId, idempotencyKey: newKey() };
+      const idempotencyKey = options.idempotencyKey.trim();
+      if (!idempotencyKey) {
+        throw new DataError('invalid_input', 'A claim needs a retry key.');
+      }
       return store.update((records) => {
         const member = currentMember(records);
-        const perk = toPerk(records, member.studentId, perkId);
-        const balance = balanceOf(records, member.studentId);
         const replayed = records.vouchers.find(
           (voucher) =>
             voucher.memberId === member.studentId &&
-            voucher.idempotencyKey === input.idempotencyKey
+            voucher.idempotencyKey === idempotencyKey
         );
         if (replayed) {
-          if (replayed.perkId !== input.perkId) {
+          if (replayed.perkId !== perkId) {
             throw new DataError(
-              'invalid_input',
-              'That retry key was already used for a different perk.'
+              'key_reused',
+              'That claim key was already used for a different perk.'
             );
           }
           return {
             status: 'claimed',
             voucher: toVoucher(records, replayed),
-            balance,
+            replayed: true,
           };
         }
+        const perk = toPerk(records, member.studentId, perkId);
+        const balance = balanceOf(records, member.studentId);
         const decline = (
           reason: Extract<ClaimResult, { status: 'declined' }>['reason'],
           message: string
-        ): ClaimResult => ({ status: 'declined', reason, message, balance });
+        ): ClaimResult => ({ status: 'declined', reason, message });
 
         if (!member.duesPaid) {
           return decline(
@@ -489,7 +491,7 @@ export function createDemoDataSource(
           expiresAt: expiresAt.toISOString(),
           redeemedAt: null,
           qrToken: `demo-voucher.v1.${serial}`,
-          idempotencyKey: input.idempotencyKey,
+          idempotencyKey,
         };
         if (stored.stock !== null) {
           stored.stock -= 1;
@@ -504,12 +506,12 @@ export function createDemoDataSource(
           referenceId: voucher.code,
           createdBy: member.studentId,
           createdAt: claimedAt.toISOString(),
-          idempotencyKey: input.idempotencyKey,
+          idempotencyKey,
         });
         return {
           status: 'claimed',
           voucher: toVoucher(records, voucher),
-          balance: balance - stored.pointsCost,
+          replayed: false,
         };
       });
     },

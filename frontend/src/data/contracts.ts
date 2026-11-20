@@ -121,14 +121,13 @@ export type ClaimDeclineReason =
   | 'claim_limit'
   | 'membership_inactive';
 
+export interface ClaimPerkOptions {
+  idempotencyKey: string;
+}
+
 export type ClaimResult =
-  | { status: 'claimed'; voucher: Voucher; balance: number }
-  | {
-      status: 'declined';
-      reason: ClaimDeclineReason;
-      message: string;
-      balance: number;
-    };
+  | { status: 'claimed'; voucher: Voucher; replayed: boolean }
+  | { status: 'declined'; reason: ClaimDeclineReason; message: string };
 
 export interface CheckInEvent {
   id: string;
@@ -217,6 +216,7 @@ export type DataErrorCode =
   | 'not_found'
   | 'invalid_input'
   | 'invalid_credentials'
+  | 'key_reused'
   | 'unsupported'
   | 'unavailable';
 
@@ -244,7 +244,7 @@ export interface PortalDataSource {
   getDigitalId(): Promise<DigitalId>;
 
   listPerks(): Promise<PerkCatalog>;
-  claimPerk(perkId: string): Promise<ClaimResult>;
+  claimPerk(perkId: string, options: ClaimPerkOptions): Promise<ClaimResult>;
   listVouchers(): Promise<Voucher[]>;
   getVoucher(voucherId: string): Promise<Voucher>;
 

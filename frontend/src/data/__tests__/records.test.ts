@@ -184,7 +184,7 @@ describe('demo records', () => {
 
   it('owns ledger entries and vouchers by student SR code', async () => {
     await data.signIn({ method: 'shortcut', shortcutId: 'verified-member' });
-    await data.claimPerk('perk-cafe-beverage');
+    await data.claimPerk('perk-cafe-beverage', { idempotencyKey: 'claim-1' });
     const records = storedRecords(storage);
     const voucher = records.vouchers[records.vouchers.length - 1];
     const entry = records.ledger[records.ledger.length - 1];
@@ -209,10 +209,14 @@ describe('demo records', () => {
     expect(unlimited.remainingStock).toBeNull();
     expect(cafe.remainingStock).toBe(30);
 
-    expect((await data.claimPerk('perk-workshop-discount')).status).toBe(
-      'claimed'
-    );
-    await data.claimPerk('perk-cafe-beverage');
+    expect(
+      (
+        await data.claimPerk('perk-workshop-discount', {
+          idempotencyKey: 'claim-2',
+        })
+      ).status
+    ).toBe('claimed');
+    await data.claimPerk('perk-cafe-beverage', { idempotencyKey: 'claim-3' });
     const after = await data.listPerks();
     expect(
       after.perks.find((perk) => perk.id === 'perk-workshop-discount')!
@@ -292,10 +296,13 @@ describe('demo records', () => {
 
     it('replays a claim that reuses its key', async () => {
       await data.signIn({ method: 'shortcut', shortcutId: 'verified-member' });
-      const first = await data.claimPerk('perk-cafe-beverage');
-      const retried = await data.claimPerk('perk-cafe-beverage');
-      expect(first.status).toBe('claimed');
-      expect(retried).toEqual(first);
+      const key = { idempotencyKey: 'retry-1' };
+      const first = await data.claimPerk('perk-cafe-beverage', key);
+      const retried = await data.claimPerk('perk-cafe-beverage', key);
+      expect(first).toMatchObject({ status: 'claimed', replayed: false });
+      expect(retried).toMatchObject({ status: 'claimed', replayed: true });
+      if (first.status !== 'claimed' || retried.status !== 'claimed') return;
+      expect(retried.voucher).toEqual(first.voucher);
       expect((await data.getOverview()).points).toBe(400);
       const records = storedRecords(storage);
       expect(
@@ -308,10 +315,38 @@ describe('demo records', () => {
 
     it('rejects a claim key reused for another perk', async () => {
       await data.signIn({ method: 'shortcut', shortcutId: 'verified-member' });
-      await data.claimPerk('perk-cafe-beverage');
-      await expect(data.claimPerk('perk-sticker-pack')).rejects.toMatchObject({
-        code: 'invalid_input',
+      const key = { idempotencyKey: 'retry-1' };
+      await data.claimPerk('perk-cafe-beverage', key);
+      await expect(
+        data.claimPerk('perk-sticker-pack', key)
+      ).rejects.toMatchObject({ code: 'key_reused' });
+      expect((await data.getOverview()).points).toBe(400);
+    });
+
+    it('gives a new claim with a new key its own voucher', async () => {
+      await data.signIn({ method: 'shortcut', shortcutId: 'verified-member' });
+      await data.claimPerk('perk-cafe-beverage', { idempotencyKey: 'retry-1' });
+      await data.claimPerk('perk-cafe-beverage', { idempotencyKey: 'retry-2' });
+      expect((await data.getOverview()).points).toBe(350);
+      expect(
+        storedRecords(storage).vouchers.filter(
+          (item) => item.perkId === 'perk-cafe-beverage'
+        )
+      ).toHaveLength(3);
+    });
+
+    it('keeps claim keys separate for each member', async () => {
+      await data.signIn({ method: 'shortcut', shortcutId: 'verified-member' });
+      await data.claimPerk('perk-cafe-beverage', { idempotencyKey: 'retry-1' });
+      await data.signOut();
+      await data.signIn({ method: 'shortcut', shortcutId: 'officer' });
+      const result = await data.claimPerk('perk-cafe-beverage', {
+        idempotencyKey: 'retry-1',
       });
+      expect(result).toMatchObject({ status: 'claimed', replayed: false });
+      expect((await data.listVouchers()).map((item) => item.id)).toEqual([
+        result.status === 'claimed' ? result.voucher.id : '',
+      ]);
     });
 
     it('records a retried grant once', async () => {
