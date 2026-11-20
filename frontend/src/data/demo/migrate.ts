@@ -2,9 +2,12 @@ import type { PerkCategory, Role } from '../contracts.js';
 import {
   DEMO_RECORDS_VERSION,
   SYSTEM_ACTOR,
+  perkSnapshot,
   type DemoLedgerType,
   type DemoMember,
   type DemoRecords,
+  type DemoVoucher,
+  type DemoVoucherSnapshot,
 } from './fixtures.js';
 
 interface V1Member {
@@ -71,6 +74,13 @@ interface V1Records {
   attendance: DemoRecords['attendance'];
 }
 
+type V2Voucher = Omit<DemoVoucher, keyof DemoVoucherSnapshot>;
+
+interface V2Records extends Omit<DemoRecords, 'version' | 'vouchers'> {
+  version: 2;
+  vouchers: V2Voucher[];
+}
+
 const LEDGER_TYPES: Record<V1LedgerEntry['kind'], DemoLedgerType> = {
   points_granted: 'grant',
   event_checked_in: 'attendance',
@@ -79,7 +89,7 @@ const LEDGER_TYPES: Record<V1LedgerEntry['kind'], DemoLedgerType> = {
 
 const GRANTED_BY = 'Granted by ';
 
-function migrateV1(records: V1Records): DemoRecords {
+function migrateV1(records: V1Records): V2Records {
   const members: DemoMember[] = records.members.map((member) => ({
     ...member,
   }));
@@ -90,7 +100,7 @@ function migrateV1(records: V1Records): DemoRecords {
     members.find((member) => member.fullName === fullName)?.memberId;
 
   return {
-    version: DEMO_RECORDS_VERSION,
+    version: 2,
     sequence: records.sequence,
     currentEventId: records.currentEventId,
     members,
@@ -145,6 +155,22 @@ function migrateV1(records: V1Records): DemoRecords {
   };
 }
 
+function migrateV2(records: V2Records): DemoRecords {
+  const missing: DemoVoucherSnapshot = {
+    reward: null,
+    partnerName: null,
+    instructions: null,
+  };
+  return {
+    ...records,
+    version: DEMO_RECORDS_VERSION,
+    vouchers: records.vouchers.map((voucher) => {
+      const perk = records.perks.find((item) => item.id === voucher.perkId);
+      return { ...voucher, ...(perk ? perkSnapshot(perk) : missing) };
+    }),
+  };
+}
+
 export function migrateRecords(value: unknown): DemoRecords | null {
   if (typeof value !== 'object' || value === null || !('version' in value)) {
     return null;
@@ -152,8 +178,11 @@ export function migrateRecords(value: unknown): DemoRecords | null {
   if (value.version === DEMO_RECORDS_VERSION) {
     return value as DemoRecords;
   }
+  if (value.version === 2) {
+    return migrateV2(value as V2Records);
+  }
   if (value.version === 1) {
-    return migrateV1(value as V1Records);
+    return migrateV2(migrateV1(value as V1Records));
   }
   return null;
 }

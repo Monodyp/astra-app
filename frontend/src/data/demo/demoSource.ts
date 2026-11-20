@@ -1,5 +1,6 @@
 import {
   DataError,
+  PERK_CATEGORY_LABELS,
   type ActivityEntry,
   type AttendanceRecord,
   type CheckInInput,
@@ -14,7 +15,6 @@ import {
   type MemberSearchResult,
   type Perk,
   type PerkCatalog,
-  type PerkCategory,
   type PortalDataSource,
   type ScanSample,
   type Session,
@@ -26,6 +26,7 @@ import {
   DEMO_SCAN_SAMPLES,
   DEMO_SHORTCUTS,
   SYSTEM_ACTOR,
+  perkSnapshot,
   type DemoLedgerEntry,
   type DemoLedgerType,
   type DemoMember,
@@ -43,13 +44,6 @@ export interface DemoSourceOptions {
 export function demoAuthUid(member: Pick<DemoMember, 'memberId'>): string {
   return `demo-auth-${member.memberId}`;
 }
-
-const CATEGORY_LABELS: Record<PerkCategory, string> = {
-  discount: 'Discounts',
-  merch: 'Merch / Collectibles',
-  workshop: 'Partner Workshops',
-  food: 'Food & Drink',
-};
 
 const RECENT_ACTIVITY_LIMIT = 5;
 const SEARCH_RESULT_LIMIT = 6;
@@ -198,25 +192,23 @@ export function createDemoDataSource(
 
   function toVoucher(records: DemoRecords, voucher: DemoVoucher): Voucher {
     const perk = records.perks.find((item) => item.id === voucher.perkId);
-    if (!perk) {
-      throw new DataError('not_found', 'That perk no longer exists.');
-    }
     return {
       id: voucher.id,
       code: voucher.code,
-      perkId: perk.id,
-      perkName: perk.title,
-      partner: perk.partnerName,
-      category: perk.category,
-      categoryLabel: CATEGORY_LABELS[perk.category],
-      bannerLabel: perk.bannerLabel,
-      title: `Voucher Claimed: ${perk.partnerName}`,
+      perkId: voucher.perkId,
+      reward: voucher.reward,
+      partnerName: voucher.partnerName,
+      instructions: voucher.instructions
+        ? voucher.instructions.split('\n').filter(Boolean)
+        : [],
+      category: perk?.category ?? null,
+      categoryLabel: perk ? PERK_CATEGORY_LABELS[perk.category] : null,
+      bannerLabel: perk?.bannerLabel ?? null,
       state: voucherState(voucher),
       claimedAt: voucher.createdAt,
       expiresAt: voucher.expiresAt,
       redeemedAt: voucher.redeemedAt,
-      qrValue: voucher.qrToken,
-      terms: [...perk.terms],
+      qrValue: voucher.qrToken || null,
     };
   }
 
@@ -256,7 +248,7 @@ export function createDemoDataSource(
       name: perk.title,
       partner: perk.partnerName,
       category: perk.category,
-      categoryLabel: CATEGORY_LABELS[perk.category],
+      categoryLabel: PERK_CATEGORY_LABELS[perk.category],
       eyebrow: perk.eyebrow,
       headline: perk.headline,
       subline: perk.subline,
@@ -367,7 +359,7 @@ export function createDemoDataSource(
         eventsAttended: attended.length,
         lastEventName: lastEvent?.name ?? null,
         activeVoucherCount: ready.length,
-        activeVoucherHighlight: ready[0]?.perkName ?? null,
+        activeVoucherHighlight: ready[0]?.reward ?? null,
         recentActivity: entries
           .slice(0, RECENT_ACTIVITY_LIMIT)
           .map((entry) => toActivity(records, entry)),
@@ -484,6 +476,7 @@ export function createDemoDataSource(
           expiresAt: expiresAt.toISOString(),
           redeemedAt: null,
           qrToken: `demo-voucher.v1.${serial}`,
+          ...perkSnapshot(stored),
           idempotencyKey,
         };
         if (stored.stock !== null) {

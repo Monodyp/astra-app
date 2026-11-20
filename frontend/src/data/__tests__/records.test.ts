@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import type { PortalDataSource } from '../contracts.js';
 import { createDemoDataSource } from '../demo/demoSource.js';
-import type { DemoRecords } from '../demo/fixtures.js';
+import { createSeedRecords, type DemoRecords } from '../demo/fixtures.js';
 import {
   RECORDS_KEY,
   SESSION_KEY,
@@ -155,7 +155,7 @@ describe('demo records', () => {
     it('stores the migrated records in the backend shapes', async () => {
       await data.getOverview();
       const records = storedRecords(storage);
-      expect(records.version).toBe(2);
+      expect(records.version).toBe(3);
       expect(records.ledger[1]).toEqual({
         id: 'L-150',
         memberId: '24-90001',
@@ -179,7 +179,96 @@ describe('demo records', () => {
         ['24-90001', 'active'],
         ['24-90001', 'used'],
       ]);
+      expect(records.vouchers[0]).toMatchObject({
+        reward: 'Campus Cafe Free Beverage',
+        partnerName: 'Campus Cafe',
+        instructions: 'Valid for one redemption by an active member.',
+      });
     });
+  });
+
+  describe('version 2 vouchers', () => {
+    function storeV2(change: (records: DemoRecords) => void) {
+      const records = createSeedRecords() as unknown as Record<string, unknown>;
+      const v2 = {
+        ...records,
+        version: 2,
+        vouchers: (records.vouchers as DemoRecords['vouchers']).map(
+          ({ reward, partnerName, instructions, ...rest }) => {
+            void reward;
+            void partnerName;
+            void instructions;
+            return rest;
+          }
+        ),
+      } as unknown as DemoRecords;
+      change(v2);
+      storage.setItem(RECORDS_KEY, JSON.stringify(v2));
+    }
+
+    beforeEach(async () => {
+      await data.signIn({ method: 'shortcut', shortcutId: 'verified-member' });
+    });
+
+    it('copies the perk details onto older vouchers', async () => {
+      storeV2(() => undefined);
+      const voucher = await data.getVoucher('V-98214');
+      expect(voucher).toMatchObject({
+        reward: '15% Off at the Campus Bookstore',
+        partnerName: 'Campus Bookstore',
+        category: 'discount',
+      });
+      expect(voucher.instructions).toHaveLength(3);
+      expect(storedRecords(storage).version).toBe(3);
+    });
+
+    it('keeps the wallet open when a legacy voucher lost its perk', async () => {
+      storeV2((records) => {
+        records.perks = records.perks.filter(
+          (perk) => perk.id !== 'perk-bookstore'
+        );
+      });
+      const vouchers = await data.listVouchers();
+      expect(vouchers).toHaveLength(3);
+      expect(vouchers.find((item) => item.id === 'V-98214')).toMatchObject({
+        code: 'ASTR-PRK-98214',
+        reward: null,
+        partnerName: null,
+        instructions: [],
+        category: null,
+        state: 'ready',
+      });
+      expect((await data.getOverview()).activeVoucherCount).toBe(1);
+    });
+  });
+
+  it('keeps the issued details after a perk is renamed or removed', async () => {
+    await data.signIn({ method: 'shortcut', shortcutId: 'verified-member' });
+    const claimed = await data.claimPerk('perk-cafe-beverage', {
+      idempotencyKey: 'claim-snapshot',
+    });
+    if (claimed.status !== 'claimed') throw new Error('claim declined');
+    const records = storedRecords(storage);
+    records.perks.find((perk) => perk.id === 'perk-cafe-beverage')!.title =
+      'Renamed Drink';
+    storage.setItem(RECORDS_KEY, JSON.stringify(records));
+    expect((await data.getVoucher(claimed.voucher.id)).reward).toBe(
+      'Campus Cafe Free Beverage'
+    );
+
+    records.perks = records.perks.filter(
+      (perk) => perk.id !== 'perk-cafe-beverage'
+    );
+    storage.setItem(RECORDS_KEY, JSON.stringify(records));
+    const wallet = await data.listVouchers();
+    expect(wallet.find((item) => item.id === claimed.voucher.id)).toMatchObject(
+      {
+        reward: 'Campus Cafe Free Beverage',
+        partnerName: 'Campus Cafe',
+        category: null,
+      }
+    );
+    expect(wallet).toHaveLength(4);
   });
 
   it('owns ledger entries and vouchers by student SR code', async () => {

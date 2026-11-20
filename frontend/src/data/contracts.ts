@@ -74,6 +74,13 @@ export interface DigitalId {
 
 export type PerkCategory = 'discount' | 'merch' | 'workshop' | 'food';
 
+export const PERK_CATEGORY_LABELS: Record<PerkCategory, string> = {
+  discount: 'Discounts',
+  merch: 'Merch / Collectibles',
+  workshop: 'Partner Workshops',
+  food: 'Food & Drink',
+};
+
 export interface Perk {
   id: string;
   name: string;
@@ -101,18 +108,17 @@ export interface Voucher {
   id: string;
   code: string;
   perkId: string;
-  perkName: string;
-  partner: string;
-  category: PerkCategory;
-  categoryLabel: string;
-  bannerLabel: string;
-  title: string;
+  reward: string | null;
+  partnerName: string | null;
+  instructions: string[];
+  category: PerkCategory | null;
+  categoryLabel: string | null;
+  bannerLabel: string | null;
   state: VoucherState;
   claimedAt: string;
   expiresAt: string;
   redeemedAt: string | null;
-  qrValue: string;
-  terms: string[];
+  qrValue: string | null;
 }
 
 export type ClaimDeclineReason =

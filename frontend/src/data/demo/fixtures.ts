@@ -13,7 +13,7 @@ export interface DemoMember {
   qrToken: string;
 }
 
-export const DEMO_RECORDS_VERSION = 2;
+export const DEMO_RECORDS_VERSION = 3;
 
 export const SYSTEM_ACTOR = 'system';
 
@@ -65,7 +65,23 @@ export interface DemoVoucher {
   expiresAt: string;
   redeemedAt: string | null;
   qrToken: string;
+  reward: string | null;
+  partnerName: string | null;
+  instructions: string | null;
   idempotencyKey?: string;
+}
+
+export type DemoVoucherSnapshot = Pick<
+  DemoVoucher,
+  'reward' | 'partnerName' | 'instructions'
+>;
+
+export function perkSnapshot(perk: DemoPerk): DemoVoucherSnapshot {
+  return {
+    reward: perk.title,
+    partnerName: perk.partnerName,
+    instructions: perk.terms.join('\n'),
+  };
 }
 
 export interface DemoEvent {
@@ -156,6 +172,141 @@ function member(
 }
 
 export function createSeedRecords(): DemoRecords {
+  const perks: DemoPerk[] = [
+    {
+      id: 'perk-workshop-discount',
+      title: '10% Off All Tech Workshops & Merchandise',
+      partnerName: 'Partner Exclusive',
+      category: 'discount',
+      eyebrow: 'Partner exclusive',
+      headline: '10%',
+      subline: 'Off your next build',
+      description: 'A little boost for your next big idea.',
+      bannerLabel: '10% OFF',
+      pointsCost: 100,
+      stock: null,
+      claimLimit: 2,
+      featured: true,
+      validityDays: 280,
+      terms: STANDARD_TERMS,
+    },
+    {
+      id: 'perk-sticker-pack',
+      title: 'ASTRA Official Dev Sticker Pack',
+      partnerName: 'ASTRA Originals',
+      category: 'merch',
+      eyebrow: 'ASTRA originals',
+      headline: 'ASTRA Developers',
+      subline: 'Build. Learn. Ship.',
+      description: 'Make your setup unmistakably yours.',
+      bannerLabel: 'ASTRA ORIGINALS',
+      pointsCost: 50,
+      stock: 25,
+      claimLimit: 3,
+      featured: false,
+      validityDays: 280,
+      terms: [
+        'Valid for one sticker pack per voucher.',
+        'Claim at the ASTRA booth during office hours.',
+        'Show your digital ID together with this voucher.',
+      ],
+    },
+    {
+      id: 'perk-cafe-beverage',
+      title: 'Campus Cafe Free Beverage',
+      partnerName: 'Campus Cafe',
+      category: 'food',
+      eyebrow: 'Campus cafe',
+      headline: 'One on us.',
+      subline: 'Fuel your next idea',
+      description: 'A well-earned break between builds.',
+      bannerLabel: 'COFFEE BREAK',
+      pointsCost: 50,
+      stock: 30,
+      claimLimit: 5,
+      featured: false,
+      validityDays: 90,
+      terms: STANDARD_TERMS,
+    },
+    {
+      id: 'perk-cloud-lab',
+      title: 'Cloud Lab Seat Reservation',
+      partnerName: 'Partner Workshops',
+      category: 'workshop',
+      eyebrow: 'Partner workshop',
+      headline: 'Cloud Lab',
+      subline: 'Reserved seat',
+      description: 'Hands-on cloud deployment session with a partner team.',
+      bannerLabel: 'CLOUD LAB',
+      pointsCost: 150,
+      stock: 12,
+      claimLimit: 1,
+      featured: false,
+      validityDays: 60,
+      terms: [
+        'Valid for one seat in the next scheduled Cloud Lab.',
+        'Show your digital ID at the lab entrance.',
+        'Seats not claimed 10 minutes after start are released.',
+      ],
+    },
+    {
+      id: 'perk-hoodie',
+      title: 'ASTRA Mission Hoodie',
+      partnerName: 'ASTRA Originals',
+      category: 'merch',
+      eyebrow: 'ASTRA originals',
+      headline: 'Mission Hoodie',
+      subline: 'Limited run',
+      description: 'Heavyweight hoodie from the ASTRA mission collection.',
+      bannerLabel: 'ASTRA ORIGINALS',
+      pointsCost: 1200,
+      stock: 8,
+      claimLimit: 1,
+      featured: false,
+      validityDays: 120,
+      terms: [
+        'Valid for one hoodie while stock lasts.',
+        'Sizes are subject to availability at pickup.',
+        'Show your digital ID together with this voucher.',
+      ],
+    },
+    {
+      id: 'perk-mentor-session',
+      title: 'Mentor Code Review Session',
+      partnerName: 'Partner Workshops',
+      category: 'workshop',
+      eyebrow: 'Partner workshop',
+      headline: '1:1 Review',
+      subline: 'With an industry mentor',
+      description: 'Thirty minutes of feedback on a project of your choice.',
+      bannerLabel: 'MENTOR 1:1',
+      pointsCost: 200,
+      stock: 0,
+      claimLimit: 1,
+      featured: false,
+      validityDays: 60,
+      terms: STANDARD_TERMS,
+    },
+    {
+      id: 'perk-bookstore',
+      title: '15% Off at the Campus Bookstore',
+      partnerName: 'Campus Bookstore',
+      category: 'discount',
+      eyebrow: 'Partner exclusive',
+      headline: '15%',
+      subline: 'Off reference books',
+      description: 'Stock up on the books behind your next build.',
+      bannerLabel: '15% OFF',
+      pointsCost: 80,
+      stock: 20,
+      claimLimit: 1,
+      featured: false,
+      validityDays: 180,
+      terms: STANDARD_TERMS,
+    },
+  ];
+  const snapshotOf = (perkId: string) =>
+    perkSnapshot(perks.find((perk) => perk.id === perkId)!);
   return {
     version: DEMO_RECORDS_VERSION,
     sequence: 100,
@@ -356,139 +507,7 @@ export function createSeedRecords(): DemoRecords {
         '2026-08-15T09:00:00+08:00'
       ),
     ],
-    perks: [
-      {
-        id: 'perk-workshop-discount',
-        title: '10% Off All Tech Workshops & Merchandise',
-        partnerName: 'Partner Exclusive',
-        category: 'discount',
-        eyebrow: 'Partner exclusive',
-        headline: '10%',
-        subline: 'Off your next build',
-        description: 'A little boost for your next big idea.',
-        bannerLabel: '10% OFF',
-        pointsCost: 100,
-        stock: null,
-        claimLimit: 2,
-        featured: true,
-        validityDays: 280,
-        terms: STANDARD_TERMS,
-      },
-      {
-        id: 'perk-sticker-pack',
-        title: 'ASTRA Official Dev Sticker Pack',
-        partnerName: 'ASTRA Originals',
-        category: 'merch',
-        eyebrow: 'ASTRA originals',
-        headline: 'ASTRA Developers',
-        subline: 'Build. Learn. Ship.',
-        description: 'Make your setup unmistakably yours.',
-        bannerLabel: 'ASTRA ORIGINALS',
-        pointsCost: 50,
-        stock: 25,
-        claimLimit: 3,
-        featured: false,
-        validityDays: 280,
-        terms: [
-          'Valid for one sticker pack per voucher.',
-          'Claim at the ASTRA booth during office hours.',
-          'Show your digital ID together with this voucher.',
-        ],
-      },
-      {
-        id: 'perk-cafe-beverage',
-        title: 'Campus Cafe Free Beverage',
-        partnerName: 'Campus Cafe',
-        category: 'food',
-        eyebrow: 'Campus cafe',
-        headline: 'One on us.',
-        subline: 'Fuel your next idea',
-        description: 'A well-earned break between builds.',
-        bannerLabel: 'COFFEE BREAK',
-        pointsCost: 50,
-        stock: 30,
-        claimLimit: 5,
-        featured: false,
-        validityDays: 90,
-        terms: STANDARD_TERMS,
-      },
-      {
-        id: 'perk-cloud-lab',
-        title: 'Cloud Lab Seat Reservation',
-        partnerName: 'Partner Workshops',
-        category: 'workshop',
-        eyebrow: 'Partner workshop',
-        headline: 'Cloud Lab',
-        subline: 'Reserved seat',
-        description: 'Hands-on cloud deployment session with a partner team.',
-        bannerLabel: 'CLOUD LAB',
-        pointsCost: 150,
-        stock: 12,
-        claimLimit: 1,
-        featured: false,
-        validityDays: 60,
-        terms: [
-          'Valid for one seat in the next scheduled Cloud Lab.',
-          'Show your digital ID at the lab entrance.',
-          'Seats not claimed 10 minutes after start are released.',
-        ],
-      },
-      {
-        id: 'perk-hoodie',
-        title: 'ASTRA Mission Hoodie',
-        partnerName: 'ASTRA Originals',
-        category: 'merch',
-        eyebrow: 'ASTRA originals',
-        headline: 'Mission Hoodie',
-        subline: 'Limited run',
-        description: 'Heavyweight hoodie from the ASTRA mission collection.',
-        bannerLabel: 'ASTRA ORIGINALS',
-        pointsCost: 1200,
-        stock: 8,
-        claimLimit: 1,
-        featured: false,
-        validityDays: 120,
-        terms: [
-          'Valid for one hoodie while stock lasts.',
-          'Sizes are subject to availability at pickup.',
-          'Show your digital ID together with this voucher.',
-        ],
-      },
-      {
-        id: 'perk-mentor-session',
-        title: 'Mentor Code Review Session',
-        partnerName: 'Partner Workshops',
-        category: 'workshop',
-        eyebrow: 'Partner workshop',
-        headline: '1:1 Review',
-        subline: 'With an industry mentor',
-        description: 'Thirty minutes of feedback on a project of your choice.',
-        bannerLabel: 'MENTOR 1:1',
-        pointsCost: 200,
-        stock: 0,
-        claimLimit: 1,
-        featured: false,
-        validityDays: 60,
-        terms: STANDARD_TERMS,
-      },
-      {
-        id: 'perk-bookstore',
-        title: '15% Off at the Campus Bookstore',
-        partnerName: 'Campus Bookstore',
-        category: 'discount',
-        eyebrow: 'Partner exclusive',
-        headline: '15%',
-        subline: 'Off reference books',
-        description: 'Stock up on the books behind your next build.',
-        bannerLabel: '15% OFF',
-        pointsCost: 80,
-        stock: 20,
-        claimLimit: 1,
-        featured: false,
-        validityDays: 180,
-        terms: STANDARD_TERMS,
-      },
-    ],
+    perks,
     vouchers: [
       {
         id: 'V-98214',
@@ -500,6 +519,7 @@ export function createSeedRecords(): DemoRecords {
         expiresAt: '2027-08-31T23:59:59+08:00',
         redeemedAt: null,
         qrToken: 'demo-voucher.v1.98214',
+        ...snapshotOf('perk-bookstore'),
       },
       {
         id: 'V-66319',
@@ -511,6 +531,7 @@ export function createSeedRecords(): DemoRecords {
         expiresAt: '2027-08-31T23:59:59+08:00',
         redeemedAt: '2026-03-08T13:20:00+08:00',
         qrToken: 'demo-voucher.v1.66319',
+        ...snapshotOf('perk-sticker-pack'),
       },
       {
         id: 'V-50412',
@@ -522,6 +543,7 @@ export function createSeedRecords(): DemoRecords {
         expiresAt: '2026-02-28T23:59:59+08:00',
         redeemedAt: null,
         qrToken: 'demo-voucher.v1.50412',
+        ...snapshotOf('perk-cafe-beverage'),
       },
     ],
     events: [
