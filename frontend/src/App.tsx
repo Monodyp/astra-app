@@ -6,6 +6,7 @@ import { ProtectedRoute } from './components/ProtectedRoute.js';
 import { Login } from './pages/Login.js';
 import { ViewportScreen } from './components/ViewportScreen.js';
 import { MobileLogin } from './features/auth/mobile/MobileLogin.js';
+import { MobileCheckIn } from './features/checkin/mobile/MobileCheckIn.js';
 import { MobileDigitalID } from './features/member/mobile/MobileDigitalID.js';
 import { MobileNotValid } from './features/member/mobile/MobileNotValid.js';
 import { MobileOverview } from './features/member/mobile/MobileOverview.js';
@@ -116,7 +117,7 @@ export const App: React.FC = () => {
               path="/checkin"
               element={
                 <ProtectedRoute role="officer">
-                  <CheckIn />
+                  <ViewportScreen mobile={MobileCheckIn} desktop={CheckIn} />
                 </ProtectedRoute>
               }
             />
