@@ -1,10 +1,21 @@
-import { Request, Response, NextFunction } from 'express';
+import type { NextFunction, Request, Response } from 'express';
 
-// TODO(AI/Backend): Check if authenticated user has required role (e.g., 'officer')
 export function requireRole(role: string) {
-  return (_req: Request, _res: Response, next: NextFunction): void => {
-    // Stub: pass-through role check for boilerplate
-    void role;
+  const requiredRole = role.trim().toLowerCase();
+
+  return (req: Request, res: Response, next: NextFunction): void => {
+    if (!req.user) {
+      res.status(401).json({ error: 'Authentication required' });
+      return;
+    }
+
+    const userRole = req.user.role.trim().toLowerCase();
+    // Administrators can access officer- and partner-protected routes.
+    if (userRole !== requiredRole && userRole !== 'admin') {
+      res.status(403).json({ error: `${role} role required` });
+      return;
+    }
+
     next();
   };
 }
