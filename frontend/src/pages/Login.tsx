@@ -144,9 +144,6 @@ export const Login: React.FC = () => {
           </span>
         </Link>
         <nav aria-label="Account" className="flex items-center gap-8">
-          <span aria-current="page" className="text-base font-medium">
-            Login
-          </span>
           <a
             href="/astrascend"
             className="inline-flex items-center gap-2 rounded-full bg-astra-primary-light px-8 py-3 text-sm font-bold text-astra-white transition-transform hover:scale-105"
