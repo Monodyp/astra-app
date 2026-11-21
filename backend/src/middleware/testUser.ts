@@ -6,6 +6,8 @@ export interface AuthenticatedUser {
   uid: string;
   srCode: string | null;
   role: string;
+  email?: string;
+  displayName?: string;
 }
 
 const testUserSchema = z.object({

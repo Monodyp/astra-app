@@ -1,10 +1,10 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
 import { firebaseAdmin } from '../lib/firebase.js';
+import { userFromDecodedToken } from '../lib/authUser.js';
 import { getConfiguredMemberService } from '../config/members.js';
-import { normalizeFirebaseUser } from '../middleware/auth.js';
 import {
-  generateMemberQrTokenWithExpiry,
+  generateMemberQrToken,
   InvalidQrTokenError,
   verifyQrToken,
 } from '../services/qrService.js';
@@ -25,13 +25,48 @@ export async function loginStub(req: Request, res: Response): Promise<void> {
 
   try {
     const decoded = await firebaseAdmin.auth().verifyIdToken(parsed.data.idToken);
-    const user = normalizeFirebaseUser(decoded);
+    const user = userFromDecodedToken(decoded);
+
     res.status(200).json({
-      user,
+      user: {
+        uid: user.uid,
+        srCode: user.srCode,
+        role: user.role,
+      },
     });
   } catch {
     res.status(401).json({ error: 'Invalid Firebase ID token' });
   }
+}
+
+interface ResolvedMemberAccount {
+  srCode: string;
+  fullName: string | null;
+  isPaid: boolean;
+  controlNumber?: string | null;
+  membershipId?: string | null;
+}
+
+async function resolveMemberAccount(
+  user: NonNullable<Request['user']>
+): Promise<ResolvedMemberAccount | null> {
+  if (!user.srCode) {
+    return null;
+  }
+  const members = getConfiguredMemberService();
+  const member = await members.findMember(user.srCode);
+  const hasResolvedSrCode = user.srCode !== user.uid;
+  if (!member && !hasResolvedSrCode) {
+    return null;
+  }
+
+  return {
+    srCode: member?.srCode ?? user.srCode,
+    fullName: member?.fullName ?? user.displayName ?? null,
+    isPaid: member ? await members.isPaid(member.srCode) : false,
+    controlNumber: member?.controlNumber ?? null,
+    membershipId: member?.membershipId ?? null,
+  };
 }
 
 export async function getAuthMeStub(req: Request, res: Response): Promise<void> {
@@ -41,16 +76,8 @@ export async function getAuthMeStub(req: Request, res: Response): Promise<void> 
   }
 
   try {
-    const members = getConfiguredMemberService();
-    if (!req.user.srCode) {
-      res.status(409).json({
-        error: 'MEMBER_LINK_REQUIRED',
-        code: 'MEMBER_LINK_REQUIRED',
-      });
-      return;
-    }
-    const member = await members.findMember(req.user.srCode);
-    if (!member) {
+    const account = await resolveMemberAccount(req.user);
+    if (!account) {
       res.status(404).json({ error: 'Member not found' });
       return;
     }
@@ -58,14 +85,9 @@ export async function getAuthMeStub(req: Request, res: Response): Promise<void> 
     res.status(200).json({
       member: {
         uid: req.user.uid,
-        srCode: member.srCode,
-        fullName: member.fullName,
-        membershipId: member.membershipId ?? member.controlNumber ?? null,
-        controlNumber: member.controlNumber ?? null,
-        program: member.program ?? null,
-        yearLevel: member.yearLevel ?? null,
-        isPaid: await members.isPaid(member.srCode),
-        email: member.email ?? null,
+        srCode: account.srCode,
+        fullName: account.fullName,
+        isPaid: account.isPaid,
         role: req.user.role,
       },
     });
@@ -81,19 +103,8 @@ export async function getMemberIdCardStub(req: Request, res: Response): Promise<
   }
 
   try {
-    const members = getConfiguredMemberService();
-    if (!req.user.srCode) {
-      res.set({
-        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
-        'Pragma': 'no-cache',
-      }).status(409).json({
-        error: 'MEMBER_LINK_REQUIRED',
-        code: 'MEMBER_LINK_REQUIRED',
-      });
-      return;
-    }
-    const member = await members.findMember(req.user.srCode);
-    if (!member) {
+    const account = await resolveMemberAccount(req.user);
+    if (!account) {
       res.set({
         'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
         'Pragma': 'no-cache',
@@ -101,49 +112,21 @@ export async function getMemberIdCardStub(req: Request, res: Response): Promise<
       return;
     }
 
-    const isPaid = await members.isPaid(member.srCode);
-    const controlNumber = member.controlNumber ?? member.membershipId ?? null;
-    let qrToken: string | null = null;
-    let qrExpiresAt: string | null = null;
-
-    if (isPaid && controlNumber) {
-      try {
-        const issued = await generateMemberQrTokenWithExpiry(controlNumber);
-        qrToken = issued.qrToken;
-        qrExpiresAt = issued.qrExpiresAt;
-      } catch (error) {
-        res.set({
-          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
-          'Pragma': 'no-cache',
-        });
-        if (error instanceof TypeError) {
-          res.set({
-            'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
-            'Pragma': 'no-cache',
-          }).status(409).json({
-            error: 'MEMBER_LINK_REQUIRED',
-            code: 'MEMBER_LINK_REQUIRED',
-          });
-          return;
-        }
-        throw error;
-      }
-    }
+    const qrIdentifier =
+      account.controlNumber ?? account.membershipId ?? account.srCode;
+    const qrToken = account.isPaid
+      ? await generateMemberQrToken(qrIdentifier)
+      : '';
 
     res.set({
       'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
       'Pragma': 'no-cache',
     }).status(200).json({
       card: {
-        studentId: member.srCode,
-        fullName: member.fullName,
-        isPaid,
-        membershipId: member.membershipId ?? controlNumber,
-        program: member.program ?? null,
-        yearLevel: member.yearLevel ?? null,
+        studentId: account.srCode,
+        fullName: account.fullName,
+        isPaid: account.isPaid,
         qrToken,
-        qrExpiresAt,
-        status: isPaid ? 'active' : 'inactive',
       },
     });
   } catch (error) {

@@ -1,6 +1,7 @@
 import type { NextFunction, Request, Response } from 'express';
 import type { DecodedIdToken } from 'firebase-admin/auth';
 import { env } from '../config/env.js';
+import { userFromDecodedToken } from '../lib/authUser.js';
 import { firebaseAdmin } from '../lib/firebase.js';
 import { testUserMiddleware } from './testUser.js';
 
@@ -23,21 +24,7 @@ export function normalizeClaimedSrCode(claims: {
 }
 
 export function normalizeFirebaseUser(token: DecodedIdToken) {
-  const claims = token as DecodedIdToken & {
-    srCode?: unknown;
-    sr_code?: unknown;
-    role?: unknown;
-  };
-
-  return {
-    uid: token.uid,
-    // UID is never used as a roster identifier. A missing claim is explicit.
-    srCode: normalizeClaimedSrCode(claims),
-    role:
-      typeof claims.role === 'string'
-        ? claims.role.trim().toLowerCase()
-        : 'member',
-  };
+  return userFromDecodedToken(token);
 }
 
 export async function authMiddleware(
@@ -69,7 +56,7 @@ export async function authMiddleware(
 
   try {
     const decoded = await firebaseAdmin.auth().verifyIdToken(token);
-    req.user = normalizeFirebaseUser(decoded);
+    req.user = userFromDecodedToken(decoded);
     next();
   } catch {
     unauthorized(res);

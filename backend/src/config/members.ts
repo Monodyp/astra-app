@@ -7,16 +7,27 @@ import {
 } from '../services/memberSources.js';
 
 const text = z.string().trim().min(1);
+const optionalText = z.preprocess(
+  (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
+  text.optional()
+);
+const defaultText = (defaultValue: string) =>
+  z.preprocess(
+    (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
+    text.default(defaultValue)
+  );
+
 const columns = {
-  MEMBERS_SR_COLUMN: text.default('sr_code'),
-  MEMBERS_NAME_COLUMN: text.default('full_name'),
-  MEMBERS_MEMBERSHIP_COLUMN: text.default('membership_id'),
-  MEMBERS_CONTROL_COLUMN: text.default('control_number'),
-  MEMBERS_PROGRAM_COLUMN: text.default('program'),
-  MEMBERS_YEAR_LEVEL_COLUMN: text.default('year_level'),
-  MEMBERS_EMAIL_COLUMN: text.default('email'),
-  PAID_SR_COLUMN: text.default('sr_code'),
+  MEMBERS_SR_COLUMN: defaultText('sr_code'),
+  MEMBERS_NAME_COLUMN: defaultText('full_name'),
+  MEMBERS_MEMBERSHIP_COLUMN: defaultText('membership_id'),
+  MEMBERS_CONTROL_COLUMN: defaultText('control_number'),
+  MEMBERS_PROGRAM_COLUMN: defaultText('program'),
+  MEMBERS_YEAR_LEVEL_COLUMN: defaultText('year_level'),
+  MEMBERS_EMAIL_COLUMN: defaultText('email'),
+  PAID_SR_COLUMN: optionalText,
 };
+
 const memberConfig = z.discriminatedUnion('MEMBER_DATA_SOURCE', [
   z.object({
     MEMBER_DATA_SOURCE: z.literal('csv'),
@@ -29,9 +40,9 @@ const memberConfig = z.discriminatedUnion('MEMBER_DATA_SOURCE', [
     GOOGLE_SERVICE_ACCOUNT_EMAIL: text.email(),
     GOOGLE_PRIVATE_KEY: text,
     MEMBERS_SHEET_ID: text,
-    PAID_SHEET_ID: text,
+    PAID_SHEET_ID: optionalText,
     MEMBERS_SHEET_RANGE: text,
-    PAID_SHEET_RANGE: text,
+    PAID_SHEET_RANGE: optionalText,
     ...columns,
   }),
 ]);
@@ -49,16 +60,16 @@ export function getConfiguredMemberService() {
     membersProgramColumn: config.MEMBERS_PROGRAM_COLUMN,
     membersYearLevelColumn: config.MEMBERS_YEAR_LEVEL_COLUMN,
     membersEmailColumn: config.MEMBERS_EMAIL_COLUMN,
-    paidSrColumn: config.PAID_SR_COLUMN,
+    paidSrColumn: config.PAID_SR_COLUMN ?? config.MEMBERS_SR_COLUMN,
   };
   if (config.MEMBER_DATA_SOURCE === 'google-sheets') {
     return createMemberService(
       createGoogleSheetsMemberSource({
         ...columnOptions,
         membersSheetId: config.MEMBERS_SHEET_ID,
-        paidSheetId: config.PAID_SHEET_ID,
+        paidSheetId: config.PAID_SHEET_ID ?? config.MEMBERS_SHEET_ID,
         membersRange: config.MEMBERS_SHEET_RANGE,
-        paidRange: config.PAID_SHEET_RANGE,
+        paidRange: config.PAID_SHEET_RANGE ?? config.MEMBERS_SHEET_RANGE,
         email: config.GOOGLE_SERVICE_ACCOUNT_EMAIL,
         privateKey: config.GOOGLE_PRIVATE_KEY,
       })
