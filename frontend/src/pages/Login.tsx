@@ -131,7 +131,7 @@ export const Login: React.FC = () => {
   return (
     <div className="relative min-h-screen overflow-hidden bg-astra-black font-astra text-astra-white">
       <PortalBackdrop />
-      <header className="relative z-10 mx-auto flex max-w-[1440px] items-center justify-between px-[112px] py-8">
+      <header className="relative z-10 mx-auto flex max-w-[1440px] items-center justify-between px-4 py-5 sm:px-8 sm:py-8 lg:px-[112px]">
         <Link
           to="/"
           className="flex items-center gap-4 text-h6 font-bold text-astra-white transition-colors hover:text-astra-primary-light"
@@ -142,8 +142,8 @@ export const Login: React.FC = () => {
             Home
           </span>
         </Link>
-        <nav aria-label="Account" className="flex items-center gap-8">
-          <span aria-current="page" className="text-base font-medium">
+        <nav aria-label="Account" className="flex items-center gap-3 sm:gap-8">
+          <span aria-current="page" className="hidden text-base font-medium sm:inline">
             Login
           </span>
           <a
@@ -164,6 +164,7 @@ export const Login: React.FC = () => {
           {technicalCorners}
           <div className="flex items-center gap-4">
             <img src={logoMark} alt="" className="h-12 w-12" />
+            <h2 className="sr-only">ASTRA Member Portal Login</h2>
             <h1 id="login-title" className="text-h6 font-bold">
               Your Membership Dashboard
             </h1>
