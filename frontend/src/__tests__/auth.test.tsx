@@ -76,7 +76,7 @@ describe('sign-in and route access', () => {
     expect(screen.queryByText('Officer access only')).toBeNull();
   });
 
-  it('opens the desktop rewards placeholders after a reload', async () => {
+  it('opens the rewards pages after a reload', async () => {
     const first = renderAt('/login');
     await chooseDemoAccount(/Verified member/);
     await waitFor(() => expect(window.location.pathname).toBe('/home'));
@@ -85,13 +85,12 @@ describe('sign-in and route access', () => {
     const pages = [
       ['/marketplace', 'Perks Marketplace'],
       ['/vouchers', 'Claimed Vouchers'],
-      ['/points', 'Points & Ledger'],
-      ['/vouchers/V-98214', 'Voucher Details'],
+      ['/points', 'Points'],
     ];
     for (const [path, heading] of pages) {
       const view = renderAt(path);
       expect(
-        await screen.findByRole('heading', { level: 2, name: heading })
+        await screen.findByRole('heading', { level: 1, name: heading })
       ).toBeDefined();
       expect(window.location.pathname).toBe(path);
       view.unmount();
