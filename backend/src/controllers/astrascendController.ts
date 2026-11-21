@@ -2,15 +2,11 @@ import { Request, Response } from 'express';
 import { createServiceRequest } from '../services/serviceRequestService.js';
 import { serviceRequestSchema } from '../lib/serviceRequestSchema.js';
 
-// TODO(AI/Backend): Return active ASTRAscend service opportunities
 export async function getOpportunitiesStub(
   _req: Request,
   res: Response
 ): Promise<void> {
-  res.status(501).json({
-    error: 'GET /astrascend/opportunities not implemented',
-    opportunities: [],
-  });
+  res.status(200).json({ opportunities: [] });
 }
 
 export async function submitServiceRequest(

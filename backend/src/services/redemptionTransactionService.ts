@@ -4,11 +4,13 @@ import {
   redemptionUnitOfWork,
   type RedemptionsIdempotencyRecord,
 } from '../repositories/redemptionUnitOfWork.js';
+import { getConfiguredMemberService } from '../config/members.js';
 
 export class RedemptionError extends Error {
   constructor(
     message: string,
-    public readonly statusCode: number
+    public readonly statusCode: number,
+    public readonly code: string = 'REDEMPTION_ERROR'
   ) {
     super(message);
     this.name = 'RedemptionError';
@@ -28,6 +30,11 @@ export interface RedeemPerkResult {
 
 export async function redeemPerk(input: RedeemPerkInput): Promise<{ voucher: any; replay: boolean }> {
   const memberId = normalizeSrCode(input.memberId);
+  const memberService = getConfiguredMemberService();
+  const membership = await memberService.verifyMembership(memberId);
+  if (!membership.isValid) {
+    throw new RedemptionError('Unknown or unpaid member', 404, 'MEMBER_NOT_ELIGIBLE');
+  }
   return redemptionUnitOfWork.runInTransaction(async (tx) => {
     const existing = await tx.idempotency.get(memberId, input.idempotencyKey);
     if (existing) {

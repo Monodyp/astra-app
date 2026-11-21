@@ -10,6 +10,7 @@ import {
   redeemPerk,
   RedemptionError,
 } from '../services/redemptionTransactionService.js';
+import { normalizeSrCode } from '../services/members.js';
 
 // ---------------------------------------------------------------------------
 // Member perk and voucher handlers
@@ -36,6 +37,10 @@ export async function redeemPerkHandler(
     res.status(401).json({ error: 'Authentication required' });
     return;
   }
+  if (!req.user.srCode) {
+    res.status(409).json({ error: 'MEMBER_LINK_REQUIRED', code: 'MEMBER_LINK_REQUIRED' });
+    return;
+  }
   const parsed = z.object({
     idempotencyKey: z.string().trim().min(1).max(100),
   }).safeParse(req.body);
@@ -52,7 +57,7 @@ export async function redeemPerkHandler(
     res.status(result.replay ? 200 : 201).json({ voucher: result.voucher });
   } catch (error) {
     if (error instanceof RedemptionError) {
-      res.status(error.statusCode).json({ error: error.message });
+      res.status(error.statusCode).json({ error: error.message, code: error.code });
       return;
     }
     next(error);
@@ -67,8 +72,12 @@ export async function getVouchersMe(
     res.status(401).json({ error: 'Authentication required' });
     return;
   }
+  if (!req.user.srCode) {
+    res.status(409).json({ error: 'MEMBER_LINK_REQUIRED', code: 'MEMBER_LINK_REQUIRED' });
+    return;
+  }
   try {
-    const vouchers = await voucherRepository.listByMember(req.user.srCode);
+    const vouchers = await voucherRepository.listByMember(normalizeSrCode(req.user.srCode));
     res.status(200).json({ vouchers });
   } catch {
     res.status(500).json({ error: 'Failed to load vouchers' });
@@ -83,9 +92,13 @@ export async function getVoucherById(
     res.status(401).json({ error: 'Authentication required' });
     return;
   }
+  if (!req.user.srCode) {
+    res.status(409).json({ error: 'MEMBER_LINK_REQUIRED', code: 'MEMBER_LINK_REQUIRED' });
+    return;
+  }
   try {
     const voucher = await voucherRepository.getById(req.params.id);
-    if (!voucher || voucher.memberId !== req.user.srCode) {
+    if (!voucher || normalizeSrCode(voucher.memberId ?? '') !== normalizeSrCode(req.user.srCode)) {
       res.status(404).json({ error: 'Voucher not found' });
       return;
     }

@@ -87,6 +87,17 @@ export async function generateMemberQrToken(memberId: string): Promise<string> {
   return unsignedToken;
 }
 
+export async function generateMemberQrTokenWithExpiry(
+  memberId: string
+): Promise<{ qrToken: string; qrExpiresAt: string }> {
+  const qrToken = await generateMemberQrToken(memberId);
+  const payload = await verifyQrToken(qrToken);
+  return {
+    qrToken,
+    qrExpiresAt: new Date(payload.exp * 1000).toISOString(),
+  };
+}
+
 export async function verifyQrToken(token: string): Promise<MemberQrPayload> {
   const parts = token.split('.');
   if (parts.length !== 2 || !parts[0] || !parts[1]) {

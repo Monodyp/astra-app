@@ -2,6 +2,7 @@
 /// <reference types="vite-plugin-svgr/client" />
 
 interface ImportMetaEnv {
+  readonly VITE_PORTAL_DATA_SOURCE?: 'demo' | 'live';
   readonly VITE_API_URL?: string;
   readonly VITE_MEMBER_FIXTURES?: string;
   readonly VITE_FIREBASE_API_KEY?: string;

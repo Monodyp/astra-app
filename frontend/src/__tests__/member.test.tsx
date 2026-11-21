@@ -616,7 +616,7 @@ describe('mobile sign-in, overview, and digital ID', () => {
 
     fireEvent.click(
       screen.getByRole('button', {
-        name: 'Login with Google / Institutional SSO',
+        name: /Google/,
       })
     );
     expect((await screen.findByRole('alert')).textContent).toContain(

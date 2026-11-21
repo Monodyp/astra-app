@@ -1,36 +1,86 @@
-// Initializes the Firebase client app lazily from environment variables only.
+// Initializes the Firebase client app and Auth SDK from environment variables
 import { initializeApp, getApps, getApp, type FirebaseApp } from 'firebase/app';
-import { getAuth, type Auth } from 'firebase/auth';
+import {
+  getAuth,
+  GoogleAuthProvider,
+  signInWithPopup,
+  signOut as firebaseSignOut,
+  onAuthStateChanged,
+  type Auth,
+  type User,
+} from 'firebase/auth';
 
-const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
-};
+export const isFirebaseConfigured = Boolean(
+  import.meta.env.VITE_FIREBASE_API_KEY &&
+    import.meta.env.VITE_FIREBASE_PROJECT_ID
+);
 
 export function hasFirebaseConfig(): boolean {
-  return Boolean(
-    firebaseConfig.apiKey?.trim() &&
-      firebaseConfig.authDomain?.trim() &&
-      firebaseConfig.projectId?.trim()
-  );
+  return isFirebaseConfigured;
 }
+
+// Fallback to placeholder config when environment variables are not set (e.g. unit tests, offline demo)
+const firebaseConfig = {
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || 'demo-api-key',
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || 'demo.firebaseapp.com',
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || 'demo-project',
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || 'demo.appspot.com',
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '1234567890',
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || '1:1234567890:web:abcdef',
+};
 
 export function getFirebaseApp(): FirebaseApp {
   if (getApps().length) {
     return getApp();
   }
-  if (!hasFirebaseConfig()) {
-    throw new Error(
-      'Firebase client configuration is missing (VITE_FIREBASE_API_KEY, VITE_FIREBASE_AUTH_DOMAIN, VITE_FIREBASE_PROJECT_ID).'
-    );
-  }
   return initializeApp(firebaseConfig);
 }
 
+export const firebaseApp: FirebaseApp = getFirebaseApp();
+
 export function getFirebaseAuth(): Auth {
-  return getAuth(getFirebaseApp());
+  return getAuth(firebaseApp);
+}
+
+export const auth: Auth = getFirebaseAuth();
+
+export const googleProvider = new GoogleAuthProvider();
+googleProvider.setCustomParameters({
+  prompt: 'select_account',
+});
+
+/**
+ * Returns the current authenticated user's ID token, or null if not logged in.
+ * If forceRefresh is true, forces token renewal against Firebase servers.
+ */
+export async function getIdToken(forceRefresh = false): Promise<string | null> {
+  const currentUser = auth.currentUser;
+  if (!currentUser) return null;
+  return currentUser.getIdToken(forceRefresh);
+}
+
+/**
+ * Signs in the user via Google popup and returns the User record and ID token.
+ */
+export async function signInWithGoogle(): Promise<{ user: User; idToken: string }> {
+  if (!isFirebaseConfigured) {
+    throw new Error('Google sign-in is not available in unconfigured environment');
+  }
+  const result = await signInWithPopup(auth, googleProvider);
+  const idToken = await result.user.getIdToken();
+  return { user: result.user, idToken };
+}
+
+/**
+ * Signs the current user out of Firebase.
+ */
+export async function signOutFirebase(): Promise<void> {
+  await firebaseSignOut(auth);
+}
+
+/**
+ * Subscribes to Firebase Auth state changes.
+ */
+export function onAuthChange(callback: (user: User | null) => void): () => void {
+  return onAuthStateChanged(auth, callback);
 }

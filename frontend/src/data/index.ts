@@ -1,18 +1,50 @@
 /**
- * Selects the live portal data adapter backed by Firebase Auth and the ASTRA API.
- * Tests can inject a fake adapter via setPortalDataSource.
+ * Selects between live backend API data and offline demo data.
+ * Default (no env flag set) = LIVE data.
+ * Explicit 'demo' or vitest runner = DEMO data.
  */
 import type { PortalDataSource } from './contracts.js';
+import { createDemoDataSource } from './demo/demoSource.js';
 import { createLiveDataSource } from './live/liveSource.js';
 
 export * from './contracts.js';
 
-let source: PortalDataSource = createLiveDataSource();
+const DEMO_LATENCY_MS = import.meta.env.MODE === 'test' ? 0 : 250;
+
+/**
+ * Resolves the active data source mode.
+ * - In automated test runs (vitest), always defaults to demo for speed and isolation.
+ * - If VITE_PORTAL_DATA_SOURCE is explicitly 'demo', uses demo.
+ * - If VITE_PORTAL_DATA_SOURCE is omitted or 'live', defaults to LIVE!
+ */
+export function resolveDataSourceMode(
+  env: { MODE?: string; VITE_PORTAL_DATA_SOURCE?: string } = import.meta.env
+): 'demo' | 'live' {
+  if (env.MODE === 'test') {
+    return 'demo';
+  }
+  if (env.VITE_PORTAL_DATA_SOURCE === 'demo') {
+    return 'demo';
+  }
+  return 'live';
+}
+
+export function createConfiguredDataSource(): PortalDataSource {
+  return resolveDataSourceMode() === 'live'
+    ? createLiveDataSource()
+    : createDemoDataSource({ latencyMs: DEMO_LATENCY_MS });
+}
+
+let source: PortalDataSource = createConfiguredDataSource();
 
 export function setPortalDataSource(next: PortalDataSource): PortalDataSource {
   const previous = source;
   source = next;
   return previous;
+}
+
+export function resetPortalDataSource(): void {
+  source = createConfiguredDataSource();
 }
 
 export const portalData: PortalDataSource = {

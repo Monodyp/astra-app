@@ -43,11 +43,16 @@ interface ResolvedMemberAccount {
   srCode: string;
   fullName: string | null;
   isPaid: boolean;
+  controlNumber?: string | null;
+  membershipId?: string | null;
 }
 
 async function resolveMemberAccount(
   user: NonNullable<Request['user']>
 ): Promise<ResolvedMemberAccount | null> {
+  if (!user.srCode) {
+    return null;
+  }
   const members = getConfiguredMemberService();
   const member = await members.findMember(user.srCode);
   const hasResolvedSrCode = user.srCode !== user.uid;
@@ -59,6 +64,8 @@ async function resolveMemberAccount(
     srCode: member?.srCode ?? user.srCode,
     fullName: member?.fullName ?? user.displayName ?? null,
     isPaid: member ? await members.isPaid(member.srCode) : false,
+    controlNumber: member?.controlNumber ?? null,
+    membershipId: member?.membershipId ?? null,
   };
 }
 
@@ -98,15 +105,23 @@ export async function getMemberIdCardStub(req: Request, res: Response): Promise<
   try {
     const account = await resolveMemberAccount(req.user);
     if (!account) {
-      res.status(404).json({ error: 'Member not found' });
+      res.set({
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        'Pragma': 'no-cache',
+      }).status(404).json({ error: 'Member not found' });
       return;
     }
 
+    const qrIdentifier =
+      account.controlNumber ?? account.membershipId ?? account.srCode;
     const qrToken = account.isPaid
-      ? await generateMemberQrToken(account.srCode)
+      ? await generateMemberQrToken(qrIdentifier)
       : '';
 
-    res.status(200).json({
+    res.set({
+      'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+      'Pragma': 'no-cache',
+    }).status(200).json({
       card: {
         studentId: account.srCode,
         fullName: account.fullName,
@@ -115,6 +130,10 @@ export async function getMemberIdCardStub(req: Request, res: Response): Promise<
       },
     });
   } catch (error) {
+    res.set({
+      'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+      'Pragma': 'no-cache',
+    });
     if (error instanceof TypeError) {
       res.status(400).json({ error: 'Member ID cannot generate a QR token' });
       return;

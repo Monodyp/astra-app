@@ -13,6 +13,7 @@ const inMemoryVouchers = new Map<string, VoucherRow>();
 export interface ValidationResult {
   valid: boolean;
   reason: 'ok' | 'not_found' | 'wrong_partner' | 'expired' | 'already_used';
+  error?: string;
   /** Reward description — only present when valid */
   reward?: string;
   /** Expiry timestamp string — only present when valid */
@@ -22,6 +23,7 @@ export interface ValidationResult {
 export interface ApplyResult {
   applied: boolean;
   reason?: 'ok' | 'not_found' | 'wrong_partner' | 'expired' | 'already_used';
+  error?: string;
   reward?: string;
 }
 
@@ -116,9 +118,12 @@ function validateRow(row: VoucherRow, partner: string): ValidationResult {
   if (row.status === 'used') {
     return { valid: false, reason: 'already_used' };
   }
+  if (row.status === 'expired') {
+    return { valid: false, reason: 'expired', error: 'Voucher has expired' };
+  }
 
   if (isExpired(row)) {
-    return { valid: false, reason: 'expired' };
+    return { valid: false, reason: 'expired', error: 'Voucher has expired' };
   }
 
   return {
@@ -186,7 +191,13 @@ export async function applyVoucher(
 
     const validation = validateRow(row, partner);
     if (!validation.valid) {
-      return { applied: false, reason: validation.reason };
+      return {
+        applied: false,
+        reason: validation.reason,
+        ...(validation.reason === 'expired'
+          ? { error: 'Voucher has expired' }
+          : {}),
+      };
     }
 
     row.status = 'used';
@@ -205,7 +216,13 @@ export async function applyVoucher(
     const row = toVoucherRow(document.id, document.data());
     const validation = validateRow(row, partner);
     if (!validation.valid) {
-      return { applied: false, reason: validation.reason };
+      return {
+        applied: false,
+        reason: validation.reason,
+        ...(validation.reason === 'expired'
+          ? { error: 'Voucher has expired' }
+          : {}),
+      };
     }
 
     transaction.update(document.ref, {

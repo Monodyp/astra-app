@@ -11,14 +11,29 @@ const optionalText = z.preprocess(
   (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
   text.optional()
 );
+const defaultText = (defaultValue: string) =>
+  z.preprocess(
+    (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
+    text.default(defaultValue)
+  );
+
+const columns = {
+  MEMBERS_SR_COLUMN: defaultText('sr_code'),
+  MEMBERS_NAME_COLUMN: defaultText('full_name'),
+  MEMBERS_MEMBERSHIP_COLUMN: defaultText('membership_id'),
+  MEMBERS_CONTROL_COLUMN: defaultText('control_number'),
+  MEMBERS_PROGRAM_COLUMN: defaultText('program'),
+  MEMBERS_YEAR_LEVEL_COLUMN: defaultText('year_level'),
+  MEMBERS_EMAIL_COLUMN: defaultText('email'),
+  PAID_SR_COLUMN: optionalText,
+};
+
 const memberConfig = z.discriminatedUnion('MEMBER_DATA_SOURCE', [
   z.object({
     MEMBER_DATA_SOURCE: z.literal('csv'),
     MEMBERS_CSV_PATH: text,
     PAID_CSV_PATH: text,
-    MEMBERS_SR_COLUMN: text.default('sr_code'),
-    MEMBERS_NAME_COLUMN: text.default('full_name'),
-    PAID_SR_COLUMN: optionalText,
+    ...columns,
   }),
   z.object({
     MEMBER_DATA_SOURCE: z.literal('google-sheets'),
@@ -28,9 +43,7 @@ const memberConfig = z.discriminatedUnion('MEMBER_DATA_SOURCE', [
     PAID_SHEET_ID: optionalText,
     MEMBERS_SHEET_RANGE: text,
     PAID_SHEET_RANGE: optionalText,
-    MEMBERS_SR_COLUMN: text.default('sr_code'),
-    MEMBERS_NAME_COLUMN: text.default('full_name'),
-    PAID_SR_COLUMN: optionalText,
+    ...columns,
   }),
 ]);
 
@@ -42,6 +55,11 @@ export function getConfiguredMemberService() {
   const columnOptions = {
     membersSrColumn: config.MEMBERS_SR_COLUMN,
     membersNameColumn: config.MEMBERS_NAME_COLUMN,
+    membersMembershipColumn: config.MEMBERS_MEMBERSHIP_COLUMN,
+    membersControlColumn: config.MEMBERS_CONTROL_COLUMN,
+    membersProgramColumn: config.MEMBERS_PROGRAM_COLUMN,
+    membersYearLevelColumn: config.MEMBERS_YEAR_LEVEL_COLUMN,
+    membersEmailColumn: config.MEMBERS_EMAIL_COLUMN,
     paidSrColumn: config.PAID_SR_COLUMN ?? config.MEMBERS_SR_COLUMN,
   };
   if (config.MEMBER_DATA_SOURCE === 'google-sheets') {

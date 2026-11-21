@@ -2,7 +2,7 @@ import { env } from '../config/env.js';
 import { firebaseAdmin } from '../lib/firebase.js';
 import { normalizeSrCode } from '../services/members.js';
 
-export type LedgerEntryType = 'attendance' | 'grant' | 'redemption' | 'adjustment';
+export type LedgerEntryType = 'attendance' | 'event_attendance' | 'grant' | 'redemption' | 'adjustment';
 
 export interface LedgerEntry {
   id: string;
@@ -13,6 +13,7 @@ export interface LedgerEntry {
   referenceId: string;
   createdBy: string;
   createdAt: Date;
+  metadata?: Record<string, unknown>;
 }
 
 export interface CreateLedgerEntry {
@@ -24,6 +25,7 @@ export interface CreateLedgerEntry {
   referenceId: string;
   createdBy: string;
   createdAt?: Date;
+  metadata?: Record<string, unknown>;
 }
 
 export class DuplicateLedgerEntryError extends Error {
@@ -111,6 +113,7 @@ export class FirestoreLedgerRepository implements LedgerRepository {
         referenceId: entry.referenceId,
         createdBy: entry.createdBy,
         createdAt: entry.createdAt,
+        metadata: entry.metadata,
       });
     } catch (error) {
       if ((error as { code?: number }).code === 6) {
@@ -138,6 +141,7 @@ export class FirestoreLedgerRepository implements LedgerRepository {
           referenceId: data.referenceId,
           createdBy: data.createdBy,
           createdAt,
+          metadata: data.metadata,
         } satisfies LedgerEntry;
       })
       .sort((a, b) => {
