@@ -48,7 +48,7 @@ const GoogleMark: React.FC = () => (
 );
 
 export const Login: React.FC = () => {
-  const { user, loading, signIn } = useAuth();
+  const { user, loading, sessionError, signIn } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const next = searchParams.get('next');
@@ -58,6 +58,11 @@ export const Login: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [pending, setPending] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [sessionBannerDismissed, setSessionBannerDismissed] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<{
+    identifier?: string;
+    password?: string;
+  }>({});
   const [help, setHelp] = useState<HelpTopic | null>(null);
   const [shortcuts, setShortcuts] = useState<SignInShortcut[]>([]);
 
@@ -94,6 +99,8 @@ export const Login: React.FC = () => {
   async function attempt(key: string, input: SignInInput) {
     setPending(key);
     setError(null);
+    setSessionBannerDismissed(true);
+    setFieldErrors({});
     try {
       const signedIn = await signIn(input);
       navigate(landingPathFor(next, signedIn.role), { replace: true });
@@ -109,15 +116,18 @@ export const Login: React.FC = () => {
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    // Validate fields before submitting
+    const errors: { identifier?: string; password?: string } = {};
     if (!identifier.trim()) {
-      setError('Enter your student ID or email address.');
-      return;
+      errors.identifier = 'Enter your student ID or email address.';
     }
     if (!password) {
-      setError('Enter your password.');
+      errors.password = 'Enter your password.';
+    }
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
       return;
     }
+    setFieldErrors({});
     setError(null);
     void attempt('credentials', {
       method: 'credentials',
@@ -131,35 +141,35 @@ export const Login: React.FC = () => {
   return (
     <div className="relative min-h-screen overflow-hidden bg-astra-black font-astra text-astra-white">
       <PortalBackdrop />
-      <header className="relative z-10 mx-auto flex max-w-[1440px] items-center justify-between px-[112px] py-8">
+      <header className="relative z-10 mx-auto flex max-w-[1440px] items-center justify-between px-4 sm:px-8 lg:px-[112px] py-4 sm:py-8">
         <Link
           to="/"
-          className="flex items-center gap-4 text-h6 font-bold text-astra-white transition-colors hover:text-astra-primary-light"
+          className="flex items-center gap-2 sm:gap-4 text-sm sm:text-h6 font-bold text-astra-white transition-colors hover:text-astra-primary-light"
         >
-          <img src={logoMark} alt="" className="h-11 w-11" />
+          <img src={logoMark} alt="" className="h-8 w-8 sm:h-11 sm:w-11" />
           <span className="flex items-center gap-1">
-            <ChevronLeft className="h-5 w-5" aria-hidden="true" />
+            <ChevronLeft className="h-4 w-4 sm:h-5 sm:w-5" aria-hidden="true" />
             Home
           </span>
         </Link>
-        <nav aria-label="Account" className="flex items-center gap-8">
-          <span aria-current="page" className="text-base font-medium">
+        <nav aria-label="Account" className="flex items-center gap-4 sm:gap-8">
+          <span aria-current="page" className="hidden sm:inline text-base font-medium">
             Login
           </span>
           <a
             href="/astrascend"
-            className="inline-flex items-center gap-2 rounded-full bg-astra-primary-light px-8 py-3 text-sm font-bold text-astra-white transition-transform hover:scale-105"
+            className="inline-flex items-center gap-1.5 sm:gap-2 rounded-full bg-astra-primary-light px-4 py-2 sm:px-8 sm:py-3 text-xs sm:text-sm font-bold text-astra-white transition-transform hover:scale-105"
           >
             ASTRAscend
-            <ExternalLink className="h-4 w-4" aria-hidden="true" />
+            <ExternalLink className="h-3.5 w-3.5 sm:h-4 sm:w-4" aria-hidden="true" />
           </a>
         </nav>
       </header>
 
-      <main className="relative z-10 mx-auto flex max-w-[1440px] justify-center px-6 pb-20 pt-4">
+      <main className="relative z-10 mx-auto flex max-w-[1440px] justify-center px-4 sm:px-6 pb-20 pt-4">
         <section
           aria-labelledby="login-title"
-          className="relative w-full max-w-[476px] border border-astra-primary-dark bg-[#0b1118]/80 px-8 py-8 shadow-[0_0_32px_rgba(0,140,204,0.12)] backdrop-blur-sm"
+          className="relative w-full max-w-[476px] border border-astra-primary-dark bg-[#0b1118]/80 px-6 sm:px-8 py-8 shadow-[0_0_32px_rgba(0,140,204,0.12)] backdrop-blur-sm"
         >
           {technicalCorners}
           <div className="flex items-center gap-4">
@@ -167,10 +177,48 @@ export const Login: React.FC = () => {
             <h1 id="login-title" className="text-h6 font-bold">
               Your Membership Dashboard
             </h1>
+            <h2 className="sr-only">ASTRA Member Portal Login</h2>
           </div>
           <p className="mt-4 text-sm font-medium">
             Sign in using your student credentials or registered account
           </p>
+
+          {sessionError === 'unlinked' && !error && !sessionBannerDismissed && (
+            <div
+              role="alert"
+              className="mt-6 border border-yellow-400/40 bg-yellow-950/30 px-4 py-3 text-sm text-yellow-200"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <p className="font-semibold">Account not linked to a student record.</p>
+                  <p className="mt-1 text-yellow-200/80">
+                    Your Google account isn't connected to an ASTRA membership
+                    yet. Sign in with your institutional email (
+                    <span className="font-mono">@g.batstate-u.edu.ph</span>) or
+                    contact an ASTRA officer to link your account.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSessionBannerDismissed(true)}
+                  className="shrink-0 text-yellow-200/60 hover:text-yellow-200"
+                  aria-label="Dismiss"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+          )}
+
+          {sessionError === 'unavailable' && !error && !sessionBannerDismissed && (
+            <p
+              role="alert"
+              className="mt-6 border border-astra-primary-dark/60 bg-astra-primary-dark/10 px-4 py-3 text-sm text-astra-gray"
+            >
+              The membership service is temporarily unavailable. Please try
+              again in a moment.
+            </p>
+          )}
 
           {error && (
             <p
@@ -210,11 +258,21 @@ export const Login: React.FC = () => {
               name="identifier"
               autoComplete="username"
               value={identifier}
-              onChange={(event) => setIdentifier(event.target.value)}
+              onChange={(event) => {
+                setIdentifier(event.target.value);
+                if (fieldErrors.identifier) {
+                  setFieldErrors((prev) => ({ ...prev, identifier: undefined }));
+                }
+              }}
               placeholder="2X-XXXXX or name@astra.example"
               aria-describedby={error ? errorId : undefined}
               className={`${fieldClass} mt-3`}
             />
+            {fieldErrors.identifier && (
+              <p className="mt-1.5 text-sm text-red-300">
+                Error: {fieldErrors.identifier}
+              </p>
+            )}
 
             <label
               htmlFor={passwordId}
@@ -229,7 +287,12 @@ export const Login: React.FC = () => {
                 type={showPassword ? 'text' : 'password'}
                 autoComplete="current-password"
                 value={password}
-                onChange={(event) => setPassword(event.target.value)}
+                onChange={(event) => {
+                  setPassword(event.target.value);
+                  if (fieldErrors.password) {
+                    setFieldErrors((prev) => ({ ...prev, password: undefined }));
+                  }
+                }}
                 placeholder="Password"
                 className={`${fieldClass} pr-12`}
               />
@@ -247,8 +310,13 @@ export const Login: React.FC = () => {
                 )}
               </button>
             </div>
+            {fieldErrors.password && (
+              <p className="mt-1.5 text-sm text-red-300">
+                Error: {fieldErrors.password}
+              </p>
+            )}
 
-            <div className="mt-6 flex justify-between text-xs font-bold">
+            <div className="mt-6 flex flex-col gap-4 sm:flex-row justify-between items-end sm:items-center text-xs font-bold">
               <button
                 type="button"
                 onClick={() => setHelp(help === 'password' ? null : 'password')}

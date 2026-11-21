@@ -5,7 +5,6 @@ import { AppShell } from './components/AppShell.js';
 import { ProtectedRoute } from './components/ProtectedRoute.js';
 import { Login } from './pages/Login.js';
 import { ViewportScreen } from './components/ViewportScreen.js';
-import { MobileLogin } from './features/auth/mobile/MobileLogin.js';
 import { MobileCheckIn } from './features/checkin/mobile/MobileCheckIn.js';
 import { MobileDigitalID } from './features/member/mobile/MobileDigitalID.js';
 import { MobileNotValid } from './features/member/mobile/MobileNotValid.js';
@@ -41,10 +40,7 @@ export const App: React.FC = () => {
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          <Route
-            path="/login"
-            element={<ViewportScreen mobile={MobileLogin} desktop={Login} />}
-          />
+          <Route path="/login" element={<Login />} />
           <Route path="/events/:id" element={<EventDetail />} />
           <Route path="/astrascend" element={<AstrascendLayout />}>
             <Route index element={<LandingPage />} />
