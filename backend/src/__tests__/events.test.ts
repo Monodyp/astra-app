@@ -4,6 +4,12 @@ import { app } from '../app.js';
 import { _resetStore, _seedMember } from '../services/attendanceService.js';
 import { generateMemberQrToken } from '../services/qrService.js';
 
+const officer = {
+  uid: 'officer-1',
+  srCode: '24-90001',
+  role: 'officer',
+};
+
 describe('Event check-in API', () => {
   beforeEach(() => {
     _resetStore();
@@ -15,6 +21,7 @@ describe('Event check-in API', () => {
 
     const response = await request(app)
       .post('/events/event-001/checkin')
+      .set('x-test-user', JSON.stringify(officer))
       .send({ qrToken });
 
     expect(response.status).toBe(200);
@@ -30,6 +37,7 @@ describe('Event check-in API', () => {
 
     const response = await request(app)
       .post('/events/event-001/checkin')
+      .set('x-test-user', JSON.stringify(officer))
       .send({ qrToken: 'invalid-token' });
 
     expect(response.status).toBe(400);
@@ -44,9 +52,11 @@ describe('Event check-in API', () => {
     const qrToken = await generateMemberQrToken('ASTR1D-0001');
     const first = await request(app)
       .post('/events/event-001/checkin')
+      .set('x-test-user', JSON.stringify(officer))
       .send({ qrToken });
     const second = await request(app)
       .post('/events/event-001/checkin')
+      .set('x-test-user', JSON.stringify(officer))
       .send({ qrToken });
 
     expect(first.body.awarded).toBe(true);
@@ -61,6 +71,7 @@ describe('Event check-in API', () => {
   it('requires a QR token', async () => {
     const response = await request(app)
       .post('/events/event-001/checkin')
+      .set('x-test-user', JSON.stringify(officer))
       .send({});
 
     expect(response.status).toBe(400);

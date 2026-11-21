@@ -31,10 +31,12 @@ export function normalizeFirebaseUser(token: DecodedIdToken) {
 
   return {
     uid: token.uid,
-    // Firebase custom claims carry the member identifier. UID is a safe
-    // fallback for accounts that have not yet been linked to a member row.
+    // UID is never used as a roster identifier. A missing claim is explicit.
     srCode: normalizeClaimedSrCode(claims),
-    role: typeof claims.role === 'string' ? claims.role : 'member',
+    role:
+      typeof claims.role === 'string'
+        ? claims.role.trim().toLowerCase()
+        : 'member',
   };
 }
 

@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto';
+
 export interface Member {
   srCode: string;
   fullName: string | null;
@@ -22,6 +24,8 @@ export interface MembershipResult {
 
 export interface MemberService {
   findMember(srCode: string): Promise<Member | null>;
+  findByControlNumber(controlNumber: string): Promise<Member | null>;
+  findByQrReference(reference: string): Promise<Member | null>;
   isPaid(srCode: string): Promise<boolean>;
   verifyMembership(srCode: string): Promise<MembershipResult>;
 }
@@ -38,6 +42,35 @@ export function createMemberService(source: MemberSource): MemberService {
           (member) => normalizeSrCode(member.srCode) === normalizeSrCode(srCode)
         ) ?? null
       );
+    },
+    async findByControlNumber(controlNumber) {
+      const snapshot = await source.read();
+      const normalized = normalizeSrCode(controlNumber);
+      return (
+        snapshot.members.find((member) =>
+          [member.controlNumber, member.membershipId].some(
+            (value) =>
+              typeof value === 'string' &&
+              normalizeSrCode(value) === normalized
+          )
+        ) ?? null
+      );
+    },
+    async findByQrReference(reference) {
+      const snapshot = await source.read();
+      for (const member of snapshot.members) {
+        for (const value of [member.controlNumber, member.membershipId]) {
+          if (
+            typeof value === 'string' &&
+            createHash('sha256')
+              .update(normalizeSrCode(value))
+              .digest('base64url') === reference
+          ) {
+            return member;
+          }
+        }
+      }
+      return null;
     },
     async isPaid(srCode) {
       const code = normalizeSrCode(srCode);

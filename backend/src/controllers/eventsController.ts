@@ -1,9 +1,10 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { firebaseAdmin } from '../lib/firebase.js';
 import {
   resolveCheckInIdentity,
   checkInMember,
+  AttendanceServiceError,
 } from '../services/attendanceService.js';
 import { InvalidQrTokenError } from '../services/qrService.js';
 
@@ -40,12 +41,12 @@ export async function getEvents(_req: Request, res: Response): Promise<void> {
 
 const eventCheckInSchema = z.object({
   qrToken: z.string().min(1, 'qrToken is required'),
-  points: z.number().int().positive().optional(),
 });
 
 export async function checkInEvent(
   req: Request,
-  res: Response
+  res: Response,
+  next: NextFunction
 ): Promise<void> {
   const parsed = eventCheckInSchema.safeParse(req.body);
   const eventId = z.string().min(1).safeParse(req.params.id);
@@ -64,13 +65,22 @@ export async function checkInEvent(
     const srCode = await resolveCheckInIdentity({
       qrToken: parsed.data.qrToken,
     });
-    const result = await checkInMember(srCode, eventId.data);
+    const result = await checkInMember(
+      srCode,
+      eventId.data,
+      undefined,
+      req.user?.uid
+    );
     res.status(200).json({ ...result, checkedIn: result.awarded });
   } catch (error) {
     if (error instanceof InvalidQrTokenError) {
       res.status(400).json({ error: error.message, checkedIn: false });
       return;
     }
-    throw error;
+    if (error instanceof AttendanceServiceError) {
+      res.status(error.statusCode).json({ error: error.message, checkedIn: false });
+      return;
+    }
+    next(error);
   }
 }
