@@ -42,7 +42,7 @@ const features: Feature[] = [
 
 export default function FeatureOverview() {
   return (
-    <section id="features" className="scroll-mt-[150px] lg:scroll-mt-[120px] xl:mt-16 relative border border-astra-primary-dark/90 bg-black/20 p-4 mx-0 sm:mx-6 lg:mx-12 sm:p-8">
+    <section id="features" className="scroll-mt-24 lg:scroll-mt-[120px] xl:mt-16 relative border border-astra-primary-dark/90 bg-black/20 p-4 mx-0 sm:mx-6 lg:mx-12 sm:p-8">
       {technicalCorners}
       <div className="grid gap-4 sm:grid-cols-2 sm:gap-8 lg:grid-cols-4">
         {features.map(({ title, description, icon: Icon, href }) => (

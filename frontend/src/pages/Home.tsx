@@ -32,9 +32,9 @@ export const Home: React.FC = () => {
         />
       </div>
       <LandingHeader />
-      <main className="pt-[150px] relative z-10 mx-auto max-w-[1440px] px-4 pb-16 sm:px-8 lg:px-12">
-        <div className="flex flex-col border border-astra-primary-dark gap-28 py-12">
-          <section id="home" className="mx-12">
+      <main className="pt-[96px] lg:pt-[150px] relative z-10 mx-auto max-w-[1440px] px-4 pb-16 sm:px-8 lg:px-12">
+        <div className="flex flex-col border border-astra-primary-dark gap-12 py-8 sm:gap-20 sm:py-12 lg:gap-28">
+          <section id="home" className="mx-4 sm:mx-6 lg:mx-12">
             <div className="mb-3 flex justify-between gap-4 font-astra text-[10px] font-bold tracking-widest text-astra-gray">
               <span>ASTRA / FLIGHT INTERFACE</span>
               <span>WINDOW PROJECTION · ONLINE</span>
@@ -72,15 +72,15 @@ export const Home: React.FC = () => {
                   </ActionLink>
                 </div>
               </div>
-              <div className="mx-auto flex aspect-[600/460] w-full min-w-0 max-w-[480px] items-center justify-center lg:mx-0 lg:mt-8 lg:block lg:aspect-auto lg:max-w-md">
+              <div className="mx-auto mt-2 flex aspect-[600/265] w-full min-w-0 sm:mt-0 sm:aspect-[600/400] max-w-[480px] items-center justify-center lg:mx-0 lg:mt-8 lg:block lg:aspect-auto lg:max-w-md">
                 <FloatingCardWrapper
                   isPreview={true}
-                  className="w-full max-w-md sm:max-w-lg aspect-[600/378]"
+                  className="w-full max-w-md sm:max-w-lg aspect-[600/378] [--astra-drift:0.4] lg:[--astra-drift:1]"
                   glowColor={'rgba(0, 177, 237, 0.25)'}
                 >
                   <TiltCard
                     desktopInteractionOnly
-                    className="aspect-[600/378] w-[82%] min-w-0 -translate-y-[8%] lg:w-full lg:translate-y-0"
+                    className="mx-auto aspect-[600/378] w-[72%] min-w-0 translate-x-[1.8%] translate-y-[14%] sm:w-[82%] sm:translate-x-[2.7%] sm:translate-y-[11%] lg:mx-0 lg:translate-x-0 lg:w-full lg:translate-y-0"
                     isInteractable={true}
                   >
                     <MemberIdCard />
@@ -94,7 +94,7 @@ export const Home: React.FC = () => {
           <MemberConsole />
           <UpcomingEvents />
           <EventsCalendar />
-          <section className="mx-12 relative border border-astra-primary-dark bg-black/30 px-6 py-14 text-center shadow-[0_0_16px_rgba(0,140,204,0.07)] sm:px-10">
+          <section className="relative mx-0 border border-astra-primary-dark bg-black/30 px-6 py-14 sm:mx-6 lg:mx-12 text-center shadow-[0_0_16px_rgba(0,140,204,0.07)] sm:px-10">
             {technicalCorners}
             <h2 className="font-astra text-xl font-bold text-astra-white">
               Ready to build with ASTRA Developers?

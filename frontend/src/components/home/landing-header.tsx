@@ -77,15 +77,15 @@ export default function LandingHeader() {
   }, [menuOpen]);
 
   return (
-    <header className="fixed z-[100] mx-auto w-full bg-astra-black/80 px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3 shadow-[0_0_16px_rgba(0,140,204,0.07)] backdrop-blur sm:px-8 lg:flex lg:items-center lg:justify-between lg:gap-6 lg:bg-astra-black/30 lg:px-8 lg:py-8 xl:px-[112px] lg:backdrop-blur-none">
-      <div className="flex items-center justify-between gap-4 lg:contents">
-        <a href="#home" aria-label="ASTRA Developers home" className="inline-flex min-h-11 items-center">
+    <header className="fixed z-[100] mx-auto w-full bg-astra-black/80 px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3 shadow-[0_0_16px_rgba(0,140,204,0.07)] backdrop-blur sm:px-8 flex items-center justify-between gap-3 lg:gap-6 lg:bg-astra-black/30 lg:px-8 lg:py-8 xl:px-[112px] lg:backdrop-blur-none">
+      <div className="contents">
+        <a href="#home" aria-label="ASTRA Developers home" className="mr-auto inline-flex min-h-11 items-center lg:mr-0">
           <img src={wordmark} alt="ASTRA Developers" className="h-auto w-36 sm:w-44 lg:w-48" />
         </a>
         <button
           ref={toggleRef}
           type="button"
-          className="inline-flex h-11 w-11 items-center justify-center border border-astra-primary-dark text-astra-white lg:hidden"
+          className="order-3 inline-flex h-11 w-11 items-center justify-center border border-astra-primary-dark text-astra-white lg:hidden"
           aria-label={menuOpen ? "Close menu" : "Open menu"}
           aria-expanded={menuOpen}
           aria-controls="landing-mobile-menu"
@@ -108,8 +108,8 @@ export default function LandingHeader() {
           </a>
         ))}
       </nav>
-      <div className="mt-3 flex items-center gap-4 font-astra text-sm font-medium lg:mt-0">
-        <a className="flex min-h-11 w-full items-center justify-center border border-astra-primary-light text-astra-white transition-colors hover:text-astra-primary-light lg:inline lg:min-h-0 lg:w-auto lg:py-3 lg:whitespace-nowrap lg:border-0" href="/login">Log In</a>
+      <div className="order-2 flex items-center gap-4 font-astra text-sm font-medium">
+        <a className="flex min-h-11 items-center justify-center whitespace-nowrap border border-astra-primary-light px-5 text-astra-white transition-colors hover:text-astra-primary-light lg:inline lg:min-h-0 lg:w-auto lg:border-0 lg:px-0 lg:py-3" href="/login">Log In</a>
         <a className="hidden items-center gap-2 rounded-full bg-astra-primary-light px-4 py-2 font-bold text-astra-white transition-transform hover:scale-105 lg:inline-flex" href="/astrascend">
           ASTRAscend
           <ExternalLink className="h-4 w-4" aria-hidden="true" />
