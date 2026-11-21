@@ -43,7 +43,7 @@ interface AuthMeResponse {
 }
 
 export class LivePortalDataSource implements PortalDataSource {
-  constructor(private readonly options: LiveSourceOptions = {}) {}
+  constructor(public readonly options: LiveSourceOptions = {}) {}
 
   async restoreSession(): Promise<Session | null> {
     try {

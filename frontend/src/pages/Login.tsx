@@ -48,7 +48,7 @@ const GoogleMark: React.FC = () => (
 );
 
 export const Login: React.FC = () => {
-  const { user, loading, signIn } = useAuth();
+  const { user, loading, sessionError, signIn } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const next = searchParams.get('next');
@@ -58,6 +58,7 @@ export const Login: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [pending, setPending] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [sessionBannerDismissed, setSessionBannerDismissed] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<{
     identifier?: string;
     password?: string;
@@ -98,6 +99,7 @@ export const Login: React.FC = () => {
   async function attempt(key: string, input: SignInInput) {
     setPending(key);
     setError(null);
+    setSessionBannerDismissed(true);
     setFieldErrors({});
     try {
       const signedIn = await signIn(input);
@@ -180,6 +182,43 @@ export const Login: React.FC = () => {
           <p className="mt-4 text-sm font-medium">
             Sign in using your student credentials or registered account
           </p>
+
+          {sessionError === 'unlinked' && !error && !sessionBannerDismissed && (
+            <div
+              role="alert"
+              className="mt-6 border border-yellow-400/40 bg-yellow-950/30 px-4 py-3 text-sm text-yellow-200"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <p className="font-semibold">Account not linked to a student record.</p>
+                  <p className="mt-1 text-yellow-200/80">
+                    Your Google account isn't connected to an ASTRA membership
+                    yet. Sign in with your institutional email (
+                    <span className="font-mono">@g.batstate-u.edu.ph</span>) or
+                    contact an ASTRA officer to link your account.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSessionBannerDismissed(true)}
+                  className="shrink-0 text-yellow-200/60 hover:text-yellow-200"
+                  aria-label="Dismiss"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+          )}
+
+          {sessionError === 'unavailable' && !error && !sessionBannerDismissed && (
+            <p
+              role="alert"
+              className="mt-6 border border-astra-primary-dark/60 bg-astra-primary-dark/10 px-4 py-3 text-sm text-astra-gray"
+            >
+              The membership service is temporarily unavailable. Please try
+              again in a moment.
+            </p>
+          )}
 
           {error && (
             <p
