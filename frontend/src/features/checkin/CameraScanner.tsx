@@ -142,7 +142,7 @@ export const CameraScanner: React.FC<{
         <span className={status.tone}>{status.text}</span>
       </div>
 
-      <div className="relative mx-auto mt-[18px] h-[207px] w-[300px]">
+      <div className="relative mx-auto mt-[18px] h-[207px] w-full max-w-[300px]">
         {active ? (
           <video
             ref={videoRef}

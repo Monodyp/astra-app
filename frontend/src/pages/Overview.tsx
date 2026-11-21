@@ -111,6 +111,7 @@ export const Overview: React.FC = () => {
     <>
       <HudFrameAccents />
       <div className="flex flex-col gap-[8px]">
+        <p className="sr-only">Total Points: {data.points} PTS</p>
         <p className="text-[14px] font-bold leading-[16px] text-[#8a8a8a]">
           Events Attended
         </p>
@@ -137,7 +138,7 @@ export const Overview: React.FC = () => {
         <div className="relative flex flex-col justify-between gap-12 border border-[#224573] bg-[rgba(10,12,13,0.4)] px-[24px] py-[36px] shadow-[0px_0px_16px_rgba(0,140,204,0.07)] backdrop-blur-[4px] sm:px-[32px] sm:py-[48px] lg:row-span-3">
           <HudFrameAccents />
 
-          <div className="flex flex-wrap items-center justify-between gap-[24px]">
+          <div className="flex flex-col items-start justify-between gap-[24px] lg:flex-row lg:items-center">
             <div className="flex min-w-0 flex-1 flex-col gap-[16px]">
               <p className="text-[20px] font-bold leading-[28px] tracking-[-0.48px] text-[#fdfcfa] sm:text-[24px] sm:leading-[32px]">
                 Welcome back,
@@ -158,6 +159,9 @@ export const Overview: React.FC = () => {
                     ID
                   </p>
                 )}
+                <p className="sr-only">
+                  {verified ? '✔ Active Member' : '✖ Membership not active'}
+                </p>
               </div>
             </div>
 
@@ -213,7 +217,7 @@ export const Overview: React.FC = () => {
         </Link>
 
         {user?.role === 'officer' ? (
-          <Link to="/checkin" className={statLinkClass}>
+          <Link to="/checkin" aria-label="Check In to Event" className={statLinkClass}>
             {eventsBody}
           </Link>
         ) : (

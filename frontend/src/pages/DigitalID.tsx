@@ -47,6 +47,11 @@ export const DigitalID: React.FC = () => {
 
   return (
     <div className="relative font-astra text-astra-white">
+      <p className="sr-only">
+        {isVerified
+          ? 'VALID / ACTIVE DUES'
+          : 'UNVERIFIED / INACTIVE FOR CHECK-IN'}
+      </p>
       <div className="pointer-events-none fixed inset-0 z-0">
         <div className="absolute top-1/4 left-1/3 h-96 w-96 rounded-full bg-cyan-600/10 blur-[120px]" />
         <div className="absolute bottom-1/3 right-1/4 h-96 w-96 rounded-full bg-indigo-600/10 blur-[140px]" />

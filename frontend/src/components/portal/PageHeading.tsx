@@ -6,8 +6,8 @@ export const PageHeading: React.FC<{
   description: string;
   aside?: React.ReactNode;
 }> = ({ eyebrow, title, description, aside }) => (
-  <div className="flex items-start justify-between gap-8">
-    <div>
+  <div className="flex flex-col items-stretch justify-between gap-4 sm:flex-row sm:items-start sm:gap-8">
+    <div className="min-w-0">
       {eyebrow && (
         <p className="text-xs font-bold uppercase tracking-wide text-astra-primary-light">
           {eyebrow}
