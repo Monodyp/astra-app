@@ -15,7 +15,7 @@
 | `POST /points/grant { memberId, amount, reason, referenceId?, idempotencyKey }` → 201 `{ entry }`, 409 duplicate reference, 404 unknown or unpaid. `createdBy` is the officer UID. | Adopt. The portal already treats a 409 on a retried grant as "already recorded" and keeps its own 1 to 1000 limit. No change needed. |
 | `GET /perks` → `{ perks }`. `POST /perks/:id/redeem { idempotencyKey }` → 201 new, 200 replay, 422 key reused for another perk. | Adopt. These match the portal's claim retry logic exactly. |
 | `GET /vouchers/me` → `{ vouchers }`, `GET /vouchers/:id` → `{ voucher }`, 404 for missing or someone else's. | Adopt. |
-| `POST /attendance/checkin { srCode | qrToken, eventId }` (officer), `GET /attendance/:eventId` (officer), `GET /events`. | Adopt the shape. The identity and ledger behavior behind it needs the P0 fixes below. |
+| `POST /attendance/checkin { srCode \| qrToken, eventId }` (officer), `GET /attendance/:eventId` (officer), `GET /events`. | Adopt the shape. The identity and ledger behavior behind it needs the P0 fixes below. |
 | QR tokens are HMAC-signed, expire after `QR_TOKEN_TTL_SECONDS` (300 by default). | Adopt. The frontend refreshes the card before expiry (section 3). |
 
 Tests: `npm test` in `backend/` runs 120 tests on `main`; 115 pass and 5 fail. The 5 failures are the new PR #24 tests in `events.test.ts` and the QR case in `attendance.test.ts`. They send no `x-test-user` header, so they get 401 since PR #22. `tsc --noEmit` is clean.
