@@ -48,7 +48,7 @@ const GoogleMark: React.FC = () => (
 );
 
 export const Login: React.FC = () => {
-  const { user, loading, sessionError, signIn } = useAuth();
+  const { user, loading, sessionError, restoreError, signIn } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const next = searchParams.get('next');
@@ -137,6 +137,7 @@ export const Login: React.FC = () => {
   }
 
   const busy = pending !== null;
+  const alertMessage = error ?? (sessionBannerDismissed ? restoreError : null);
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-astra-black font-astra text-astra-white">
@@ -153,9 +154,6 @@ export const Login: React.FC = () => {
           </span>
         </Link>
         <nav aria-label="Account" className="flex items-center gap-4 sm:gap-8">
-          <span aria-current="page" className="hidden sm:inline text-base font-medium">
-            Login
-          </span>
           <a
             href="/astrascend"
             className="inline-flex items-center gap-1.5 sm:gap-2 rounded-full bg-astra-primary-light px-4 py-2 sm:px-8 sm:py-3 text-xs sm:text-sm font-bold text-astra-white transition-transform hover:scale-105"
@@ -220,13 +218,13 @@ export const Login: React.FC = () => {
             </p>
           )}
 
-          {error && (
+          {alertMessage && (
             <p
               id={errorId}
               role="alert"
               className="mt-6 border border-red-400/40 bg-red-950/30 px-4 py-3 text-sm text-red-200"
             >
-              {error}
+              {alertMessage}
             </p>
           )}
 

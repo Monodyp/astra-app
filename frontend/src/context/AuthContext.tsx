@@ -25,16 +25,20 @@ interface AuthContextType {
   user: SessionUser | null;
   loading: boolean;
   sessionError: SessionError;
+  restoreError: string | null;
   signIn: (input: SignInInput) => Promise<SessionUser>;
   signOut: () => Promise<void>;
+  retryRestore: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: false,
   sessionError: null,
+  restoreError: null,
   signIn: () => Promise.reject(new Error('AuthProvider is missing')),
   signOut: () => Promise.resolve(),
+  retryRestore: () => Promise.resolve(),
 });
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
@@ -43,71 +47,101 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [user, setUser] = useState<SessionUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [sessionError, setSessionError] = useState<SessionError>(null);
-  // Session epoch: incremented on account change to discard stale async results
-  const epochRef = useRef(0);
+  const [restoreError, setRestoreError] = useState<string | null>(null);
+  const requestSeq = useRef(0);
+  const mounted = useRef(true);
 
-  // Core restore logic: called on mount and whenever Firebase auth state changes
-  const restoreFromSession = useCallback(async (epoch: number) => {
-    setLoading(true);
-    setSessionError(null);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+
+  const runRestore = useCallback(async () => {
+    const seq = ++requestSeq.current;
+    if (mounted.current) {
+      setLoading(true);
+      setSessionError(null);
+      setRestoreError(null);
+    }
     try {
       const session = await portalData.restoreSession();
-      if (epochRef.current !== epoch) return; // stale — a newer session took over
+      if (!mounted.current || seq !== requestSeq.current) return;
       setUser(session?.user ?? null);
-    } catch (err) {
-      if (epochRef.current !== epoch) return;
+      setSessionError(null);
+      setRestoreError(null);
+    } catch (error) {
+      if (!mounted.current || seq !== requestSeq.current) return;
       setUser(null);
-      // Distinguish roster miss (unlinked account) from temporary outage
-      if (isDataError(err)) {
-        if (err.code === 'not_found' || err.code === 'forbidden') {
+      if (isDataError(error)) {
+        if (error.code === 'not_found' || error.code === 'forbidden') {
           setSessionError('unlinked');
-        } else if (err.code === 'unavailable') {
+          setRestoreError(error.message);
+        } else if (error.code === 'unavailable') {
           setSessionError('unavailable');
+          setRestoreError(error.message);
         } else {
           setSessionError(null);
+          setRestoreError(error.message);
         }
+      } else {
+        setSessionError(null);
+        setRestoreError(error instanceof Error ? error.message : 'Authentication failed');
       }
     } finally {
-      if (epochRef.current === epoch) setLoading(false);
+      if (mounted.current && seq === requestSeq.current) {
+        setLoading(false);
+      }
     }
   }, []);
 
   useEffect(() => {
-    // If Firebase is configured, subscribe to auth state changes so that
-    // sign-in/sign-out in another tab, token expiry, or account switches
-    // are reflected without a full page reload.
     if (isFirebaseConfigured) {
       const unsubscribe = onAuthChange(() => {
-        const epoch = ++epochRef.current;
-        void restoreFromSession(epoch);
+        void runRestore();
       });
       return unsubscribe;
     }
 
-    // Demo / offline mode: do a single restore on mount
-    const epoch = ++epochRef.current;
-    void restoreFromSession(epoch);
+    void runRestore();
     return undefined;
-  }, [restoreFromSession]);
+  }, [runRestore]);
 
   const signIn = useCallback(async (input: SignInInput) => {
+    const seq = ++requestSeq.current;
     const session = await portalData.signIn(input);
-    epochRef.current++; // discard any in-flight restore from the Firebase listener
-    setSessionError(null);
-    setUser(session.user);
+    if (mounted.current && seq === requestSeq.current) {
+      setUser(session.user);
+      setSessionError(null);
+      setRestoreError(null);
+      setLoading(false);
+    }
     return session.user;
   }, []);
 
   const signOut = useCallback(async () => {
+    const seq = ++requestSeq.current;
     await portalData.signOut();
-    epochRef.current++;
-    setUser(null);
-    setSessionError(null);
+    if (mounted.current && seq === requestSeq.current) {
+      setUser(null);
+      setSessionError(null);
+      setRestoreError(null);
+      setLoading(false);
+    }
   }, []);
 
   const value = useMemo(
-    () => ({ user, loading, sessionError, signIn, signOut }),
-    [user, loading, sessionError, signIn, signOut]
+    () => ({
+      user,
+      loading,
+      sessionError,
+      restoreError,
+      signIn,
+      signOut,
+      retryRestore: runRestore,
+    }),
+    [user, loading, sessionError, restoreError, signIn, signOut, runRestore]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -1,5 +1,5 @@
 // Initializes the Firebase client app and Auth SDK from environment variables
-import { initializeApp, getApps, getApp } from 'firebase/app';
+import { initializeApp, getApps, getApp, type FirebaseApp } from 'firebase/app';
 import {
   getAuth,
   GoogleAuthProvider,
@@ -15,6 +15,10 @@ export const isFirebaseConfigured = Boolean(
     import.meta.env.VITE_FIREBASE_PROJECT_ID
 );
 
+export function hasFirebaseConfig(): boolean {
+  return isFirebaseConfigured;
+}
+
 // Fallback to placeholder config when environment variables are not set (e.g. unit tests, offline demo)
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || 'demo-api-key',
@@ -25,11 +29,20 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID || '1:1234567890:web:abcdef',
 };
 
-export const firebaseApp = getApps().length
-  ? getApp()
-  : initializeApp(firebaseConfig);
+export function getFirebaseApp(): FirebaseApp {
+  if (getApps().length) {
+    return getApp();
+  }
+  return initializeApp(firebaseConfig);
+}
 
-export const auth: Auth = getAuth(firebaseApp);
+export const firebaseApp: FirebaseApp = getFirebaseApp();
+
+export function getFirebaseAuth(): Auth {
+  return getAuth(firebaseApp);
+}
+
+export const auth: Auth = getFirebaseAuth();
 
 export const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({

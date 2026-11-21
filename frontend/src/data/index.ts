@@ -5,7 +5,7 @@
  */
 import type { PortalDataSource } from './contracts.js';
 import { createDemoDataSource } from './demo/demoSource.js';
-import { createLiveDataSource } from './live/index.js';
+import { createLiveDataSource } from './live/liveSource.js';
 
 export * from './contracts.js';
 

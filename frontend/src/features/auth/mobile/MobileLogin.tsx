@@ -18,7 +18,7 @@ import { errorMessage } from '../../../lib/format.js';
 
 export const MobileLogin: React.FC = () => {
   const uid = useId();
-  const { user, loading, signIn } = useAuth();
+  const { user, loading, restoreError, signIn } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const next = searchParams.get('next');
@@ -88,6 +88,7 @@ export const MobileLogin: React.FC = () => {
   const linkBtn =
     'inline-flex min-h-11 items-center self-start font-astra text-sm text-astra-white underline underline-offset-4 hover:text-astra-primary-light';
   const busy = pending !== null;
+  const alertMessage = notice ?? restoreError;
 
   return (
     <div className="flex min-h-dvh items-start justify-center bg-astra-black px-4 pb-[max(2rem,env(safe-area-inset-bottom))] pt-[max(2.5rem,env(safe-area-inset-top))] font-astra text-astra-white sm:items-center sm:pt-10">
@@ -193,12 +194,12 @@ export const MobileLogin: React.FC = () => {
           </button>
         </div>
 
-        {notice && (
+        {alertMessage && (
           <p
             role="alert"
             className="border border-amber-400/60 bg-amber-400/10 p-3 text-sm"
           >
-            {notice}
+            {alertMessage}
           </p>
         )}
 

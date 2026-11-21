@@ -2,20 +2,30 @@
 // HTTP status preservation (200 vs 201), and automatic 401 token refresh retry.
 import { getIdToken } from './firebase.js';
 
-const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:4000';
-
 export class ApiError extends Error {
+  readonly status: number;
+  readonly data: unknown;
+
   constructor(
-    message: string,
-    public readonly status: number,
-    public readonly data?: unknown
+    statusOrMessage: number | string,
+    messageOrStatus?: string | number,
+    data: unknown = null
   ) {
-    super(message);
+    if (typeof statusOrMessage === 'number') {
+      super(typeof messageOrStatus === 'string' ? messageOrStatus : '');
+      this.status = statusOrMessage;
+      this.data = data;
+    } else {
+      super(statusOrMessage);
+      this.status = typeof messageOrStatus === 'number' ? messageOrStatus : 0;
+      this.data = data;
+    }
     this.name = 'ApiError';
   }
 }
 
 export interface ApiRequestOptions extends RequestInit {
+  token?: string;
   skipAuth?: boolean;
   params?: Record<string, string | number | boolean | undefined>;
 }
@@ -23,8 +33,16 @@ export interface ApiRequestOptions extends RequestInit {
 export interface ApiResponse<T> {
   data: T;
   status: number;
-  ok: boolean;
-  headers: Headers;
+  ok?: boolean;
+  headers?: Headers;
+}
+
+export function getApiBaseUrl(): string {
+  const configured = import.meta.env.VITE_API_URL?.trim();
+  if (configured) {
+    return configured.replace(/\/+$/, '');
+  }
+  return 'http://localhost:4000';
 }
 
 /**
@@ -34,8 +52,8 @@ export function buildUrl(
   endpoint: string,
   params?: Record<string, string | number | boolean | undefined>
 ): string {
-  const cleanEndpoint = endpoint.replace(/^\//, '');
-  const url = new URL(`${BASE_URL.replace(/\/$/, '')}/${cleanEndpoint}`);
+  const cleanEndpoint = endpoint.replace(/^\/+/, '');
+  const url = new URL(`${getApiBaseUrl()}/${cleanEndpoint}`);
   if (params) {
     Object.entries(params).forEach(([key, value]) => {
       if (value !== undefined) {
@@ -54,7 +72,7 @@ export async function apiFetch<T>(
   endpoint: string,
   options: ApiRequestOptions = {}
 ): Promise<ApiResponse<T>> {
-  const { skipAuth = false, params, ...requestInit } = options;
+  const { token, skipAuth = false, params, ...requestInit } = options;
   const url = buildUrl(endpoint, params);
 
   const headers = new Headers(requestInit.headers || {});
@@ -62,44 +80,61 @@ export async function apiFetch<T>(
     headers.set('Content-Type', 'application/json');
   }
 
-  // Inject Bearer token if not already provided and not skipping auth
-  if (!headers.has('Authorization') && !skipAuth) {
-    const token = await getIdToken(false);
-    if (token) {
-      headers.set('Authorization', `Bearer ${token}`);
+  // Inject Bearer token if explicitly provided, or auto-fetch from Firebase if not skipping auth
+  if (token) {
+    headers.set('Authorization', `Bearer ${token}`);
+  } else if (!headers.has('Authorization') && !skipAuth) {
+    const activeToken = await getIdToken(false);
+    if (activeToken) {
+      headers.set('Authorization', `Bearer ${activeToken}`);
     }
   }
 
-  let response = await fetch(url, { ...requestInit, headers });
+  let response: Response;
+  try {
+    response = await fetch(url, { ...requestInit, headers });
+  } catch {
+    throw new ApiError(0, 'Unable to reach the ASTRA server. Check your connection and try again.');
+  }
 
-  // On 401 Unauthorized, attempt ONE force refresh of the Firebase token and retry
-  if (response.status === 401 && !skipAuth) {
+  // On 401 Unauthorized, attempt ONE force refresh of the Firebase token and retry (if not using explicit token)
+  if (response.status === 401 && !skipAuth && !token) {
     const refreshedToken = await getIdToken(true);
     if (refreshedToken) {
       headers.set('Authorization', `Bearer ${refreshedToken}`);
-      response = await fetch(url, { ...requestInit, headers });
+      try {
+        response = await fetch(url, { ...requestInit, headers });
+      } catch {
+        throw new ApiError(0, 'Unable to reach the ASTRA server. Check your connection and try again.');
+      }
     }
   }
 
   const isJson = response.headers.get('content-type')?.includes('application/json');
   const data = isJson
-    ? await response.json().catch(() => ({} as T))
+    ? await response.json().catch(() => null)
     : (await response.text().catch(() => '')) as unknown as T;
 
   if (!response.ok) {
     const message =
-      (data as { error?: string })?.error ||
-      `HTTP ${response.status}: ${response.statusText}`;
-    throw new ApiError(message, response.status, data);
+      data &&
+      typeof data === 'object' &&
+      'error' in data &&
+      typeof (data as { error?: unknown }).error === 'string'
+        ? ((data as { error: string }).error)
+        : `HTTP ${response.status}: ${response.statusText}`;
+    throw new ApiError(response.status, message, data);
   }
 
   return {
-    data,
+    data: data as T,
     status: response.status,
     ok: response.ok,
     headers: response.headers,
   };
 }
+
+export const requestApi = apiFetch;
 
 /**
  * Primary apiClient function: returns response data directly.
@@ -121,10 +156,6 @@ apiClient.post = <T>(endpoint: string, body?: unknown, options?: ApiRequestOptio
     method: 'POST',
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
-
-// ---------------------------------------------------------------------------
-// Existing helpers for backwards compatibility (DevTools, etc.)
-// ---------------------------------------------------------------------------
 
 export const attendanceApi = {
   checkIn: (srCode: string, eventId: string) =>
