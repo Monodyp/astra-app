@@ -65,6 +65,7 @@ export async function getAuthMeStub(req: Request, res: Response): Promise<void> 
         program: member.program ?? null,
         yearLevel: member.yearLevel ?? null,
         isPaid: await members.isPaid(member.srCode),
+        email: member.email ?? null,
         role: req.user.role,
       },
     });
@@ -82,7 +83,10 @@ export async function getMemberIdCardStub(req: Request, res: Response): Promise<
   try {
     const members = getConfiguredMemberService();
     if (!req.user.srCode) {
-      res.set('Cache-Control', 'no-store').status(409).json({
+      res.set({
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        'Pragma': 'no-cache',
+      }).status(409).json({
         error: 'MEMBER_LINK_REQUIRED',
         code: 'MEMBER_LINK_REQUIRED',
       });
@@ -90,7 +94,10 @@ export async function getMemberIdCardStub(req: Request, res: Response): Promise<
     }
     const member = await members.findMember(req.user.srCode);
     if (!member) {
-      res.status(404).json({ error: 'Member not found' });
+      res.set({
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        'Pragma': 'no-cache',
+      }).status(404).json({ error: 'Member not found' });
       return;
     }
 
@@ -105,8 +112,15 @@ export async function getMemberIdCardStub(req: Request, res: Response): Promise<
         qrToken = issued.qrToken;
         qrExpiresAt = issued.qrExpiresAt;
       } catch (error) {
+        res.set({
+          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+          'Pragma': 'no-cache',
+        });
         if (error instanceof TypeError) {
-          res.set('Cache-Control', 'no-store').status(409).json({
+          res.set({
+            'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+            'Pragma': 'no-cache',
+          }).status(409).json({
             error: 'MEMBER_LINK_REQUIRED',
             code: 'MEMBER_LINK_REQUIRED',
           });
@@ -116,7 +130,10 @@ export async function getMemberIdCardStub(req: Request, res: Response): Promise<
       }
     }
 
-    res.set('Cache-Control', 'no-store').status(200).json({
+    res.set({
+      'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+      'Pragma': 'no-cache',
+    }).status(200).json({
       card: {
         studentId: member.srCode,
         fullName: member.fullName,
@@ -126,9 +143,14 @@ export async function getMemberIdCardStub(req: Request, res: Response): Promise<
         yearLevel: member.yearLevel ?? null,
         qrToken,
         qrExpiresAt,
+        status: isPaid ? 'active' : 'inactive',
       },
     });
   } catch (error) {
+    res.set({
+      'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+      'Pragma': 'no-cache',
+    });
     if (error instanceof TypeError) {
       res.status(400).json({ error: 'Member ID cannot generate a QR token' });
       return;

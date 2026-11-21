@@ -14,6 +14,7 @@ const columns = {
   MEMBERS_CONTROL_COLUMN: text.default('control_number'),
   MEMBERS_PROGRAM_COLUMN: text.default('program'),
   MEMBERS_YEAR_LEVEL_COLUMN: text.default('year_level'),
+  MEMBERS_EMAIL_COLUMN: text.default('email'),
   PAID_SR_COLUMN: text.default('sr_code'),
 };
 const memberConfig = z.discriminatedUnion('MEMBER_DATA_SOURCE', [
@@ -47,6 +48,7 @@ export function getConfiguredMemberService() {
     membersControlColumn: config.MEMBERS_CONTROL_COLUMN,
     membersProgramColumn: config.MEMBERS_PROGRAM_COLUMN,
     membersYearLevelColumn: config.MEMBERS_YEAR_LEVEL_COLUMN,
+    membersEmailColumn: config.MEMBERS_EMAIL_COLUMN,
     paidSrColumn: config.PAID_SR_COLUMN,
   };
   if (config.MEMBER_DATA_SOURCE === 'google-sheets') {

@@ -39,6 +39,7 @@ export interface AttendanceRecord {
   srCode: string;
   fullName: string;
   checkedInAt: string;
+  pointsAwarded?: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -54,6 +55,7 @@ interface AttendanceRow {
   fullName: string;
   eventId: string;
   checkedInAt: string;
+  pointsAwarded?: number;
 }
 
 interface MemberRow {
@@ -67,7 +69,13 @@ interface MemberRow {
 export const _store = {
   members: new Map<string, MemberRow>(),
   attendance: new Map<string, AttendanceRow>(), // key: `${srCode}::${eventId}`
-  pointsLedger: [] as Array<{ srCode: string; amount: number; reason: string }>,
+  pointsLedger: [] as Array<{
+    srCode: string;
+    amount: number;
+    reason: string;
+    type?: 'event_attendance';
+    metadata?: Record<string, unknown>;
+  }>,
 };
 
 /** Seed default sample members and attendance into store for live dev testing. */
@@ -224,14 +232,11 @@ export async function checkInMember(
       const ledgerRef = db.collection('pointsLedger').doc(attendanceId);
 
       const result = await db.runTransaction(async (transaction) => {
-        const [eventSnapshot, attendanceSnapshot, memberSnapshot, ledgerSnapshot] =
+        const [eventSnapshot, attendanceSnapshot, memberSnapshot] =
           await Promise.all([
             transaction.get(eventRef),
             transaction.get(attendanceRef),
             transaction.get(memberRef),
-            transaction.get(
-              db.collection('pointsLedger').where('memberId', '==', normalizedCode)
-            ),
           ]);
 
         if (!eventSnapshot.exists) {
@@ -251,13 +256,12 @@ export async function checkInMember(
           return { awarded: false, reason: 'points_error' } as CheckInResult;
         }
 
-        const ledgerBalance = ledgerSnapshot.docs.reduce(
-          (sum, document) => sum + (Number(document.data().amount) || 0),
-          0
-        );
         const memberData = memberSnapshot.data() ?? {};
-        const newBalance = ledgerBalance + attendancePoints;
+        const currentBalance = Number(memberData.points) || 0;
+        const newBalance = currentBalance + attendancePoints;
         const now = firebaseAdmin.firestore.FieldValue.serverTimestamp();
+        const eventTitle =
+          String(eventData.title ?? eventData.name ?? eventRef.id);
 
         transaction.create(attendanceRef, {
           attendanceId,
@@ -275,10 +279,16 @@ export async function checkInMember(
             memberId: normalizedCode,
             amount: attendancePoints,
             reason: `Event attendance: ${eventRef.id}`,
-            type: 'attendance',
+            type: 'event_attendance',
             referenceId: attendanceId,
             createdBy: actorId,
             createdAt: now,
+            metadata: {
+              type: 'event_attendance',
+              eventId: eventRef.id,
+              eventTitle,
+              timestamp: now,
+            },
           },
           { merge: false }
         );
@@ -328,6 +338,7 @@ export async function checkInMember(
     fullName: mem.fullName,
     eventId,
     checkedInAt: new Date().toISOString(),
+    pointsAwarded: attendancePoints,
   };
   _store.attendance.set(attendanceKey, attendanceRow);
   mem.points += attendancePoints;
@@ -335,6 +346,13 @@ export async function checkInMember(
     srCode: normalizedCode,
     amount: attendancePoints,
     reason: `Event attendance: ${eventId}`,
+    type: 'event_attendance',
+    metadata: {
+      type: 'event_attendance',
+      eventId,
+      eventTitle: eventId,
+      timestamp: attendanceRow.checkedInAt,
+    },
   });
 
   return {
@@ -372,6 +390,7 @@ export async function getEventAttendance(
           srCode: data.memberId || data.srCode || '',
           fullName: data.fullName || data.memberId || 'Member',
           checkedInAt: timestamp,
+          pointsAwarded: Number(data.pointsEarned) || undefined,
         };
       });
     } catch {
@@ -391,6 +410,7 @@ export async function getEventAttendance(
         srCode: row.srCode,
         fullName: row.fullName,
         checkedInAt: row.checkedInAt,
+        pointsAwarded: row.pointsAwarded,
       });
     }
   }

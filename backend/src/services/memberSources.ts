@@ -15,6 +15,7 @@ export interface CsvSourceOptions {
   membersControlColumn?: string;
   membersProgramColumn?: string;
   membersYearLevelColumn?: string;
+  membersEmailColumn?: string;
 }
 
 export interface SheetsReadRequest {
@@ -43,6 +44,7 @@ export interface GoogleSheetsSourceOptions {
   membersControlColumn?: string;
   membersProgramColumn?: string;
   membersYearLevelColumn?: string;
+  membersEmailColumn?: string;
   createRequester?: (credentials: JWTOptions) => SheetsRequester;
 }
 
@@ -147,6 +149,7 @@ function snapshotFromRows(
     | 'membersControlColumn'
     | 'membersProgramColumn'
     | 'membersYearLevelColumn'
+    | 'membersEmailColumn'
   >
 ) {
   const srIndex = columnIndex(
@@ -163,6 +166,7 @@ function snapshotFromRows(
   const controlIndex = columnIndex(members[0] ?? [], options.membersControlColumn ?? 'control_number', false);
   const programIndex = columnIndex(members[0] ?? [], options.membersProgramColumn ?? 'program', false);
   const yearLevelIndex = columnIndex(members[0] ?? [], options.membersYearLevelColumn ?? 'year_level', false);
+  const emailIndex = columnIndex(members[0] ?? [], options.membersEmailColumn ?? 'email', false);
   const paidIndex = columnIndex(
     paid[0] ?? [],
     options.paidSrColumn ?? 'sr_code',
@@ -184,6 +188,7 @@ function snapshotFromRows(
     const controlNumber = controlIndex >= 0 ? row[controlIndex]?.trim() || null : null;
     const program = programIndex >= 0 ? row[programIndex]?.trim() || null : null;
     const yearLevel = yearLevelIndex >= 0 ? row[yearLevelIndex]?.trim() || null : null;
+    const email = emailIndex >= 0 ? row[emailIndex]?.trim() || null : null;
     uniqueMembers.set(srCode, {
       srCode,
       fullName,
@@ -191,6 +196,7 @@ function snapshotFromRows(
       ...(controlNumber ? { controlNumber } : {}),
       ...(program ? { program } : {}),
       ...(yearLevel ? { yearLevel } : {}),
+      ...(email ? { email } : {}),
     });
   }
   const paidCodes = new Set<string>();

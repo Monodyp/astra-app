@@ -257,7 +257,11 @@ class FirestoreRedemptionUnitOfWork implements RedemptionUnitOfWork {
               return { ok: false, reason: 'expired' };
             }
             if (voucher.status !== 'active') return { ok: false, reason: 'already_used' };
-            firestoreTx.update(ref, { status: 'used', redeemedAt: new Date() });
+            firestoreTx.update(ref, {
+              status: 'used',
+              isRedeemed: true,
+              redeemedAt: firebaseAdmin.firestore.FieldValue.serverTimestamp(),
+            });
             return { ok: true };
           },
         },
