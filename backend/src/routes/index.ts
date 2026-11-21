@@ -66,7 +66,12 @@ router.post(
 
 // Events routes
 router.get('/events', authMiddleware, getEvents);
-router.post('/events/:id/checkin', authMiddleware, checkInEvent);
+router.post(
+  '/events/:id/checkin',
+  authMiddleware,
+  requireRole('officer'),
+  checkInEvent
+);
 
 // Perks & Vouchers routes
 router.get('/perks', authMiddleware, getPerks);

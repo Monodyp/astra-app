@@ -116,6 +116,9 @@ function validateRow(row: VoucherRow, partner: string): ValidationResult {
   if (row.status === 'used') {
     return { valid: false, reason: 'already_used' };
   }
+  if (row.status === 'expired') {
+    return { valid: false, reason: 'expired' };
+  }
 
   if (isExpired(row)) {
     return { valid: false, reason: 'expired' };

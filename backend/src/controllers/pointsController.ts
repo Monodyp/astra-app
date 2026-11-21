@@ -9,7 +9,7 @@ import {
 const memberIdSchema = z.string().trim().min(1).max(128);
 const grantSchema = z.object({
   memberId: memberIdSchema,
-  amount: z.number().int().positive().max(1_000_000),
+  amount: z.number().int().positive().max(1_000),
   reason: z.string().trim().min(1).max(200),
   referenceId: z.string().trim().min(1).max(200).optional(),
   idempotencyKey: z.string().trim().min(1).max(100),
@@ -30,6 +30,10 @@ export async function getPointsMe(
 ): Promise<void> {
   const user = getUser(req, res);
   if (!user) return;
+  if (!user.srCode) {
+    res.status(409).json({ error: 'MEMBER_LINK_REQUIRED', code: 'MEMBER_LINK_REQUIRED' });
+    return;
+  }
   try {
   const points = await getMemberPoints(user.srCode);
   res.status(200).json({ points });
@@ -45,6 +49,10 @@ export async function getPointsHistoryHandler(
 ): Promise<void> {
   const user = getUser(req, res);
   if (!user) return;
+  if (!user.srCode) {
+    res.status(409).json({ error: 'MEMBER_LINK_REQUIRED', code: 'MEMBER_LINK_REQUIRED' });
+    return;
+  }
   try {
     const history = await getPointsHistory(user.srCode);
     res.status(200).json({ history });
@@ -60,7 +68,7 @@ export async function grantPointsHandler(
 ): Promise<void> {
   const user = getUser(req, res);
   if (!user) return;
-  if (user.role !== 'officer') {
+  if (user.role !== 'officer' && user.role !== 'admin') {
     res.status(403).json({ error: 'Officer role required' });
     return;
   }

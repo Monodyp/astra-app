@@ -11,6 +11,10 @@ export interface CsvSourceOptions {
   membersSrColumn?: string;
   membersNameColumn?: string;
   paidSrColumn?: string;
+  membersMembershipColumn?: string;
+  membersControlColumn?: string;
+  membersProgramColumn?: string;
+  membersYearLevelColumn?: string;
 }
 
 export interface SheetsReadRequest {
@@ -35,6 +39,10 @@ export interface GoogleSheetsSourceOptions {
   membersSrColumn?: string;
   membersNameColumn?: string;
   paidSrColumn?: string;
+  membersMembershipColumn?: string;
+  membersControlColumn?: string;
+  membersProgramColumn?: string;
+  membersYearLevelColumn?: string;
   createRequester?: (credentials: JWTOptions) => SheetsRequester;
 }
 
@@ -132,7 +140,13 @@ function snapshotFromRows(
   paid: string[][],
   options: Pick<
     CsvSourceOptions,
-    'membersSrColumn' | 'membersNameColumn' | 'paidSrColumn'
+    | 'membersSrColumn'
+    | 'membersNameColumn'
+    | 'paidSrColumn'
+    | 'membersMembershipColumn'
+    | 'membersControlColumn'
+    | 'membersProgramColumn'
+    | 'membersYearLevelColumn'
   >
 ) {
   const srIndex = columnIndex(
@@ -145,6 +159,10 @@ function snapshotFromRows(
     options.membersNameColumn ?? 'full_name',
     false
   );
+  const membershipIndex = columnIndex(members[0] ?? [], options.membersMembershipColumn ?? 'membership_id', false);
+  const controlIndex = columnIndex(members[0] ?? [], options.membersControlColumn ?? 'control_number', false);
+  const programIndex = columnIndex(members[0] ?? [], options.membersProgramColumn ?? 'program', false);
+  const yearLevelIndex = columnIndex(members[0] ?? [], options.membersYearLevelColumn ?? 'year_level', false);
   const paidIndex = columnIndex(
     paid[0] ?? [],
     options.paidSrColumn ?? 'sr_code',
@@ -162,7 +180,18 @@ function snapshotFromRows(
     ) {
       throw new Error('MEMBER_SOURCE_UNAVAILABLE');
     }
-    uniqueMembers.set(srCode, { srCode, fullName });
+    const membershipId = membershipIndex >= 0 ? row[membershipIndex]?.trim() || null : null;
+    const controlNumber = controlIndex >= 0 ? row[controlIndex]?.trim() || null : null;
+    const program = programIndex >= 0 ? row[programIndex]?.trim() || null : null;
+    const yearLevel = yearLevelIndex >= 0 ? row[yearLevelIndex]?.trim() || null : null;
+    uniqueMembers.set(srCode, {
+      srCode,
+      fullName,
+      ...(membershipId ? { membershipId } : {}),
+      ...(controlNumber ? { controlNumber } : {}),
+      ...(program ? { program } : {}),
+      ...(yearLevel ? { yearLevel } : {}),
+    });
   }
   const paidCodes = new Set<string>();
   for (const row of paid.slice(1)) {

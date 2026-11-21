@@ -81,6 +81,7 @@ describe('Attendance Check-In API', () => {
   it('POST /attendance/checkin → 400 for an invalid QR token', async () => {
     const res = await request(app)
       .post(`${BASE}/checkin`)
+      .set('x-test-user', asUser())
       .send({ qrToken: 'invalid-token', eventId: 'EVT-001' });
 
     expect(res.status).toBe(400);

@@ -1,5 +1,8 @@
 import { env } from '../config/env.js';
 import { firebaseAdmin } from '../lib/firebase.js';
+import { createHash } from 'node:crypto';
+import { getConfiguredMemberService } from '../config/members.js';
+import { normalizeSrCode } from './members.js';
 import {
   matchesMemberQrReference,
   verifyQrToken,
@@ -7,10 +10,16 @@ import {
 
 function getDb() {
   if (process.env.NODE_ENV === 'test') return null;
-  try {
-    return firebaseAdmin.firestore();
-  } catch {
-    return null;
+  return firebaseAdmin.firestore();
+}
+
+export class AttendanceServiceError extends Error {
+  constructor(
+    message: string,
+    public readonly statusCode: number
+  ) {
+    super(message);
+    this.name = 'AttendanceServiceError';
   }
 }
 
@@ -22,7 +31,7 @@ export interface CheckInResult {
   awarded: boolean;
   points?: number;
   newBalance?: number;
-  reason?: 'already_checked_in' | 'invalid_member' | 'points_error';
+  reason?: 'already_checked_in' | 'invalid_member' | 'inactive_member' | 'invalid_event' | 'points_error';
 }
 
 export interface AttendanceRecord {
@@ -51,6 +60,7 @@ interface MemberRow {
   srCode: string;
   fullName: string;
   points: number;
+  controlNumber?: string | null;
 }
 
 // Exported so tests can seed / inspect state
@@ -94,15 +104,17 @@ export function _seedDefaultData(): void {
   });
 }
 
-// Initialize default seed data for server startup
-_seedDefaultData();
-
 /** Seed a member into the in-memory store (used by tests). */
-export function _seedMember(srCode: string, fullName = 'Test Member'): void {
+export function _seedMember(
+  srCode: string,
+  fullName = 'Test Member',
+  controlNumber: string | null = null
+): void {
   _store.members.set(srCode.toUpperCase(), {
     srCode: srCode.toUpperCase(),
     fullName,
     points: 0,
+    controlNumber,
   });
 }
 
@@ -128,7 +140,7 @@ export async function resolveCheckInIdentity(input: {
   qrToken?: string;
 }): Promise<string> {
   if (input.srCode) {
-    return input.srCode.trim().toUpperCase();
+    return normalizeSrCode(input.srCode);
   }
 
   if (!input.qrToken) {
@@ -136,29 +148,24 @@ export async function resolveCheckInIdentity(input: {
   }
 
   const payload = await verifyQrToken(input.qrToken);
-  const db = getDb();
-
-  if (db) {
-    const snapshot = await db.collection('members').get();
-    for (const document of snapshot.docs) {
-      const data = document.data();
-      const memberId = data.srCode || data.memberId || document.id;
-      if (
-        typeof memberId === 'string' &&
-        matchesMemberQrReference(memberId, payload.ref)
-      ) {
-        return memberId.trim().toUpperCase();
+  if (process.env.NODE_ENV === 'test') {
+    for (const member of _store.members.values()) {
+      const controlNumber = member.controlNumber ?? member.srCode;
+      if (matchesMemberQrReference(controlNumber, payload.ref)) {
+        return member.srCode;
       }
     }
+    return '';
   }
 
-  for (const member of _store.members.values()) {
-    if (matchesMemberQrReference(member.srCode, payload.ref)) {
-      return member.srCode;
-    }
+  try {
+    const member = await getConfiguredMemberService().findByQrReference(
+      payload.ref
+    );
+    return member?.srCode ?? '';
+  } catch {
+    throw new Error('MEMBER_SOURCE_UNAVAILABLE');
   }
-
-  return '';
 }
 
 // ---------------------------------------------------------------------------
@@ -181,144 +188,159 @@ export async function resolveCheckInIdentity(input: {
 export async function checkInMember(
   srCode: string,
   eventId: string,
-  points?: number
+  _points?: number,
+  actorId = 'system'
 ): Promise<CheckInResult> {
-  const normalizedCode = srCode.trim().toUpperCase();
-  const rawCode = srCode.trim();
-  const attendancePoints = points ?? parseInt(env.ATTENDANCE_POINTS, 10);
-  const db = getDb();
-
-  let memberFullName = '';
-  let currentPoints = 0;
-  let memberDocRef: FirebaseFirestore.DocumentReference | null = null;
-
-  // 1. Validate member exists (check live Firestore first if connected)
-  if (db) {
-    try {
-      let doc = await db.collection('members').doc(rawCode).get();
-      if (!doc.exists && rawCode !== normalizedCode) {
-        doc = await db.collection('members').doc(normalizedCode).get();
-      }
-      if (!doc.exists) {
-        const bySr = await db
-          .collection('members')
-          .where('srCode', '==', rawCode)
-          .limit(1)
-          .get();
-        if (!bySr.empty) doc = bySr.docs[0];
-      }
-      if (!doc.exists) {
-        const byMem = await db
-          .collection('members')
-          .where('memberId', '==', rawCode)
-          .limit(1)
-          .get();
-        if (!byMem.empty) doc = byMem.docs[0];
-      }
-
-      if (doc.exists) {
-        const data = doc.data() || {};
-        memberFullName = data.fullName || rawCode;
-        currentPoints = Number(data.points || 0);
-        memberDocRef = doc.ref;
-      }
-    } catch (err) {
-      console.warn('Firestore member check error:', err);
-    }
-  }
-
-  // Fallback to in-memory store
-  if (!memberFullName) {
-    const mem =
-      _store.members.get(normalizedCode) || _store.members.get(rawCode);
-    if (mem) {
-      memberFullName = mem.fullName;
-      currentPoints = mem.points;
-    }
-  }
-
-  if (!memberFullName) {
-    return { awarded: false, reason: 'invalid_member' };
-  }
-
-  // 2. Check for duplicate attendance
-  if (db) {
-    try {
-      const existing = await db
-        .collection('attendances')
-        .where('eventId', '==', eventId)
-        .where('memberId', 'in', [rawCode, normalizedCode])
-        .limit(1)
-        .get();
-      if (!existing.empty) {
-        return { awarded: false, reason: 'already_checked_in' };
-      }
-    } catch (err) {
-      console.warn('Firestore duplicate check error:', err);
-    }
-  }
-
+  const normalizedCode = normalizeSrCode(srCode);
   const attendanceKey = `${normalizedCode}::${eventId}`;
   if (_store.attendance.has(attendanceKey)) {
     return { awarded: false, reason: 'already_checked_in' };
   }
 
-  // 3. Record attendance in Firestore (if connected)
-  const attendanceId = `att_${Date.now()}`;
-  if (db) {
+  if (process.env.NODE_ENV !== 'test') {
+    let db: FirebaseFirestore.Firestore;
     try {
-      await db.collection('attendances').add({
-        attendanceId,
-        eventId,
-        memberId: rawCode,
-        pointsEarned: attendancePoints,
-        checkedInAt: firebaseAdmin.firestore.FieldValue.serverTimestamp(),
-      });
-
-      if (memberDocRef) {
-        await memberDocRef.update({
-          points:
-            firebaseAdmin.firestore.FieldValue.increment(attendancePoints),
-        });
+      db = getDb() as FirebaseFirestore.Firestore;
+    } catch {
+      throw new AttendanceServiceError('Attendance service unavailable', 503);
+    }
+    try {
+      const memberService = getConfiguredMemberService();
+      const member = await memberService.findMember(normalizedCode);
+      if (!member) {
+        return { awarded: false, reason: 'invalid_member' };
+      }
+      const membership = await memberService.verifyMembership(normalizedCode);
+      if (!membership.isValid) {
+        return { awarded: false, reason: 'inactive_member' };
       }
 
-      await db.collection('pointsLedger').add({
-        memberId: rawCode,
-        amount: attendancePoints,
-        reason: `Event attendance: ${eventId}`,
-        createdAt: firebaseAdmin.firestore.FieldValue.serverTimestamp(),
+      const attendanceId = createHash('sha256')
+        .update(`${normalizedCode}|${eventId.trim()}`)
+        .digest('hex');
+      const eventRef = db.collection('events').doc(eventId.trim());
+      const attendanceRef = db.collection('attendances').doc(attendanceId);
+      const memberRef = db.collection('members').doc(normalizedCode);
+      const ledgerRef = db.collection('pointsLedger').doc(attendanceId);
+
+      const result = await db.runTransaction(async (transaction) => {
+        const [eventSnapshot, attendanceSnapshot, memberSnapshot, ledgerSnapshot] =
+          await Promise.all([
+            transaction.get(eventRef),
+            transaction.get(attendanceRef),
+            transaction.get(memberRef),
+            transaction.get(
+              db.collection('pointsLedger').where('memberId', '==', normalizedCode)
+            ),
+          ]);
+
+        if (!eventSnapshot.exists) {
+          return { awarded: false, reason: 'invalid_event' } as CheckInResult;
+        }
+        if (attendanceSnapshot.exists) {
+          return { awarded: false, reason: 'already_checked_in' } as CheckInResult;
+        }
+
+        const eventData = eventSnapshot.data() ?? {};
+        const configuredAward = eventData.pointsAward ?? eventData.awardPoints ?? eventData.points;
+        const attendancePoints =
+          typeof configuredAward === 'number' && Number.isInteger(configuredAward) && configuredAward > 0
+            ? configuredAward
+            : parseInt(env.ATTENDANCE_POINTS, 10);
+        if (!Number.isInteger(attendancePoints) || attendancePoints <= 0) {
+          return { awarded: false, reason: 'points_error' } as CheckInResult;
+        }
+
+        const ledgerBalance = ledgerSnapshot.docs.reduce(
+          (sum, document) => sum + (Number(document.data().amount) || 0),
+          0
+        );
+        const memberData = memberSnapshot.data() ?? {};
+        const newBalance = ledgerBalance + attendancePoints;
+        const now = firebaseAdmin.firestore.FieldValue.serverTimestamp();
+
+        transaction.create(attendanceRef, {
+          attendanceId,
+          eventId: eventRef.id,
+          memberId: normalizedCode,
+          srCode: normalizedCode,
+          fullName: member.fullName,
+          pointsEarned: attendancePoints,
+          checkedInAt: now,
+          createdBy: actorId,
+        });
+        transaction.set(
+          ledgerRef,
+          {
+            memberId: normalizedCode,
+            amount: attendancePoints,
+            reason: `Event attendance: ${eventRef.id}`,
+            type: 'attendance',
+            referenceId: attendanceId,
+            createdBy: actorId,
+            createdAt: now,
+          },
+          { merge: false }
+        );
+        transaction.set(
+          memberRef,
+          {
+            srCode: normalizedCode,
+            fullName: member.fullName,
+            points: newBalance,
+            updatedAt: now,
+          },
+          { merge: true }
+        );
+
+        return {
+          awarded: true,
+          points: attendancePoints,
+          newBalance,
+        } as CheckInResult;
       });
-    } catch (err) {
-      console.error('Firestore write error:', err);
-      return { awarded: false, reason: 'points_error' };
+      return result;
+    } catch (error) {
+      if (error instanceof AttendanceServiceError) throw error;
+      if (error instanceof Error && error.message === 'MEMBER_SOURCE_UNAVAILABLE') {
+        throw new AttendanceServiceError('Member source unavailable', 503);
+      }
+      throw new AttendanceServiceError('Attendance service unavailable', 503);
     }
   }
 
-  // Record attendance in in-memory store
+  const mem = _store.members.get(normalizedCode);
+  if (!mem) {
+    return { awarded: false, reason: 'invalid_member' };
+  }
+
+  if (_store.attendance.has(attendanceKey)) {
+    return { awarded: false, reason: 'already_checked_in' };
+  }
+
+  const attendancePoints = parseInt(env.ATTENDANCE_POINTS, 10);
+  const attendanceId = createHash('sha256')
+    .update(`${normalizedCode}|${eventId}`)
+    .digest('hex');
   const attendanceRow: AttendanceRow = {
     id: attendanceId,
-    srCode: rawCode,
-    fullName: memberFullName,
+    srCode: normalizedCode,
+    fullName: mem.fullName,
     eventId,
     checkedInAt: new Date().toISOString(),
   };
   _store.attendance.set(attendanceKey, attendanceRow);
-
-  const mem =
-    _store.members.get(normalizedCode) || _store.members.get(rawCode);
-  if (mem) {
-    mem.points += attendancePoints;
-    _store.pointsLedger.push({
-      srCode: rawCode,
-      amount: attendancePoints,
-      reason: `Event attendance: ${eventId}`,
-    });
-  }
+  mem.points += attendancePoints;
+  _store.pointsLedger.push({
+    srCode: normalizedCode,
+    amount: attendancePoints,
+    reason: `Event attendance: ${eventId}`,
+  });
 
   return {
     awarded: true,
     points: attendancePoints,
-    newBalance: currentPoints + attendancePoints,
+    newBalance: mem.points,
   };
 }
 
@@ -328,29 +350,32 @@ export async function checkInMember(
 export async function getEventAttendance(
   eventId: string
 ): Promise<AttendanceRecord[]> {
-  const db = getDb();
-  if (db) {
+  if (process.env.NODE_ENV !== 'test') {
+    let db: FirebaseFirestore.Firestore;
+    try {
+      db = getDb() as FirebaseFirestore.Firestore;
+    } catch {
+      throw new AttendanceServiceError('Attendance service unavailable', 503);
+    }
     try {
       const snap = await db
         .collection('attendances')
         .where('eventId', '==', eventId)
         .get();
-      if (!snap.empty) {
-        return snap.docs.map((d) => {
-          const data = d.data();
-          const timestamp = data.checkedInAt?.toDate
-            ? data.checkedInAt.toDate().toISOString()
-            : new Date().toISOString();
-          return {
-            id: data.attendanceId || d.id,
-            srCode: data.memberId || data.srCode || '',
-            fullName: data.fullName || data.memberId || 'Member',
-            checkedInAt: timestamp,
-          };
-        });
-      }
-    } catch (err) {
-      console.warn('Firestore getEventAttendance error:', err);
+      return snap.docs.map((d) => {
+        const data = d.data();
+        const timestamp = data.checkedInAt?.toDate
+          ? data.checkedInAt.toDate().toISOString()
+          : new Date().toISOString();
+        return {
+          id: data.attendanceId || d.id,
+          srCode: data.memberId || data.srCode || '',
+          fullName: data.fullName || data.memberId || 'Member',
+          checkedInAt: timestamp,
+        };
+      });
+    } catch {
+      throw new AttendanceServiceError('Attendance service unavailable', 503);
     }
   }
 
