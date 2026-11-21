@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto';
 export interface Member {
   srCode: string;
   fullName: string | null;
+  email?: string | null;
   membershipId?: string | null;
   controlNumber?: string | null;
   program?: string | null;
@@ -26,6 +27,7 @@ export interface MemberService {
   findMember(srCode: string): Promise<Member | null>;
   findByControlNumber(controlNumber: string): Promise<Member | null>;
   findByQrReference(reference: string): Promise<Member | null>;
+  searchMembers(query: string): Promise<Member[]>;
   isPaid(srCode: string): Promise<boolean>;
   verifyMembership(srCode: string): Promise<MembershipResult>;
 }
@@ -36,6 +38,19 @@ export function normalizeSrCode(value: string): string {
 
 export function createMemberService(source: MemberSource): MemberService {
   return {
+    async searchMembers(query) {
+      const needle = normalizeSrCode(query);
+      const snapshot = await source.read();
+      return snapshot.members.filter((member) => {
+        const name = member.fullName?.toUpperCase() ?? '';
+        const email = member.email?.toUpperCase() ?? '';
+        return (
+          normalizeSrCode(member.srCode).includes(needle) ||
+          name.includes(needle) ||
+          email.includes(needle)
+        );
+      });
+    },
     async findMember(srCode) {
       return (
         (await source.read()).members.find(

@@ -48,6 +48,17 @@ describe('Points Ledger API', () => {
     expect(response.status).toBe(401);
   });
 
+  it('searches members for officers by name or SR code', async () => {
+    const response = await request(testApp)
+      .get('/members/search?q=24-90001')
+      .set('x-test-user', asUser());
+    expect(response.status).toBe(200);
+    expect(response.body.members[0]).toMatchObject({
+      srCode: '24-90001',
+      fullName: 'Demo Member 01',
+    });
+  });
+
   it('rejects non-officers with 403', async () => {
     const response = await request(testApp)
       .post('/points/grant')

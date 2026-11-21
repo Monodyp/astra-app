@@ -114,3 +114,34 @@ export async function getAttendanceHandler(
     next(error);
   }
 }
+
+export async function getEventRosterHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  const eventId = z.string().trim().min(1).safeParse(req.params.id);
+  if (!eventId.success) {
+    res.status(400).json({ error: 'Invalid event ID' });
+    return;
+  }
+  try {
+    const records = await getEventAttendance(eventId.data);
+    res.status(200).json({
+      eventId: eventId.data,
+      totalAttendees: records.length,
+      roster: records.map((record) => ({
+        srCode: record.srCode,
+        fullName: record.fullName,
+        checkedInAt: record.checkedInAt,
+        pointsAwarded: record.pointsAwarded ?? 0,
+      })),
+    });
+  } catch (error) {
+    if (error instanceof AttendanceServiceError) {
+      res.status(error.statusCode).json({ error: error.message });
+      return;
+    }
+    next(error);
+  }
+}

@@ -5,6 +5,9 @@ import {
   getPointsHistory,
   grantPoints,
 } from '../services/pointsService.js';
+import { getConfiguredMemberService } from '../config/members.js';
+import { voucherRepository } from '../repositories/voucherRepository.js';
+import { firebaseAdmin } from '../lib/firebase.js';
 
 const memberIdSchema = z.string().trim().min(1).max(128);
 const grantSchema = z.object({
@@ -56,6 +59,93 @@ export async function getPointsHistoryHandler(
   try {
     const history = await getPointsHistory(user.srCode);
     res.status(200).json({ history });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function searchMembersHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  const parsed = z.object({ q: z.string().trim().min(2).max(100) }).safeParse(req.query);
+  if (!parsed.success) {
+    res.status(400).json({ error: 'Search query must be at least 2 characters' });
+    return;
+  }
+  try {
+    const matches = await getConfiguredMemberService().searchMembers(parsed.data.q);
+    const summaries = await Promise.all(matches.map(async (member) => ({
+      id: member.srCode,
+      fullName: member.fullName,
+      srCode: member.srCode,
+      email: member.email ?? null,
+      currentPoints: await getMemberPoints(member.srCode),
+    })));
+    res.status(200).json({ members: summaries });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function getMemberOverviewHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  const user = getUser(req, res);
+  if (!user) return;
+  if (!user.srCode) {
+    res.status(409).json({ error: 'MEMBER_LINK_REQUIRED', code: 'MEMBER_LINK_REQUIRED' });
+    return;
+  }
+  try {
+    const memberService = getConfiguredMemberService();
+    const member = await memberService.findMember(user.srCode);
+    if (!member) {
+      res.status(404).json({ error: 'Member not found' });
+      return;
+    }
+    const [points, recentVouchers, eventSnapshot] = await Promise.all([
+      getMemberPoints(user.srCode),
+      voucherRepository.listByMember(user.srCode),
+      firebaseAdmin.firestore().collection('events').get(),
+    ]);
+    const now = Date.now();
+    const upcomingEvents = eventSnapshot.docs
+      .map((document) => {
+        const data = document.data() as Record<string, unknown>;
+        return { id: document.id, ...data };
+      })
+      .filter((event) => {
+        const eventData = event as Record<string, unknown>;
+        const raw = eventData.startAt ?? eventData.date ?? eventData.startsAt;
+        if (!raw) return true;
+        const date = typeof raw === 'object'
+          && raw !== null
+          && 'toDate' in raw
+          && typeof raw.toDate === 'function'
+          ? raw.toDate()
+          : new Date(String(raw));
+        return !Number.isNaN(date.getTime()) && date.getTime() >= now;
+      })
+      .slice(0, 10);
+    res.status(200).json({
+      member: {
+        uid: user.uid,
+        srCode: member.srCode,
+        fullName: member.fullName,
+        membershipId: member.membershipId ?? member.controlNumber ?? null,
+        controlNumber: member.controlNumber ?? null,
+        program: member.program ?? null,
+        yearLevel: member.yearLevel ?? null,
+        email: member.email ?? null,
+      },
+      points,
+      recentVouchers: recentVouchers.slice(0, 10),
+      upcomingEvents,
+    });
   } catch (error) {
     next(error);
   }
