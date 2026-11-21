@@ -1,17 +1,13 @@
 /**
- * Backend handoff: add data/live/ with a PortalDataSource for the API and
- * select it here. Pages, routes, and components need no changes.
+ * Selects the live portal data adapter backed by Firebase Auth and the ASTRA API.
+ * Tests can inject a fake adapter via setPortalDataSource.
  */
 import type { PortalDataSource } from './contracts.js';
-import { createDemoDataSource } from './demo/demoSource.js';
+import { createLiveDataSource } from './live/liveSource.js';
 
 export * from './contracts.js';
 
-const DEMO_LATENCY_MS = import.meta.env.MODE === 'test' ? 0 : 250;
-
-let source: PortalDataSource = createDemoDataSource({
-  latencyMs: DEMO_LATENCY_MS,
-});
+let source: PortalDataSource = createLiveDataSource();
 
 export function setPortalDataSource(next: PortalDataSource): PortalDataSource {
   const previous = source;
