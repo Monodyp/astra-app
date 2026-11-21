@@ -64,7 +64,7 @@ export async function checkInEvent(
     const srCode = await resolveCheckInIdentity({
       qrToken: parsed.data.qrToken,
     });
-    const result = await checkInMember(srCode, eventId.data, parsed.data.points);
+    const result = await checkInMember(srCode, eventId.data);
     res.status(200).json({ ...result, checkedIn: result.awarded });
   } catch (error) {
     if (error instanceof InvalidQrTokenError) {

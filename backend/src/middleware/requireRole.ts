@@ -10,7 +10,7 @@ export function requireRole(role: string) {
     }
 
     const userRole = req.user.role.trim().toLowerCase();
-    // Administrators can access officer- and partner-protected routes.
+    // Published role policy: admin may access every protected route.
     if (userRole !== requiredRole && userRole !== 'admin') {
       res.status(403).json({ error: `${role} role required` });
       return;

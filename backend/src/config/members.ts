@@ -10,6 +10,10 @@ const text = z.string().trim().min(1);
 const columns = {
   MEMBERS_SR_COLUMN: text.default('sr_code'),
   MEMBERS_NAME_COLUMN: text.default('full_name'),
+  MEMBERS_MEMBERSHIP_COLUMN: text.default('membership_id'),
+  MEMBERS_CONTROL_COLUMN: text.default('control_number'),
+  MEMBERS_PROGRAM_COLUMN: text.default('program'),
+  MEMBERS_YEAR_LEVEL_COLUMN: text.default('year_level'),
   PAID_SR_COLUMN: text.default('sr_code'),
 };
 const memberConfig = z.discriminatedUnion('MEMBER_DATA_SOURCE', [
@@ -39,6 +43,10 @@ export function getConfiguredMemberService() {
   const columnOptions = {
     membersSrColumn: config.MEMBERS_SR_COLUMN,
     membersNameColumn: config.MEMBERS_NAME_COLUMN,
+    membersMembershipColumn: config.MEMBERS_MEMBERSHIP_COLUMN,
+    membersControlColumn: config.MEMBERS_CONTROL_COLUMN,
+    membersProgramColumn: config.MEMBERS_PROGRAM_COLUMN,
+    membersYearLevelColumn: config.MEMBERS_YEAR_LEVEL_COLUMN,
     paidSrColumn: config.PAID_SR_COLUMN,
   };
   if (config.MEMBER_DATA_SOURCE === 'google-sheets') {

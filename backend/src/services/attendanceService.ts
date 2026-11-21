@@ -187,6 +187,10 @@ export async function checkInMember(
   const rawCode = srCode.trim();
   const attendancePoints = points ?? parseInt(env.ATTENDANCE_POINTS, 10);
   const db = getDb();
+  const attendanceKey = `${normalizedCode}::${eventId}`;
+  if (_store.attendance.has(attendanceKey)) {
+    return { awarded: false, reason: 'already_checked_in' };
+  }
 
   let memberFullName = '';
   let currentPoints = 0;
@@ -258,7 +262,6 @@ export async function checkInMember(
     }
   }
 
-  const attendanceKey = `${normalizedCode}::${eventId}`;
   if (_store.attendance.has(attendanceKey)) {
     return { awarded: false, reason: 'already_checked_in' };
   }

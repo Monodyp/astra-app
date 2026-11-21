@@ -8,7 +8,21 @@ function unauthorized(res: Response): void {
   res.status(401).json({ error: 'Authentication required' });
 }
 
-function userFromToken(token: DecodedIdToken) {
+export function normalizeClaimedSrCode(claims: {
+  srCode?: unknown;
+  sr_code?: unknown;
+}): string | null {
+  const claimed =
+    typeof claims.srCode === 'string'
+      ? claims.srCode
+      : typeof claims.sr_code === 'string'
+        ? claims.sr_code
+        : null;
+  if (!claimed?.trim()) return null;
+  return claimed.trim().toUpperCase();
+}
+
+export function normalizeFirebaseUser(token: DecodedIdToken) {
   const claims = token as DecodedIdToken & {
     srCode?: unknown;
     sr_code?: unknown;
@@ -19,12 +33,7 @@ function userFromToken(token: DecodedIdToken) {
     uid: token.uid,
     // Firebase custom claims carry the member identifier. UID is a safe
     // fallback for accounts that have not yet been linked to a member row.
-    srCode:
-      typeof claims.srCode === 'string'
-        ? claims.srCode
-        : typeof claims.sr_code === 'string'
-          ? claims.sr_code
-          : token.uid,
+    srCode: normalizeClaimedSrCode(claims),
     role: typeof claims.role === 'string' ? claims.role : 'member',
   };
 }
@@ -58,7 +67,7 @@ export async function authMiddleware(
 
   try {
     const decoded = await firebaseAdmin.auth().verifyIdToken(token);
-    req.user = userFromToken(decoded);
+    req.user = normalizeFirebaseUser(decoded);
     next();
   } catch {
     unauthorized(res);

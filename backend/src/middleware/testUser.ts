@@ -4,13 +4,13 @@ import { env } from '../config/env.js';
 
 export interface AuthenticatedUser {
   uid: string;
-  srCode: string;
+  srCode: string | null;
   role: string;
 }
 
 const testUserSchema = z.object({
   uid: z.string().min(1),
-  srCode: z.string().min(1),
+  srCode: z.string().min(1).nullable(),
   role: z.string().min(1),
 });
 

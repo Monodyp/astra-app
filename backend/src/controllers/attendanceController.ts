@@ -50,7 +50,7 @@ export async function checkInHandler(
     return;
   }
 
-  const { srCode: rawCode, qrToken, eventId, points } = parsed.data;
+  const { srCode: rawCode, qrToken, eventId } = parsed.data;
 
   let normalizedCode: string;
   try {
@@ -65,7 +65,7 @@ export async function checkInHandler(
     }
     throw error;
   }
-  const result = await checkInMember(normalizedCode, eventId, points);
+  const result = await checkInMember(normalizedCode, eventId);
 
   res.status(200).json(result);
 }

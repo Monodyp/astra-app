@@ -1,6 +1,10 @@
 export interface Member {
   srCode: string;
   fullName: string | null;
+  membershipId?: string | null;
+  controlNumber?: string | null;
+  program?: string | null;
+  yearLevel?: string | null;
 }
 
 export interface MemberSnapshot {
