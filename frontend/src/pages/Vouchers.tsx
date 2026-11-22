@@ -29,7 +29,6 @@ export const Vouchers: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <h2 className="sr-only">Claimed Vouchers</h2>
       <PageHeading
         eyebrow="Rewards"
         title="Claimed Vouchers"

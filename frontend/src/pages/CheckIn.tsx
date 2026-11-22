@@ -25,7 +25,7 @@ type Outcome =
   | { kind: 'error'; message: string };
 
 const RosterRow: React.FC<{ record: AttendanceRecord }> = ({ record }) => (
-  <li className="grid grid-cols-2 items-center gap-x-4 gap-y-2 border border-astra-white/10 bg-black/50 px-4 py-4 text-sm sm:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,.8fr)_minmax(0,.6fr)]">
+  <li className="grid grid-cols-2 items-center gap-x-4 gap-y-2 border border-astra-white/10 bg-black/50 px-4 py-4 text-sm lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,.8fr)_minmax(0,.6fr)]">
     <span className="flex items-center gap-3 font-bold text-astra-white">
       <CircleCheck className="h-5 w-5 text-[#4ade80]" aria-hidden="true" />
       {record.memberName}
@@ -171,7 +171,7 @@ export const CheckIn: React.FC = () => {
                     )
                   }
                   aria-pressed={shownSampleId === sample.id}
-                  aria-label={sample.label}
+                  aria-label={`Show QR for ${sample.label}, ${sample.hint}`}
                   className={`flex w-full items-center gap-3 border bg-black/60 px-4 py-3 text-left transition-colors hover:border-astra-primary-light focus-visible:outline focus-visible:outline-2 focus-visible:outline-astra-primary-light ${
                     shownSampleId === sample.id
                       ? 'border-astra-primary-light'

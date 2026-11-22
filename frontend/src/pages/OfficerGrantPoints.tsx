@@ -544,7 +544,7 @@ export const OfficerGrantPoints: React.FC = () => {
           <div className="flex flex-wrap items-center gap-4">
             <button
               type="submit"
-              disabled={submitting || (selected !== null && !recipientActive)}
+              disabled={!canGrant}
               aria-describedby={
                 selected && !recipientActive ? inactiveId : undefined
               }

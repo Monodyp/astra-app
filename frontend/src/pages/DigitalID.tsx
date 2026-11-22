@@ -71,7 +71,7 @@ export const DigitalID: React.FC = () => {
           <div className="flex flex-col items-center justify-center py-6 sm:py-8">
             <FloatingCardWrapper
               isPreview={false}
-              className="w-full max-w-md sm:max-w-lg aspect-[600/378]"
+              className="w-full max-w-[340px] sm:max-w-lg aspect-[600/378]"
               glowColor={
                 isVerified
                   ? 'rgba(0, 177, 237, 0.25)'

@@ -75,8 +75,6 @@ export const Points: React.FC = () => {
   return (
     <div className="space-y-6">
       <PageHeading eyebrow="Rewards" title="Points" description="Every point you earned and spent, newest first." />
-      <h2 className="sr-only">Points and ledger</h2>
-      <h2 className="sr-only">Points &amp; Ledger</h2>
       <p className="sr-only">Total Points: {balance} PTS</p>
       <div className="grid gap-4 sm:grid-cols-3">
         <Stat label="Current Balance" value={balance} />

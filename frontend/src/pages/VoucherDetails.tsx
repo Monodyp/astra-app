@@ -159,7 +159,6 @@ export const VoucherDetails: React.FC = () => {
 
   return (
     <div className="fixed inset-0 z-[70] overflow-y-auto bg-black/80 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))]">
-      <h2 className="sr-only">Voucher Details</h2>
       <div ref={ref} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="voucher-title"
         className="mx-auto w-full max-w-md space-y-4 border border-astra-primary-dark bg-astra-black p-5 font-astra outline-none sm:p-6">
         <VoucherBody key={id} id={id} issued={issued} />

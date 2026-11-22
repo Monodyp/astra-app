@@ -146,7 +146,7 @@ export const Overview: React.FC = () => {
               <div className="flex flex-col gap-[8px]">
                 <h1
                   id="overview-heading"
-                  className="text-[30px] font-bold leading-[38px] tracking-[-0.8px] text-[#fdfcfa] sm:text-[40px] sm:leading-[48px]"
+                  className="break-words [overflow-wrap:anywhere] text-[30px] font-bold leading-[38px] tracking-[-0.8px] text-[#fdfcfa] sm:text-[40px] sm:leading-[48px]"
                 >
                   {data.member.fullName}
                 </h1>
@@ -217,7 +217,7 @@ export const Overview: React.FC = () => {
         </Link>
 
         {user?.role === 'officer' ? (
-          <Link to="/checkin" aria-label="Check In to Event" className={statLinkClass}>
+          <Link to="/checkin" className={statLinkClass}>
             {eventsBody}
           </Link>
         ) : (

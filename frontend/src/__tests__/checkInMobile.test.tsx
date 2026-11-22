@@ -44,13 +44,12 @@ async function openCheckIn() {
   await screen.findByText('Scan Member Digital ID QR');
 }
 
-function recentScans() {
-  return screen.getByRole('heading', { name: 'Recent Scans' })
-    .parentElement as HTMLElement;
+function checkedInMembers() {
+  return screen.getByRole('list', { name: 'Checked-in members' });
 }
 
 async function enterStudentId(studentId: string) {
-  fireEvent.change(screen.getByLabelText('Student ID Attendance'), {
+  fireEvent.change(screen.getByLabelText('Or enter Student ID manually:'), {
     target: { value: studentId },
   });
   fireEvent.click(screen.getByRole('button', { name: 'Verify & Check In' }));
@@ -59,7 +58,7 @@ async function enterStudentId(studentId: string) {
   );
 }
 
-describe('mobile event check-in', () => {
+describe('responsive event check-in', () => {
   beforeEach(() => {
     window.sessionStorage.clear();
     usePhoneViewport();
@@ -72,30 +71,30 @@ describe('mobile event check-in', () => {
     Reflect.deleteProperty(navigator, 'mediaDevices');
   });
 
-  it('shows the mobile team layout with the attendee list as recent scans', async () => {
+  it('uses the responsive check-in page at a phone viewport', async () => {
     await openCheckIn();
     expect(
+      screen.getByRole('heading', { level: 1, name: 'Event Check-In' })
+    ).toBeDefined();
+    expect(
       screen.getByText(
-        'No camera or scanner is available on this device or browser. Use the student ID below.'
+        'No camera is available here. Use a sample ID or the student ID.'
       )
     ).toBeDefined();
     expect(screen.getByText('Or enter Student ID manually:')).toBeDefined();
-    expect(within(recentScans()).getAllByRole('listitem')).toHaveLength(2);
+    expect(within(checkedInMembers()).getAllByRole('listitem')).toHaveLength(2);
     expect(
-      within(recentScans()).getByText('Paolo Lim · 25-90005')
+      within(checkedInMembers()).getByText('Paolo Lim')
     ).toBeDefined();
   });
 
-  it('checks in by student ID and explains each rejection', async () => {
+  it('checks in by student ID and reports rejected members at a phone viewport', async () => {
     await openCheckIn();
-    fireEvent.click(screen.getByRole('button', { name: 'Verify & Check In' }));
-    expect(screen.getByText('Error: Enter the student ID.')).toBeDefined();
-
     await enterStudentId('24-90001');
     expect(
-      screen.getByText('✔ Verified Doe checked in. +100 pts')
-    ).toBeDefined();
-    expect(within(recentScans()).getAllByRole('listitem')).toHaveLength(3);
+      (await screen.findByRole('status')).textContent
+    ).toContain('Verified Doe checked in. +100 pts');
+    expect(within(checkedInMembers()).getAllByRole('listitem')).toHaveLength(3);
 
     await enterStudentId('24-90001');
     expect(screen.getByRole('alert').textContent).toContain(
@@ -109,29 +108,28 @@ describe('mobile event check-in', () => {
     expect(screen.getByRole('alert').textContent).toContain(
       'No member has the student ID 99-99999.'
     );
-    expect(within(recentScans()).getAllByRole('listitem')).toHaveLength(3);
+    expect(within(checkedInMembers()).getAllByRole('listitem')).toHaveLength(3);
   });
 
-  it('checks in from a demo QR', async () => {
+  it('shows and simulates a demo QR at a phone viewport', async () => {
     await openCheckIn();
-    fireEvent.click(await screen.findByRole('button', { name: 'Iris Cruz' }));
     fireEvent.click(
-      await screen.findByRole('button', { name: 'Verified Doe' })
+      await screen.findByRole('button', {
+        name: 'Show QR for Verified Doe, Sample verified member ID',
+      })
     );
+    const panel = screen.getByRole('region', {
+      name: 'Sample QR for Verified Doe',
+    });
     expect(
-      screen.getByRole('img', { name: 'QR code for Verified Doe' })
+      within(panel).getByRole('img', { name: 'QR code for Verified Doe' })
     ).toBeDefined();
-    expect(
-      screen.queryByRole('img', { name: 'QR code for Iris Cruz' })
-    ).toBeNull();
-    fireEvent.click(
-      screen.getByRole('button', { name: 'Check in with this QR' })
-    );
+    fireEvent.click(within(panel).getByRole('button', { name: 'Simulate scan' }));
     await waitFor(() =>
-      expect(within(recentScans()).getAllByRole('listitem')).toHaveLength(3)
+      expect(within(checkedInMembers()).getAllByRole('listitem')).toHaveLength(3)
     );
     expect(
-      within(recentScans()).getByText('Verified Doe · 24-90001')
+      within(checkedInMembers()).getByText('Verified Doe')
     ).toBeDefined();
   });
 
@@ -147,12 +145,16 @@ describe('mobile event check-in', () => {
     });
     const checkIn = vi.spyOn(portalData, 'checkIn');
     await openCheckIn();
-    fireEvent.click(screen.getByRole('button', { name: 'Start camera' }));
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Open camera to scan a member QR',
+      })
+    );
     expect(await screen.findByLabelText('Camera preview')).toBeDefined();
     decode.mockReturnValue('demo-qr.v1.7f3a9c41e2b8');
 
     await waitFor(() =>
-      expect(within(recentScans()).getAllByRole('listitem')).toHaveLength(3)
+      expect(within(checkedInMembers()).getAllByRole('listitem')).toHaveLength(3)
     );
     await new Promise((resolve) => setTimeout(resolve, 600));
     expect(checkIn).toHaveBeenCalledTimes(1);
@@ -162,7 +164,7 @@ describe('mobile event check-in', () => {
     });
   });
 
-  it('keeps the desktop check-in at desktop width', async () => {
+  it('keeps the same responsive check-in page at desktop width', async () => {
     vi.restoreAllMocks();
     window.history.pushState(
       {},
@@ -174,6 +176,6 @@ describe('mobile event check-in', () => {
     expect(
       await screen.findByRole('heading', { level: 1, name: 'Event Check-In' })
     ).toBeDefined();
-    expect(screen.queryByText('Or enter Student ID manually:')).toBeNull();
+    expect(screen.getByText('Or enter Student ID manually:')).toBeDefined();
   });
 });

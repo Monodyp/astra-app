@@ -163,8 +163,6 @@ export const Marketplace: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <h2 className="sr-only">Partner Perks &amp; Rewards</h2>
-      <h2 className="sr-only">Perks Marketplace</h2>
       <PageHeading eyebrow="Rewards" title="Perks Marketplace"
         description="Spend your points on partner perks. Each claim adds a voucher to your wallet." />
       <div className="grid gap-3 sm:grid-cols-2">

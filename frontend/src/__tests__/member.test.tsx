@@ -98,11 +98,14 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe('mobile perks marketplace', () => {
-  it('shows the mobile team filters with Food added', async () => {
+describe('responsive perks marketplace', () => {
+  it('shows the category filters with Food', async () => {
     await signInAs(/Verified member/, '/marketplace');
     expect(
-      await screen.findByRole('heading', { name: 'Partner Perks & Rewards' })
+      await screen.findByRole('heading', {
+        level: 1,
+        name: 'Perks Marketplace',
+      })
     ).toBeDefined();
     const filters = screen.getByRole('group', { name: 'Perk categories' });
     expect(
@@ -124,7 +127,7 @@ describe('mobile perks marketplace', () => {
     ).toEqual(['ASTRA Official Dev Sticker Pack', 'ASTRA Mission Hoodie']);
   });
 
-  it('keeps the mobile cards without sample labels', async () => {
+  it('keeps perk cards free of sample labels', async () => {
     await signInAs(/Verified member/, '/marketplace');
     expect(await screen.findByText('450 PTS Available')).toBeDefined();
     expect(screen.getByRole('link', { name: 'My Vouchers (1)' })).toBeDefined();
@@ -302,11 +305,14 @@ describe('mobile perks marketplace', () => {
   });
 });
 
-describe('mobile voucher wallet and receipts', () => {
+describe('responsive voucher wallet and receipts', () => {
   it('lists each voucher with its code and status', async () => {
     await signInAs(/Verified member/, '/vouchers');
     expect(
-      await screen.findByRole('heading', { name: 'Claimed Vouchers' })
+      await screen.findByRole('heading', {
+        level: 1,
+        name: 'Claimed Vouchers',
+      })
     ).toBeDefined();
     expect(await screen.findByText('ASTR-PRK-98214')).toBeDefined();
     expect(screen.getByText('✔ Active')).toBeDefined();
@@ -357,7 +363,7 @@ describe('mobile voucher wallet and receipts', () => {
     const used = await screen.findByRole('dialog', {
       name: 'ASTRA Official Dev Sticker Pack',
     });
-    expect(within(used).getByText('✖ ALREADY REDEEMED')).toBeDefined();
+    expect(within(used).getByText('Already redeemed')).toBeDefined();
   });
 
   it('shows the unavailable QR box for a voucher without a supported code', async () => {
@@ -413,13 +419,13 @@ describe('mobile voucher wallet and receipts', () => {
 
     window.history.pushState({}, '', '/vouchers');
     render(<App />);
-    expect(await screen.findByText('Perk details unavailable')).toBeDefined();
+    expect(await screen.findByText('ASTRA partner perk')).toBeDefined();
     expect(screen.getByText('ASTRA Official Dev Sticker Pack')).toBeDefined();
     expect(screen.getByText('ASTR-PRK-98214')).toBeDefined();
   });
 });
 
-describe('mobile points', () => {
+describe('responsive points', () => {
   it('shows the complete ledger opened from the More menu', async () => {
     await portalData.signIn({ method: 'shortcut', shortcutId: 'officer' });
     for (const referenceId of ['Booth', 'Stage']) {
@@ -448,31 +454,31 @@ describe('mobile points', () => {
     await waitFor(() => expect(window.location.pathname).toBe('/points'));
 
     expect(
-      await screen.findByRole('heading', { name: 'Points and ledger' })
+      await screen.findByRole('heading', { level: 1, name: 'Points' })
     ).toBeDefined();
-    expect(screen.getByText('Current Balance').nextSibling?.textContent).toBe(
-      '470 PTS'
+    expect(screen.getByText('Current Balance').parentElement?.textContent).toBe(
+      'Current Balance470PTS'
     );
-    expect(screen.getByText('Lifetime Redeemed').nextSibling?.textContent).toBe(
-      '50 PTS'
+    expect(screen.getByText('Spent on Perks').parentElement?.textContent).toBe(
+      'Spent on Perks50PTS'
     );
-    expect(screen.getAllByText('Activity / Event')).toHaveLength(7);
-    expect(screen.queryByText('Status')).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: 'Redeemed' }));
-    expect(screen.getAllByText('Activity / Event')).toHaveLength(1);
-    expect(screen.getByText('−50 PTS')).toBeDefined();
+    expect(
+      within(screen.getByRole('list', { name: 'Points ledger' })).getAllByRole(
+        'listitem'
+      )
+    ).toHaveLength(7);
+    fireEvent.click(screen.getByRole('button', { name: 'Redemptions' }));
+    expect(
+      within(screen.getByRole('list', { name: 'Points ledger' })).getAllByRole(
+        'listitem'
+      )
+    ).toHaveLength(1);
+    expect(screen.getByText('-50 pts')).toBeDefined();
   });
 });
 
-describe('desktop rewards screens', () => {
-  const placeholders: Array<[string, string]> = [
-    ['/marketplace', 'Perks Marketplace'],
-    ['/vouchers', 'Claimed Vouchers'],
-    ['/vouchers/V-98214', 'Voucher Details'],
-    ['/points', 'Points & Ledger'],
-  ];
-
-  it('shows the placeholders and loads no rewards data', async () => {
+describe('responsive rewards screens', () => {
+  it('loads marketplace, wallet, receipt, and ledger data from the adapter', async () => {
     useViewport(true);
     const calls: string[] = [];
     useAdapter((base) => ({
@@ -495,40 +501,70 @@ describe('desktop rewards screens', () => {
     }));
     const first = await signInAs(/Verified member/, '/home');
     first.unmount();
-    for (const [path, heading] of placeholders) {
-      window.history.pushState({}, '', path);
-      const view = render(<App />);
-      expect(
-        await screen.findByRole('heading', { level: 2, name: heading })
-      ).toBeDefined();
-      view.unmount();
-    }
-    expect(calls).toEqual([]);
+    window.history.pushState({}, '', '/marketplace');
+    const marketplace = render(<App />);
+    expect(
+      await screen.findByRole('heading', {
+        level: 1,
+        name: 'Perks Marketplace',
+      })
+    ).toBeDefined();
+    expect(await screen.findByRole('heading', {
+      level: 3,
+      name: 'Campus Cafe Free Beverage',
+    })).toBeDefined();
+    marketplace.unmount();
+
+    window.history.pushState({}, '', '/vouchers');
+    const wallet = render(<App />);
+    expect(
+      await screen.findByRole('heading', {
+        level: 1,
+        name: 'Claimed Vouchers',
+      })
+    ).toBeDefined();
+    expect(await screen.findByText('ASTR-PRK-98214')).toBeDefined();
+    wallet.unmount();
+
+    window.history.pushState({}, '', '/vouchers/V-98214');
+    const receipt = render(<App />);
+    expect(
+      await screen.findByRole('dialog', {
+        name: '15% Off at the Campus Bookstore',
+      })
+    ).toBeDefined();
+    receipt.unmount();
+
+    window.history.pushState({}, '', '/points');
+    const points = render(<App />);
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Points' })
+    ).toBeDefined();
+    expect(calls).toEqual(
+      expect.arrayContaining([
+        'listPerks',
+        'listVouchers',
+        'getVoucher',
+        'getPoints',
+      ])
+    );
+    points.unmount();
   });
 
-  it('switches screens when the viewport crosses the breakpoint', async () => {
+  it('keeps the same page content when the viewport crosses the breakpoint', async () => {
     const viewport = useViewport(true);
     await signInAs(/Verified member/, '/marketplace');
     expect(
-      await screen.findByRole('heading', {
-        level: 2,
-        name: 'Perks Marketplace',
-      })
+      await screen.findByRole('heading', { level: 1, name: 'Perks Marketplace' })
     ).toBeDefined();
     viewport.set(false);
     expect(
-      await screen.findByRole('heading', { name: 'Partner Perks & Rewards' })
+      screen.getByRole('heading', { level: 1, name: 'Perks Marketplace' })
     ).toBeDefined();
     viewport.set(true);
     expect(
-      await screen.findByRole('heading', {
-        level: 2,
-        name: 'Perks Marketplace',
-      })
+      screen.getByRole('heading', { level: 1, name: 'Perks Marketplace' })
     ).toBeDefined();
-    expect(
-      screen.queryByRole('heading', { name: 'Partner Perks & Rewards' })
-    ).toBeNull();
   });
 
   it('keeps an unconfirmed claim key across the breakpoint', async () => {
@@ -552,9 +588,8 @@ describe('desktop rewards screens', () => {
     await within(dialog).findByRole('alert');
 
     viewport.set(true);
-    await screen.findByRole('heading', { level: 2, name: 'Perks Marketplace' });
+    await screen.findByRole('heading', { level: 1, name: 'Perks Marketplace' });
     viewport.set(false);
-    dialog = await openClaim('Campus Cafe Free Beverage');
     fireEvent.click(
       within(dialog).getByRole('button', { name: 'Confirm claim' })
     );
@@ -565,7 +600,7 @@ describe('desktop rewards screens', () => {
     expect((await portalData.getPoints()).balance).toBe(400);
   });
 
-  it('opens no receipt when the screen changes during a claim', async () => {
+  it('completes a pending claim when the viewport changes', async () => {
     const viewport = useViewport(false);
     let finish: () => void = () => undefined;
     useAdapter((base) => ({
@@ -586,19 +621,23 @@ describe('desktop rewards screens', () => {
     ).toBeDefined();
 
     viewport.set(true);
-    await screen.findByRole('heading', { level: 2, name: 'Perks Marketplace' });
+    await screen.findByRole('heading', { level: 1, name: 'Perks Marketplace' });
     await act(async () => {
       finish();
       await new Promise((resolve) => setTimeout(resolve, 20));
     });
-    expect(window.location.pathname).toBe('/marketplace');
-    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(window.location.pathname).toBe('/vouchers/V-101');
+    expect(
+      await screen.findByRole('dialog', {
+        name: 'Voucher Claimed: Campus Cafe Free Beverage',
+      })
+    ).toBeDefined();
     expect((await portalData.getPoints()).balance).toBe(400);
   });
 });
 
-describe('mobile sign-in, overview, and digital ID', () => {
-  it('signs in from the mobile login and returns to the requested page', async () => {
+describe('responsive sign-in, overview, and digital ID', () => {
+  it('signs in from the portal login and returns to the requested page', async () => {
     window.history.pushState(
       {},
       '',
@@ -606,17 +645,24 @@ describe('mobile sign-in, overview, and digital ID', () => {
     );
     render(<App />);
     expect(
-      await screen.findByRole('heading', { name: 'ASTRA Member Portal Login' })
+      await screen.findByRole('heading', {
+        level: 1,
+        name: 'Your Membership Dashboard',
+      })
     ).toBeDefined();
     fireEvent.click(screen.getByRole('button', { name: 'Sign In to Portal' }));
     expect(
-      screen.getByText('Error: Enter your student ID or email address.')
+      screen.getByText('Enter your student ID or email address.')
     ).toBeDefined();
-    expect(screen.getByText('Error: Enter your password.')).toBeDefined();
+    fireEvent.change(screen.getByLabelText('Student ID or Email Address'), {
+      target: { value: '24-90001' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Sign In to Portal' }));
+    expect(screen.getByText('Enter your password.')).toBeDefined();
 
     fireEvent.click(
       screen.getByRole('button', {
-        name: 'Login with Google / Institutional SSO',
+        name: 'Continue with Google',
       })
     );
     expect((await screen.findByRole('alert')).textContent).toContain(
@@ -629,7 +675,7 @@ describe('mobile sign-in, overview, and digital ID', () => {
     await waitFor(() => expect(window.location.pathname).toBe('/id'));
   });
 
-  it('signs in with typed credentials on the mobile login', async () => {
+  it('signs in with typed credentials on the responsive login', async () => {
     window.history.pushState({}, '', '/login');
     render(<App />);
     fireEvent.change(
@@ -644,18 +690,17 @@ describe('mobile sign-in, overview, and digital ID', () => {
     expect(await screen.findByText('Total Points: 450 PTS')).toBeDefined();
   });
 
-  it('shows the member overview from the portal data', async () => {
+  it('shows the desktop-based member overview at a phone viewport', async () => {
     await signInAs(/Verified member/, '/home');
-    expect(await screen.findByText('✔ Active Member')).toBeDefined();
-    expect(screen.getByText('Annual Dues Paid')).toBeDefined();
-    expect(screen.getByText('Student ID: 24-90001')).toBeDefined();
-    expect(screen.getByText('Events Attended: 2')).toBeDefined();
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Verified Doe' })
+    ).toBeDefined();
+    expect(screen.getByText('24-90001')).toBeDefined();
+    expect(screen.getByText('BS Computer Science')).toBeDefined();
     expect(screen.getByText('Last: Git Essentials')).toBeDefined();
-    expect(screen.getByText('Active Vouchers: 1')).toBeDefined();
-    expect(screen.getByText('15% Off at the Campus Bookstore')).toBeDefined();
     expect(
       screen
-        .getByRole('link', { name: 'Check In to Event' })
+        .getByRole('link', { name: 'Show My Digital ID' })
         .getAttribute('href')
     ).toBe('/id');
   });
@@ -664,21 +709,24 @@ describe('mobile sign-in, overview, and digital ID', () => {
     await signInAs(/^Officer/, '/home');
     expect(
       (
-        await screen.findByRole('link', { name: 'Check In to Event' })
+        await screen.findByRole('link', { name: /Events Attended/ })
       ).getAttribute('href')
     ).toBe('/checkin');
   });
 
-  it('shows an inactive membership on the overview', async () => {
+  it('shows an inactive membership on the desktop-based overview', async () => {
     await signInAs(/Unverified member/, '/home');
-    expect(await screen.findByText('✖ Membership not active')).toBeDefined();
-    expect(screen.getByText('Annual Dues Unpaid')).toBeDefined();
+    expect(
+      await screen.findByText(/Membership inactive · pay your annual dues/)
+    ).toBeDefined();
   });
 
-  it('shows the verified card with the member QR', async () => {
+  it('shows the verified desktop-based ID card with the member QR', async () => {
     await signInAs(/Verified member/, '/id');
     expect(await screen.findByText('VALID / ACTIVE DUES')).toBeDefined();
-    expect(screen.getByText('Verified Doe')).toBeDefined();
+    expect(
+      screen.getByRole('heading', { level: 2, name: 'Verified Doe' })
+    ).toBeDefined();
     expect(
       screen.getAllByRole('img', { name: 'Member check-in QR' })
     ).toHaveLength(1);
@@ -686,7 +734,7 @@ describe('mobile sign-in, overview, and digital ID', () => {
     expect(screen.queryByText(/sample/i)).toBeNull();
   });
 
-  it('shows an unverified card without a QR and opens the renewal notice', async () => {
+  it('shows an unverified desktop-based ID card without a QR', async () => {
     await signInAs(/Unverified member/, '/id');
     expect(
       await screen.findByText('UNVERIFIED / INACTIVE FOR CHECK-IN')
@@ -694,15 +742,10 @@ describe('mobile sign-in, overview, and digital ID', () => {
     expect(
       screen.queryByRole('img', { name: 'Member check-in QR' })
     ).toBeNull();
-    expect(screen.getByText('Payment Instructions')).toBeDefined();
-    fireEvent.click(
-      screen.getByRole('link', { name: 'Read renewal guidance' })
-    );
-    await waitFor(() => expect(window.location.pathname).toBe('/not-valid'));
     expect(
-      await screen.findByRole('heading', { name: 'Membership not valid' })
+      screen.getByRole('heading', { level: 2, name: 'Unverified Doe' })
     ).toBeDefined();
-    fireEvent.click(screen.getByRole('link', { name: 'Back to Digital ID' }));
+    goTo('/not-valid');
     await waitFor(() => expect(window.location.pathname).toBe('/id'));
   });
 
@@ -776,7 +819,7 @@ describe('portal navigation', () => {
     }
   });
 
-  it('opens Points from the mobile More menu and closes the menu with Escape', async () => {
+  it('opens Points from the More menu and closes the menu with Escape', async () => {
     await signInAs(/Verified member/, '/home');
     const more = within(bottomNav()).getByRole('button', { name: 'More' });
     fireEvent.click(more);
@@ -796,7 +839,7 @@ describe('portal navigation', () => {
     );
     await waitFor(() => expect(window.location.pathname).toBe('/points'));
     expect(
-      await screen.findByRole('heading', { name: 'Points and ledger' })
+      await screen.findByRole('heading', { level: 1, name: 'Points' })
     ).toBeDefined();
     expect(
       within(bottomNav()).getByRole('button', { name: 'More' }).className
