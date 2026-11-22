@@ -1,103 +1,149 @@
-import type { NextFunction, Request, Response } from 'express';
-import type { DecodedIdToken } from 'firebase-admin/auth';
-import { env } from '../config/env.js';
+import { Request, Response } from 'express';
+import { z } from 'zod';
 import { firebaseAdmin } from '../lib/firebase.js';
-import { testUserMiddleware } from './testUser.js';
-import { isOfficerSrCode } from '../services/officerSource.js';
+import { userFromDecodedToken } from '../lib/authUser.js';
+import { getConfiguredMemberService } from '../config/members.js';
+import {
+  generateMemberQrToken,
+  InvalidQrTokenError,
+  verifyQrToken,
+} from '../services/qrService.js';
 
-const BSU_EMAIL = /^([^@]+)@g\.batstate-u\.edu\.ph$/i;
-const BEARER = /^Bearer\s+(\S+)\s*$/i;
-const ROLES = ['member', 'officer'] as const;
-type Role = (typeof ROLES)[number];
+const loginSchema = z.object({
+  idToken: z.string().trim().min(1, 'Firebase ID token is required'),
+});
 
-function unauthorized(res: Response): void {
-  res.status(401).json({ error: 'Authentication required' });
+export async function loginStub(req: Request, res: Response): Promise<void> {
+  const parsed = loginSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({
+      error: 'Invalid login request',
+      details: parsed.error.flatten(),
+    });
+    return;
+  }
+
+  try {
+    const decoded = await firebaseAdmin.auth().verifyIdToken(parsed.data.idToken);
+    const user = userFromDecodedToken(decoded);
+
+    res.status(200).json({
+      user: {
+        uid: user.uid,
+        srCode: user.srCode,
+        role: user.role,
+      },
+    });
+  } catch {
+    res.status(401).json({ error: 'Invalid Firebase ID token' });
+  }
 }
 
-function normalizeSrCode(value: string): string {
-  return value.trim().toUpperCase();
+interface ResolvedMemberAccount {
+  srCode: string;
+  fullName: string | null;
+  isPaid: boolean;
 }
 
-function srCodeFromEmail(token: DecodedIdToken): string | null {
-  if (!token.email_verified || !token.email) return null;
-  const match = BSU_EMAIL.exec(token.email);
-  return match ? normalizeSrCode(match[1]) : null;
-}
-
-function parseRole(value: unknown): Role {
-  return ROLES.includes(value as Role) ? (value as Role) : 'member';
-}
-
-function userFromToken(token: DecodedIdToken) {
-  const claims = token as DecodedIdToken & {
-    srCode?: unknown;
-    sr_code?: unknown;
-    role?: unknown;
-  };
-
-  // A custom claim wins. Otherwise derive the SR code from a verified
-  // school email, and fall back to UID for unlinked accounts.
-  const claimSrCode =
-    typeof claims.srCode === 'string'
-      ? claims.srCode
-      : typeof claims.sr_code === 'string'
-        ? claims.sr_code
-        : null;
-
-  const srCode = claimSrCode
-    ? normalizeSrCode(claimSrCode)
-    : (srCodeFromEmail(token) ?? token.uid);
+async function resolveMemberAccount(
+  user: NonNullable<Request['user']>
+): Promise<ResolvedMemberAccount | null> {
+  const members = getConfiguredMemberService();
+  const member = await members.findMember(user.srCode);
+  const hasResolvedSrCode = user.srCode !== user.uid;
+  if (!member && !hasResolvedSrCode) {
+    return null;
+  }
 
   return {
-    uid: token.uid,
-    srCode,
-    role: parseRole(claims.role),
+    srCode: member?.srCode ?? user.srCode,
+    fullName: member?.fullName ?? user.displayName ?? null,
+    isPaid: member ? await members.isPaid(member.srCode) : false,
   };
 }
 
-export async function authMiddleware(
-  req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<void> {
-  // Test-user mechanism is only available in test mode and only when no
-  // Authorization header is sent. Assumes testUserMiddleware is synchronous.
-  if (env.NODE_ENV === 'test' && req.header('authorization') === undefined) {
-    testUserMiddleware(req, res, () => undefined);
-    if (res.headersSent) return;
-    if (req.user) {
-      next();
+export async function getAuthMeStub(req: Request, res: Response): Promise<void> {
+  if (!req.user) {
+    res.status(401).json({ error: 'Authentication required' });
+    return;
+  }
+
+  try {
+    const account = await resolveMemberAccount(req.user);
+    if (!account) {
+      if (req.user.role === 'officer') {
+        res.status(200).json({
+          member: {
+            uid: req.user.uid,
+            srCode: req.user.srCode,
+            fullName: null,
+            isPaid: false,
+            role: 'officer',
+          },
+        });
+        return;
+      }
+      res.status(404).json({ error: 'Member not found' });
       return;
     }
-  }
 
-  const match = BEARER.exec(req.header('authorization') ?? '');
-  if (!match) {
-    unauthorized(res);
-    return;
-  }
-
-  // Only token verification failures are authentication failures.
-  let decoded: DecodedIdToken;
-  try {
-    decoded = await firebaseAdmin.auth().verifyIdToken(match[1]);
+    res.status(200).json({
+      member: {
+        uid: req.user.uid,
+        srCode: account.srCode,
+        fullName: account.fullName,
+        isPaid: account.isPaid,
+        role: req.user.role,
+      },
+    });
   } catch {
-    unauthorized(res);
+    res.status(503).json({ error: 'Member source unavailable' });
+  }
+}
+
+export async function getMemberIdCardStub(req: Request, res: Response): Promise<void> {
+  if (!req.user) {
+    res.status(401).json({ error: 'Authentication required' });
     return;
   }
 
-  const user = userFromToken(decoded);
-
-  // Officer lookup failures must not log users out. Fail closed to the
-  // token's role and log the error.
-  if (user.role !== 'officer') {
-    try {
-      if (await isOfficerSrCode(user.srCode)) user.role = 'officer';
-    } catch (err) {
-      console.error('Officer lookup failed:', err);
+  try {
+    const account = await resolveMemberAccount(req.user);
+    if (!account) {
+      res.status(404).json({ error: 'Member not found' });
+      return;
     }
-  }
 
-  req.user = user;
-  next();
+    const qrToken = account.isPaid
+      ? await generateMemberQrToken(account.srCode)
+      : '';
+
+    res.status(200).json({
+      card: {
+        studentId: account.srCode,
+        fullName: account.fullName,
+        isPaid: account.isPaid,
+        qrToken,
+      },
+    });
+  } catch (error) {
+    if (error instanceof TypeError) {
+      res.status(400).json({ error: 'Member ID cannot generate a QR token' });
+      return;
+    }
+    res.status(503).json({ error: 'Member source unavailable' });
+  }
+}
+
+export async function verifyTokenStub(req: Request, res: Response): Promise<void> {
+  const { token } = req.params;
+  try {
+    await verifyQrToken(token);
+    res.set('Cache-Control', 'no-store').json({ isValid: true });
+  } catch (error) {
+    if (!(error instanceof InvalidQrTokenError)) {
+      throw error;
+    }
+    res.set('Cache-Control', 'no-store').json({ isValid: false });
+  }
 }

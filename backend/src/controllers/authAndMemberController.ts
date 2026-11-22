@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
 import { firebaseAdmin } from '../lib/firebase.js';
+import { userFromDecodedToken } from '../lib/authUser.js';
 import { getConfiguredMemberService } from '../config/members.js';
 import {
   generateMemberQrToken,
@@ -24,27 +25,41 @@ export async function loginStub(req: Request, res: Response): Promise<void> {
 
   try {
     const decoded = await firebaseAdmin.auth().verifyIdToken(parsed.data.idToken);
-    const claims = decoded as typeof decoded & {
-      srCode?: unknown;
-      sr_code?: unknown;
-      role?: unknown;
-    };
+    const user = userFromDecodedToken(decoded);
 
     res.status(200).json({
       user: {
-        uid: decoded.uid,
-        srCode:
-          typeof claims.srCode === 'string'
-            ? claims.srCode
-            : typeof claims.sr_code === 'string'
-              ? claims.sr_code
-              : decoded.uid,
-        role: typeof claims.role === 'string' ? claims.role : 'member',
+        uid: user.uid,
+        srCode: user.srCode,
+        role: user.role,
       },
     });
   } catch {
     res.status(401).json({ error: 'Invalid Firebase ID token' });
   }
+}
+
+interface ResolvedMemberAccount {
+  srCode: string;
+  fullName: string | null;
+  isPaid: boolean;
+}
+
+async function resolveMemberAccount(
+  user: NonNullable<Request['user']>
+): Promise<ResolvedMemberAccount | null> {
+  const members = getConfiguredMemberService();
+  const member = await members.findMember(user.srCode);
+  const hasResolvedSrCode = user.srCode !== user.uid;
+  if (!member && !hasResolvedSrCode) {
+    return null;
+  }
+
+  return {
+    srCode: member?.srCode ?? user.srCode,
+    fullName: member?.fullName ?? user.displayName ?? null,
+    isPaid: member ? await members.isPaid(member.srCode) : false,
+  };
 }
 
 export async function getAuthMeStub(req: Request, res: Response): Promise<void> {
@@ -54,6 +69,7 @@ export async function getAuthMeStub(req: Request, res: Response): Promise<void> 
   }
 
   try {
+<<<<<<< HEAD
     const members = getConfiguredMemberService();
     const member = await members.findMember(req.user.srCode);
     if (!member) {
@@ -69,6 +85,10 @@ export async function getAuthMeStub(req: Request, res: Response): Promise<void> 
         });
         return;
       }
+=======
+    const account = await resolveMemberAccount(req.user);
+    if (!account) {
+>>>>>>> origin/fix/proper-authentication
       res.status(404).json({ error: 'Member not found' });
       return;
     }
@@ -76,9 +96,9 @@ export async function getAuthMeStub(req: Request, res: Response): Promise<void> 
     res.status(200).json({
       member: {
         uid: req.user.uid,
-        srCode: member.srCode,
-        fullName: member.fullName,
-        isPaid: await members.isPaid(member.srCode),
+        srCode: account.srCode,
+        fullName: account.fullName,
+        isPaid: account.isPaid,
         role: req.user.role,
       },
     });
@@ -94,23 +114,21 @@ export async function getMemberIdCardStub(req: Request, res: Response): Promise<
   }
 
   try {
-    const members = getConfiguredMemberService();
-    const member = await members.findMember(req.user.srCode);
-    if (!member) {
+    const account = await resolveMemberAccount(req.user);
+    if (!account) {
       res.status(404).json({ error: 'Member not found' });
       return;
     }
 
-    const [isPaid, qrToken] = await Promise.all([
-      members.isPaid(member.srCode),
-      generateMemberQrToken(member.srCode),
-    ]);
+    const qrToken = account.isPaid
+      ? await generateMemberQrToken(account.srCode)
+      : '';
 
     res.status(200).json({
       card: {
-        studentId: member.srCode,
-        fullName: member.fullName,
-        isPaid,
+        studentId: account.srCode,
+        fullName: account.fullName,
+        isPaid: account.isPaid,
         qrToken,
       },
     });
