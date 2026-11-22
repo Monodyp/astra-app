@@ -1,4 +1,8 @@
 // jsdom lacks these browser APIs; Embla carousel and layout hooks need them.
+import { setPortalDataSource } from './data/index.js';
+import { createDemoDataSource } from './data/demo/demoSource.js';
+
+setPortalDataSource(createDemoDataSource({ latencyMs: 0 }));
 
 function matchesWidth(query: string): boolean {
   const min = /\(min-width:\s*(\d+)px\)/.exec(query);

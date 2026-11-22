@@ -48,7 +48,7 @@ const GoogleMark: React.FC = () => (
 );
 
 export const Login: React.FC = () => {
-  const { user, loading, signIn } = useAuth();
+  const { user, loading, restoreError, signIn } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const next = searchParams.get('next');
@@ -127,6 +127,7 @@ export const Login: React.FC = () => {
   }
 
   const busy = pending !== null;
+  const alertMessage = error ?? restoreError;
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-astra-black font-astra text-astra-white">
@@ -142,13 +143,10 @@ export const Login: React.FC = () => {
             Home
           </span>
         </Link>
-        <nav aria-label="Account" className="flex items-center gap-3 sm:gap-8">
-          <span aria-current="page" className="hidden text-base font-medium sm:inline">
-            Login
-          </span>
+        <nav aria-label="Account" className="flex items-center gap-8">
           <a
             href="/astrascend"
-            className="inline-flex items-center gap-2 rounded-full bg-astra-primary-light px-8 py-3 text-sm font-bold text-astra-white transition-transform hover:scale-105"
+            className="inline-flex items-center gap-2 rounded-full bg-astra-primary-light px-5 py-3 text-sm font-bold text-astra-white transition-transform hover:scale-105 sm:px-8"
           >
             ASTRAscend
             <ExternalLink className="h-4 w-4" aria-hidden="true" />
@@ -173,13 +171,13 @@ export const Login: React.FC = () => {
             Sign in using your student credentials or registered account
           </p>
 
-          {error && (
+          {alertMessage && (
             <p
               id={errorId}
               role="alert"
               className="mt-6 border border-red-400/40 bg-red-950/30 px-4 py-3 text-sm text-red-200"
             >
-              {error}
+              {alertMessage}
             </p>
           )}
 
