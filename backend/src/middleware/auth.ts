@@ -3,9 +3,29 @@ import type { DecodedIdToken } from 'firebase-admin/auth';
 import { env } from '../config/env.js';
 import { firebaseAdmin } from '../lib/firebase.js';
 import { testUserMiddleware } from './testUser.js';
+import { isOfficerSrCode } from '../services/officerSource.js';
+
+const BSU_EMAIL = /^([^@]+)@g\.batstate-u\.edu\.ph$/i;
+const BEARER = /^Bearer\s+(\S+)\s*$/i;
+const ROLES = ['member', 'officer'] as const;
+type Role = (typeof ROLES)[number];
 
 function unauthorized(res: Response): void {
   res.status(401).json({ error: 'Authentication required' });
+}
+
+function normalizeSrCode(value: string): string {
+  return value.trim().toUpperCase();
+}
+
+function srCodeFromEmail(token: DecodedIdToken): string | null {
+  if (!token.email_verified || !token.email) return null;
+  const match = BSU_EMAIL.exec(token.email);
+  return match ? normalizeSrCode(match[1]) : null;
+}
+
+function parseRole(value: unknown): Role {
+  return ROLES.includes(value as Role) ? (value as Role) : 'member';
 }
 
 function userFromToken(token: DecodedIdToken) {
@@ -15,17 +35,23 @@ function userFromToken(token: DecodedIdToken) {
     role?: unknown;
   };
 
+  // A custom claim wins. Otherwise derive the SR code from a verified
+  // school email, and fall back to UID for unlinked accounts.
+  const claimSrCode =
+    typeof claims.srCode === 'string'
+      ? claims.srCode
+      : typeof claims.sr_code === 'string'
+        ? claims.sr_code
+        : null;
+
+  const srCode = claimSrCode
+    ? normalizeSrCode(claimSrCode)
+    : (srCodeFromEmail(token) ?? token.uid);
+
   return {
     uid: token.uid,
-    // Firebase custom claims carry the member identifier. UID is a safe
-    // fallback for accounts that have not yet been linked to a member row.
-    srCode:
-      typeof claims.srCode === 'string'
-        ? claims.srCode
-        : typeof claims.sr_code === 'string'
-          ? claims.sr_code
-          : token.uid,
-    role: typeof claims.role === 'string' ? claims.role : 'member',
+    srCode,
+    role: parseRole(claims.role),
   };
 }
 
@@ -34,33 +60,44 @@ export async function authMiddleware(
   res: Response,
   next: NextFunction
 ): Promise<void> {
-  // Keep the repository's explicit test-user mechanism available only in test
-  // mode; it can never be used by a production request.
+  // Test-user mechanism is only available in test mode and only when no
+  // Authorization header is sent. Assumes testUserMiddleware is synchronous.
   if (env.NODE_ENV === 'test' && req.header('authorization') === undefined) {
     testUserMiddleware(req, res, () => undefined);
+    if (res.headersSent) return;
     if (req.user) {
       next();
       return;
     }
   }
 
-  const authorization = req.header('authorization');
-  if (!authorization?.startsWith('Bearer ')) {
+  const match = BEARER.exec(req.header('authorization') ?? '');
+  if (!match) {
     unauthorized(res);
     return;
   }
 
-  const token = authorization.slice('Bearer '.length).trim();
-  if (!token) {
-    unauthorized(res);
-    return;
-  }
-
+  // Only token verification failures are authentication failures.
+  let decoded: DecodedIdToken;
   try {
-    const decoded = await firebaseAdmin.auth().verifyIdToken(token);
-    req.user = userFromToken(decoded);
-    next();
+    decoded = await firebaseAdmin.auth().verifyIdToken(match[1]);
   } catch {
     unauthorized(res);
+    return;
   }
+
+  const user = userFromToken(decoded);
+
+  // Officer lookup failures must not log users out. Fail closed to the
+  // token's role and log the error.
+  if (user.role !== 'officer') {
+    try {
+      if (await isOfficerSrCode(user.srCode)) user.role = 'officer';
+    } catch (err) {
+      console.error('Officer lookup failed:', err);
+    }
+  }
+
+  req.user = user;
+  next();
 }

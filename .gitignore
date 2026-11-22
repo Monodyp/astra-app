@@ -41,3 +41,5 @@ yarn-error.log*
 
 # Local contribution files
 /.local/
+.vercel
+.env*
