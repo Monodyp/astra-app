@@ -69,10 +69,8 @@ export async function getAuthMeStub(req: Request, res: Response): Promise<void> 
   }
 
   try {
-<<<<<<< HEAD
-    const members = getConfiguredMemberService();
-    const member = await members.findMember(req.user.srCode);
-    if (!member) {
+    const account = await resolveMemberAccount(req.user);
+    if (!account) {
       if (req.user.role === 'officer') {
         res.status(200).json({
           member: {
@@ -85,10 +83,6 @@ export async function getAuthMeStub(req: Request, res: Response): Promise<void> 
         });
         return;
       }
-=======
-    const account = await resolveMemberAccount(req.user);
-    if (!account) {
->>>>>>> origin/fix/proper-authentication
       res.status(404).json({ error: 'Member not found' });
       return;
     }
