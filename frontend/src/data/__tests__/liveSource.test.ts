@@ -249,4 +249,69 @@ describe('liveDataSource', () => {
       live.claimPerk('perk-2', { idempotencyKey: 'key-1' })
     ).rejects.toMatchObject({ code: 'key_reused' });
   });
+
+  it('maps real program, yearLevel, and membershipId in getOverview and getDigitalId', async () => {
+    const auth = createFakeAuth(createFakeUser());
+    const request: LiveRequestFn = vi.fn(async (endpoint) => {
+      if (endpoint === '/auth/me') {
+        return {
+          status: 200,
+          data: {
+            member: {
+              uid: 'firebase-uid-1',
+              srCode: '24-12345',
+              fullName: 'Juan Dela Cruz',
+              membershipId: 'ASTR1D-0042',
+              controlNumber: 'ASTR1D-0042',
+              program: 'BSCS',
+              yearLevel: '3rd Year',
+              email: '24-12345@g.batstate-u.edu.ph',
+              isPaid: true,
+              role: 'member',
+            },
+          },
+        };
+      }
+      if (endpoint === '/points/me') return { status: 200, data: { points: 50 } };
+      if (endpoint === '/points/me/history') return { status: 200, data: { history: [] } };
+      if (endpoint === '/vouchers/me') return { status: 200, data: { vouchers: [] } };
+      if (endpoint === '/members/me/id') {
+        return {
+          status: 200,
+          data: {
+            card: {
+              studentId: '24-12345',
+              fullName: 'Juan Dela Cruz',
+              membershipId: 'ASTR1D-0042',
+              program: 'BSCS',
+              yearLevel: '3rd Year',
+              isPaid: true,
+              qrToken: 'signed-qr',
+            },
+          },
+        };
+      }
+      throw new Error(`Unexpected endpoint: ${endpoint}`);
+    }) as LiveRequestFn;
+
+    const live = createLiveDataSource({ auth: auth.client, request });
+    const overview = await live.getOverview();
+    expect(overview.member).toEqual({
+      fullName: 'Juan Dela Cruz',
+      membershipId: 'ASTR1D-0042',
+      studentId: '24-12345',
+      program: 'BSCS',
+      membershipStatus: 'verified',
+    });
+
+    const digitalId = await live.getDigitalId();
+    expect(digitalId).toMatchObject({
+      fullName: 'Juan Dela Cruz',
+      studentId: '24-12345',
+      membershipId: 'ASTR1D-0042',
+      program: 'BSCS',
+      yearLevel: '3rd Year',
+      qrValue: 'signed-qr',
+    });
+  });
 });

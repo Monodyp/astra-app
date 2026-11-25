@@ -24,6 +24,7 @@ export async function getPerks(
     const perks = await perkRepository.listActive();
     res.status(200).json({ perks });
   } catch (error) {
+    console.error('[getPerks] Failed to load perks:', error);
     res.status(500).json({ error: 'Failed to load perks' });
   }
 }
@@ -79,7 +80,8 @@ export async function getVouchersMe(
   try {
     const vouchers = await voucherRepository.listByMember(normalizeSrCode(req.user.srCode));
     res.status(200).json({ vouchers });
-  } catch {
+  } catch (error) {
+    console.error('[getVouchersMe] Failed to load vouchers:', error);
     res.status(500).json({ error: 'Failed to load vouchers' });
   }
 }

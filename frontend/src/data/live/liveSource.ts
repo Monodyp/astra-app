@@ -72,6 +72,11 @@ interface BackendMemberResponse {
     uid: string;
     srCode: string;
     fullName: string | null;
+    membershipId?: string | null;
+    controlNumber?: string | null;
+    program?: string | null;
+    yearLevel?: string | null;
+    email?: string | null;
     isPaid: boolean;
     role: string;
   };
@@ -81,6 +86,9 @@ interface BackendCardResponse {
   card: {
     studentId: string;
     fullName: string | null;
+    membershipId?: string | null;
+    program?: string | null;
+    yearLevel?: string | null;
     isPaid: boolean;
     qrToken: string;
   };
@@ -270,11 +278,11 @@ function toSessionUser(
   const fullName = member.fullName?.trim() || authUser.displayName?.trim() || member.srCode;
   const displayName = fullName.split(/\s+/)[0] || member.srCode;
   return {
-    memberId: member.srCode,
+    memberId: member.membershipId?.trim() || member.controlNumber?.trim() || member.srCode,
     studentId: member.srCode,
     fullName,
     displayName,
-    email: authUser.email ?? '',
+    email: member.email?.trim() || authUser.email || '',
     role: normalizeRole(member.role),
     membershipStatus: member.isPaid ? 'verified' : 'unverified',
   };
@@ -531,8 +539,9 @@ export function createLiveDataSource(
         withAuth<{ vouchers: BackendVoucher[] }>('/vouchers/me', { method: 'GET' }),
       ]);
 
+      const backendMember = memberRes.data.member;
       const authUser = auth.currentUser!;
-      const sessionUser = toSessionUser(memberRes.data.member, authUser);
+      const sessionUser = toSessionUser(backendMember, authUser);
       const history = historyRes.data.history ?? [];
       const attendanceEntries = history.filter((entry) => entry.type === 'attendance');
       const vouchers = (vouchersRes.data.vouchers ?? []).map(mapVoucher);
@@ -543,7 +552,7 @@ export function createLiveDataSource(
           fullName: sessionUser.fullName,
           membershipId: sessionUser.memberId,
           studentId: sessionUser.studentId,
-          program: 'ASTRA Member',
+          program: backendMember.program?.trim() || 'Not specified',
           membershipStatus: sessionUser.membershipStatus,
         },
         points: pointsRes.data.points ?? 0,
@@ -566,9 +575,9 @@ export function createLiveDataSource(
         return {
           fullName: card.fullName ?? card.studentId,
           studentId: card.studentId,
-          membershipId: card.studentId,
-          program: 'ASTRA Member',
-          yearLevel: 'Member',
+          membershipId: card.membershipId?.trim() || card.studentId,
+          program: card.program?.trim() || 'Not specified',
+          yearLevel: card.yearLevel?.trim() || 'Member',
           roleLabel: verified ? 'Verified' : 'Unverified',
           membershipStatus: verified ? 'verified' : 'unverified',
           qrValue: verified ? card.qrToken : '',
@@ -580,9 +589,12 @@ export function createLiveDataSource(
           return {
             fullName: member.fullName ?? member.srCode,
             studentId: member.srCode,
-            membershipId: member.srCode,
-            program: 'ASTRA Member',
-            yearLevel: 'Member',
+            membershipId:
+              member.membershipId?.trim() ||
+              member.controlNumber?.trim() ||
+              member.srCode,
+            program: member.program?.trim() || 'Not specified',
+            yearLevel: member.yearLevel?.trim() || 'Member',
             roleLabel: member.isPaid ? 'Verified' : 'Unverified',
             membershipStatus: member.isPaid ? 'verified' : 'unverified',
             qrValue: '',
