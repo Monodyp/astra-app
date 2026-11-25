@@ -78,6 +78,18 @@ export async function getAuthMeStub(req: Request, res: Response): Promise<void> 
   try {
     const account = await resolveMemberAccount(req.user);
     if (!account) {
+      if (req.user.role === 'officer') {
+        res.status(200).json({
+          member: {
+            uid: req.user.uid,
+            srCode: req.user.srCode,
+            fullName: null,
+            isPaid: false,
+            role: 'officer',
+          },
+        });
+        return;
+      }
       res.status(404).json({ error: 'Member not found' });
       return;
     }
