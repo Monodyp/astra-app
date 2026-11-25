@@ -65,7 +65,7 @@ export async function authMiddleware(
 
   // Officer lookup failures must not log users out. Keep the token's role
   // and log the error.
-  if (user.role !== 'officer') {
+  if (user.role !== 'officer' && user.srCode) {
     try {
       if (await isOfficerSrCode(user.srCode)) user.role = 'officer';
     } catch (err) {
