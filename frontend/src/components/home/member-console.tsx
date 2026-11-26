@@ -9,7 +9,7 @@ export default function MemberConsole() {
   ];
 
   return (
-    <section id="console" className="scroll-mt-[150px] lg:scroll-mt-[120px] space-y-8">
+    <section id="console" className="scroll-mt-24 lg:scroll-mt-[120px] space-y-8">
       <SectionHeading title="Your Member Console" subtitle="Your progress. Your next opportunity." />
       <div className="mx-0 sm:mx-6 lg:mx-12 grid gap-6 sm:gap-8 xl:grid-cols-[1.15fr_1fr]">
         <div className="relative border border-astra-primary-dark bg-black/30 p-4 shadow-[0_0_16px_rgba(0,140,204,0.07)] sm:p-8">

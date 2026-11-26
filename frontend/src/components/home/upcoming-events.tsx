@@ -58,7 +58,7 @@ export default function UpcomingEvents({ events }: { events?: UpcomingEvent[] })
   const hasEvents = !!visibleEvents?.length;
 
   return (
-    <section id="events" className="scroll-mt-[150px] lg:scroll-mt-[120px] space-y-8">
+    <section id="events" className="scroll-mt-24 lg:scroll-mt-[120px] space-y-8">
       <SectionHeading title="Upcoming Events" subtitle="Connect. Create. Collaborate" />
       {!hasEvents ? (
         <NoEvents />

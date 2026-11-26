@@ -68,7 +68,7 @@ export default function HowItWorks() {
   }, [carouselApi]);
 
   return (
-    <section id="how-it-works" className="scroll-mt-[150px] space-y-8 lg:scroll-mt-[120px]">
+    <section id="how-it-works" className="scroll-mt-24 space-y-8 lg:scroll-mt-[120px]">
     <div className="mx-0 flex flex-col gap-2 sm:mx-6 sm:flex-row lg:mx-12 sm:items-end sm:justify-between">
       <h2 className="font-astra text-3xl font-bold tracking-tight text-astra-white sm:text-4xl">How the App Works</h2>
       <p className="font-astra text-sm text-astra-gray">A quick briefing before you begin.</p>

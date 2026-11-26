@@ -27,8 +27,6 @@ import { Opportunities } from './pages/Opportunities.js';
 // Vite strips the branch in production builds via import.meta.env.DEV dead-code elimination.
 import { DevTools } from './pages/DevTools.js';
 
-const RedirectToDigitalId: React.FC = () => <Navigate to="/id" replace />;
-
 export const App: React.FC = () => {
   return (
     <AuthProvider>
@@ -78,7 +76,7 @@ export const App: React.FC = () => {
               path="/not-valid"
               element={
                 <ProtectedRoute>
-                  <RedirectToDigitalId />
+                  <Navigate to="/id" replace />
                 </ProtectedRoute>
               }
             />

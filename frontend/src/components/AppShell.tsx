@@ -48,12 +48,13 @@ export const AppShell: React.FC = () => {
 
       <header className="relative z-10 border-b border-astra-primary-dark/60 bg-astra-black/40">
         <div
-          className={`${frame} flex items-center justify-between py-4 sm:py-6`}
+          className={`${frame} flex flex-wrap items-center justify-between gap-y-2 py-4 md:flex-nowrap md:gap-y-0 sm:py-6`}
         >
-          <div className="flex items-center gap-4 sm:gap-7">
+          <div className="contents md:flex md:items-center md:gap-7">
             <Link
               to={user ? '/home' : '/'}
               aria-label="ASTRA Developers portal"
+              className="order-1 md:order-none"
             >
               <img
                 src={wordmark}
@@ -62,8 +63,8 @@ export const AppShell: React.FC = () => {
               />
             </Link>
             {user && (
-              <div className="flex items-center gap-3 sm:gap-4">
-                <div>
+              <div className="order-3 flex w-full items-center justify-between gap-3 border-t border-astra-primary-dark/40 pt-3 md:order-none md:w-auto md:justify-start md:gap-4 md:border-0 md:pt-0">
+                <div className="min-w-0">
                   <p className="text-sm sm:text-base text-astra-white">
                     Welcome back, {user.displayName}
                   </p>
@@ -84,10 +85,10 @@ export const AppShell: React.FC = () => {
             )}
           </div>
 
-          <div className="flex items-center gap-3 sm:gap-6">
+          <div className="contents md:flex md:items-center md:gap-6">
             <Link
               to="/astrascend"
-              className="hidden items-center gap-1.5 text-xs text-astra-gray transition-colors hover:text-astra-white md:inline-flex lg:hidden"
+              className="hidden shrink-0 items-center gap-1.5 whitespace-nowrap text-xs text-astra-gray transition-colors hover:text-astra-white md:ml-4 md:inline-flex lg:hidden"
             >
               <span>ASTRAscend services</span>
               <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
@@ -98,7 +99,7 @@ export const AppShell: React.FC = () => {
                 type="button"
                 onClick={() => void handleSignOut()}
                 disabled={signingOut}
-                className="text-sm sm:text-base text-astra-gray transition-colors hover:text-astra-white disabled:opacity-60"
+                className="order-2 inline-flex min-h-11 items-center text-sm sm:text-base md:order-none lg:min-h-0 text-astra-gray transition-colors hover:text-astra-white disabled:opacity-60"
               >
                 {signingOut ? 'Signing out…' : 'Logout'}
               </button>

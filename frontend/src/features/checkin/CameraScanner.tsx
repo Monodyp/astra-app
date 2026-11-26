@@ -123,7 +123,7 @@ export const CameraScanner: React.FC<{
   return (
     <section
       aria-labelledby="scanner-title"
-      className={`group relative min-h-[280px] overflow-hidden border bg-black/60 bg-[linear-gradient(rgba(0,177,237,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(0,177,237,0.06)_1px,transparent_1px)] bg-[size:32px_32px] px-4 py-4 transition-colors sm:min-h-[322px] sm:px-6 sm:py-6 ${
+      className={`group relative min-h-[322px] overflow-hidden border bg-black/60 bg-[linear-gradient(rgba(0,177,237,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(0,177,237,0.06)_1px,transparent_1px)] bg-[size:32px_32px] px-4 py-6 sm:px-6 transition-colors ${
         canOpen
           ? 'border-astra-white/10 hover:border-astra-primary-light/50 has-[:focus-visible]:border-astra-primary-light'
           : 'border-astra-white/10'
@@ -194,7 +194,7 @@ export const CameraScanner: React.FC<{
           <button
             type="button"
             onClick={cancel}
-            className="relative z-20 rounded-full border border-astra-white/30 px-5 py-2 text-xs font-bold normal-case text-astra-white transition-colors hover:border-astra-primary-light focus-visible:outline focus-visible:outline-2 focus-visible:outline-astra-primary-light"
+            className="relative z-20 inline-flex min-h-11 items-center rounded-full border border-astra-white/30 px-5 py-2 text-xs font-bold normal-case text-astra-white transition-colors hover:border-astra-primary-light focus-visible:outline focus-visible:outline-2 focus-visible:outline-astra-primary-light"
           >
             Cancel
           </button>

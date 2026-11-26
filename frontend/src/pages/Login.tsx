@@ -24,7 +24,7 @@ const HELP_TEXT: Record<HelpTopic, string> = {
 };
 
 const fieldClass =
-  'h-12 w-full border border-astra-primary-dark bg-black/40 px-4 font-astra text-sm text-astra-white placeholder:text-astra-gray/70 focus:border-astra-primary-light focus:outline-none focus-visible:ring-1 focus-visible:ring-astra-primary-light';
+  'h-12 w-full border border-astra-primary-dark bg-black/40 px-4 font-astra text-base text-astra-white md:text-sm placeholder:text-astra-gray/70 focus:border-astra-primary-light focus:outline-none focus-visible:ring-1 focus-visible:ring-astra-primary-light';
 
 const GoogleMark: React.FC = () => (
   <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true">
@@ -142,7 +142,7 @@ export const Login: React.FC = () => {
   return (
     <div className="relative min-h-screen overflow-hidden bg-astra-black font-astra text-astra-white">
       <PortalBackdrop />
-      <header className="relative z-10 mx-auto flex max-w-[1440px] items-center justify-between px-4 py-5 sm:px-8 sm:py-8 lg:px-[112px]">
+      <header className="relative z-10 mx-auto flex max-w-[1440px] items-center justify-between px-4 py-6 sm:px-8 lg:px-[112px] lg:py-8">
         <Link
           to="/"
           className="flex items-center gap-2 sm:gap-4 text-sm sm:text-h6 font-bold text-astra-white transition-colors hover:text-astra-primary-light"
@@ -156,7 +156,7 @@ export const Login: React.FC = () => {
         <nav aria-label="Account" className="flex items-center gap-4 sm:gap-8">
           <a
             href="/astrascend"
-            className="inline-flex items-center gap-2 rounded-full bg-astra-primary-light px-5 py-3 text-sm font-bold text-astra-white transition-transform hover:scale-105 sm:px-8"
+            className="inline-flex items-center gap-2 rounded-full bg-astra-primary-light px-5 py-3 text-sm sm:px-8 font-bold text-astra-white transition-transform hover:scale-105"
           >
             ASTRAscend
             <ExternalLink className="h-3.5 w-3.5 sm:h-4 sm:w-4" aria-hidden="true" />
@@ -164,10 +164,10 @@ export const Login: React.FC = () => {
         </nav>
       </header>
 
-      <main className="relative z-10 mx-auto flex max-w-[1440px] justify-center px-4 sm:px-6 pb-20 pt-4">
+      <main className="relative z-10 mx-auto flex max-w-[1440px] justify-center px-4 pb-20 pt-4 sm:px-6">
         <section
           aria-labelledby="login-title"
-          className="relative w-full max-w-[476px] border border-astra-primary-dark bg-[#0b1118]/80 px-6 sm:px-8 py-8 shadow-[0_0_32px_rgba(0,140,204,0.12)] backdrop-blur-sm"
+          className="relative w-full max-w-[476px] border border-astra-primary-dark bg-[#0b1118]/80 px-5 py-8 shadow-[0_0_32px_rgba(0,140,204,0.12)] backdrop-blur-sm sm:px-8"
         >
           {technicalCorners}
           <div className="flex items-center gap-4">
@@ -320,7 +320,7 @@ export const Login: React.FC = () => {
                 type="button"
                 onClick={() => setHelp(help === 'password' ? null : 'password')}
                 aria-expanded={help === 'password'}
-                className="underline underline-offset-2 hover:text-astra-primary-light"
+                className="inline-flex min-h-11 items-center underline underline-offset-2 hover:text-astra-primary-light lg:min-h-0"
               >
                 Forgot password?
               </button>
@@ -328,7 +328,7 @@ export const Login: React.FC = () => {
                 type="button"
                 onClick={() => setHelp(help === 'renewal' ? null : 'renewal')}
                 aria-expanded={help === 'renewal'}
-                className="underline underline-offset-2 hover:text-astra-primary-light"
+                className="inline-flex min-h-11 items-center underline underline-offset-2 hover:text-astra-primary-light lg:min-h-0"
               >
                 Need membership renewal?
               </button>

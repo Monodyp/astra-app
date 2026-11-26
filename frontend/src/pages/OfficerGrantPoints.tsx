@@ -16,7 +16,7 @@ const MAX_REFERENCE = 200;
 const SEARCH_DELAY_MS = 200;
 
 const fieldClass =
-  'w-full border border-astra-white/15 bg-black/50 px-4 text-sm text-astra-white placeholder:text-astra-gray/70 focus:border-astra-primary-light focus:outline-none disabled:opacity-60';
+  'w-full border border-astra-white/15 bg-black/50 px-4 text-base text-astra-white md:text-sm placeholder:text-astra-gray/70 focus:border-astra-primary-light focus:outline-none disabled:opacity-60';
 
 type Search =
   | { status: 'idle' }

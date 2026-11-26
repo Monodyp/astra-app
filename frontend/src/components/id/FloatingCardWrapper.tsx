@@ -66,42 +66,42 @@ export const FloatingCardWrapper: React.FC<FloatingCardWrapperProps> = ({
     <>
       <style>{`
   @keyframes astraDriftX {
-    0%   { translate: 0px 0; }
-    14%  { translate: -26px 0; }
-    31%  { translate: 14px 0; }
-    47%  { translate: -20px 0; }
-    63%  { translate: 28px 0; }
-    79%  { translate: -10px 0; }
-    91%  { translate: 18px 0; }
-    100% { translate: 0px 0; }
+    0%   { translate: calc(0px * var(--astra-drift, 1)) 0; }
+    14%  { translate: calc(-26px * var(--astra-drift, 1)) 0; }
+    31%  { translate: calc(14px * var(--astra-drift, 1)) 0; }
+    47%  { translate: calc(-20px * var(--astra-drift, 1)) 0; }
+    63%  { translate: calc(28px * var(--astra-drift, 1)) 0; }
+    79%  { translate: calc(-10px * var(--astra-drift, 1)) 0; }
+    91%  { translate: calc(18px * var(--astra-drift, 1)) 0; }
+    100% { translate: calc(0px * var(--astra-drift, 1)) 0; }
   }
   @keyframes astraDriftY {
-    0%   { transform: translateY(0px); }
-    17%  { transform: translateY(-22px); }
-    34%  { transform: translateY(10px); }
-    51%  { transform: translateY(-16px); }
-    66%  { transform: translateY(20px); }
-    81%  { transform: translateY(-8px); }
-    93%  { transform: translateY(14px); }
-    100% { transform: translateY(0px); }
+    0%   { transform: translateY(calc(0px * var(--astra-drift, 1))); }
+    17%  { transform: translateY(calc(-22px * var(--astra-drift, 1))); }
+    34%  { transform: translateY(calc(10px * var(--astra-drift, 1))); }
+    51%  { transform: translateY(calc(-16px * var(--astra-drift, 1))); }
+    66%  { transform: translateY(calc(20px * var(--astra-drift, 1))); }
+    81%  { transform: translateY(calc(-8px * var(--astra-drift, 1))); }
+    93%  { transform: translateY(calc(14px * var(--astra-drift, 1))); }
+    100% { transform: translateY(calc(0px * var(--astra-drift, 1))); }
   }
   @keyframes astraBreath {
     0%   { scale: 1; }
-    22%  { scale: 1.035; }
-    45%  { scale: 0.966; }
-    68%  { scale: 1.028; }
-    85%  { scale: 0.975; }
+    22%  { scale: calc(1 + 0.035 * var(--astra-drift, 1)); }
+    45%  { scale: calc(1 + -0.034 * var(--astra-drift, 1)); }
+    68%  { scale: calc(1 + 0.028 * var(--astra-drift, 1)); }
+    85%  { scale: calc(1 + -0.025 * var(--astra-drift, 1)); }
     100% { scale: 1; }
   }
   @keyframes astraSpin {
-    0%   { rotate: 0deg; }
-    13%  { rotate: -6deg; }
-    28%  { rotate: 4.5deg; }
-    44%  { rotate: -9deg; }
-    59%  { rotate: 7deg; }
-    73%  { rotate: -2.5deg; }
-    87%  { rotate: 5.5deg; }
-    100% { rotate: 0deg; }
+    0%   { rotate: calc(0deg * var(--astra-drift, 1)); }
+    13%  { rotate: calc(-6deg * var(--astra-drift, 1)); }
+    28%  { rotate: calc(4.5deg * var(--astra-drift, 1)); }
+    44%  { rotate: calc(-9deg * var(--astra-drift, 1)); }
+    59%  { rotate: calc(7deg * var(--astra-drift, 1)); }
+    73%  { rotate: calc(-2.5deg * var(--astra-drift, 1)); }
+    87%  { rotate: calc(5.5deg * var(--astra-drift, 1)); }
+    100% { rotate: calc(0deg * var(--astra-drift, 1)); }
   }
 
   /* One element, four independent animations (each on a different property) */

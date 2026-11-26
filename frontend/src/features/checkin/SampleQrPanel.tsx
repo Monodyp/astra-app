@@ -12,7 +12,7 @@ export const SampleQrPanel: React.FC<{
 }> = ({ sample, busy, scanning, onSimulate, onClose }) => (
   <section
     aria-label={`Sample QR for ${sample.label}`}
-    className="mt-6 flex flex-col items-start gap-4 border border-astra-primary-dark bg-black/70 px-4 py-4 sm:flex-row sm:items-center sm:gap-8 sm:px-6 sm:py-6"
+    className="mt-6 flex flex-col items-start gap-5 border border-astra-primary-dark bg-black/70 px-4 py-6 sm:flex-row sm:items-center sm:gap-8 sm:px-6"
   >
     <div className="shrink-0 bg-astra-white p-3">
       <QRCodeSVG

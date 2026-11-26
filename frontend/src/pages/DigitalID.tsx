@@ -46,7 +46,7 @@ export const DigitalID: React.FC = () => {
   const isVerified = memberData.membershipStatus === 'verified';
 
   return (
-    <div className="relative font-astra text-astra-white">
+    <div className="relative overflow-x-clip font-astra text-astra-white">
       <p className="sr-only">
         {isVerified
           ? 'VALID / ACTIVE DUES'
@@ -67,7 +67,7 @@ export const DigitalID: React.FC = () => {
           </p>
         </div>
 
-        <div className="grid gap-32 lg:grid-rows-[1.1fr_0.9fr] lg:items-center">
+        <div className="grid gap-10 md:gap-20 lg:gap-32 lg:grid-rows-[1.1fr_0.9fr] lg:items-center">
           <div className="flex flex-col items-center justify-center py-6 sm:py-8">
             <FloatingCardWrapper
               isPreview={false}
