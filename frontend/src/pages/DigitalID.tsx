@@ -67,11 +67,13 @@ export const DigitalID: React.FC = () => {
           </p>
         </div>
 
-        <div className="grid gap-10 md:gap-20 lg:gap-32 lg:grid-rows-[1.1fr_0.9fr] lg:items-center">
-          <div className="flex flex-col items-center justify-center py-6 sm:py-8">
+        <div className="flex flex-col gap-24 sm:gap-28 md:gap-32 items-center">
+          {/* <div className="flex flex-col items-center justify-center py-6 w-full sm:py-8"> */}
+          <div className="mx-auto mt-11 flex aspect-[600/265] w-3/4 md:w-full min-w-0 sm:aspect-[600/400] max-w-[480px] items-center justify-center">
             <FloatingCardWrapper
               isPreview={false}
-              className="w-full max-w-[340px] sm:max-w-lg aspect-[600/378]"
+              // className="w-full max-w-[340px] sm:max-w-lg aspect-[600/378]"
+              className="w-full max-w-md sm:max-w-lg aspect-[600/378] [--astra-drift:0.4] lg:[--astra-drift:1]"
               glowColor={
                 isVerified
                   ? 'rgba(0, 177, 237, 0.25)'
@@ -95,73 +97,73 @@ export const DigitalID: React.FC = () => {
             </FloatingCardWrapper>
           </div>
 
-          <div className="space-y-6">
-            <div className="relative border border-astra-primary-dark/80 bg-black/40 p-6 sm:p-7 shadow-[0_0_20px_rgba(0,140,204,0.08)]">
+          <div className="w-full space-y-6">
+            <div className="relative border border-astra-primary-dark/80 bg-black/40 p-4 sm:p-7 shadow-[0_0_20px_rgba(0,140,204,0.08)]">
               {technicalCorners}
 
-              <div className="flex items-center justify-between border-b border-white/10 pb-4">
-                <div>
+              {/* Header: stacked on mobile, side by side from sm up */}
+              <div className="flex flex-col gap-3 border-b border-white/10 pb-4 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+                <div className="min-w-0">
                   <p className="text-xs font-bold uppercase tracking-wider text-astra-gray">
                     Verification Clearance
                   </p>
-                  <h2 className="mt-1 text-lg font-bold text-astra-white">
+                  <h2 className="mt-1 break-words text-base font-bold text-astra-white sm:text-lg">
                     {memberData.fullName}
                   </h2>
                 </div>
-                <div className="text-right">
-                  <span
-                    className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold ${
-                      isVerified
-                        ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
-                        : 'bg-slate-700/60 text-slate-300 border border-slate-600'
+
+                <span
+                  className={`inline-flex shrink-0 items-center gap-1.5 self-start whitespace-nowrap rounded-full px-3 py-1 text-xs font-bold ${isVerified
+                      ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
+                      : 'bg-slate-700/60 text-slate-300 border border-slate-600'
                     }`}
-                  >
-                    {isVerified ? (
-                      <CheckCircle2
-                        className="h-3.5 w-3.5 text-cyan-400"
-                        aria-hidden="true"
-                      />
-                    ) : (
-                      <AlertCircle
-                        className="h-3.5 w-3.5 text-amber-400"
-                        aria-hidden="true"
-                      />
-                    )}
-                    {isVerified ? 'Verified Member' : 'Unverified'}
-                  </span>
-                </div>
+                >
+                  {isVerified ? (
+                    <CheckCircle2
+                      className="h-3.5 w-3.5 text-cyan-400"
+                      aria-hidden="true"
+                    />
+                  ) : (
+                    <AlertCircle
+                      className="h-3.5 w-3.5 text-amber-400"
+                      aria-hidden="true"
+                    />
+                  )}
+                  {isVerified ? 'Verified Member' : 'Unverified'}
+                </span>
               </div>
 
-              <div className="mt-4 grid grid-cols-2 gap-y-4 gap-x-6 text-sm">
-                <div>
+              {/* Details: 1 col on very small screens, 2 cols once there's room */}
+              <div className="mt-4 grid grid-cols-1 gap-x-6 gap-y-4 text-sm min-[420px]:grid-cols-2">
+                <div className="min-w-0">
                   <span className="block text-[11px] font-bold uppercase tracking-wide text-astra-gray">
                     Student SR-Code
                   </span>
-                  <span className="mt-0.5 block font-mono font-medium text-slate-200">
+                  <span className="mt-0.5 block break-all font-mono font-medium text-slate-200">
                     {memberData.studentId}
                   </span>
                 </div>
-                <div>
+                <div className="min-w-0">
                   <span className="block text-[11px] font-bold uppercase tracking-wide text-astra-gray">
                     Membership ID
                   </span>
-                  <span className="mt-0.5 block font-mono font-medium text-slate-200">
+                  <span className="mt-0.5 block break-all font-mono font-medium text-slate-200">
                     {memberData.membershipId}
                   </span>
                 </div>
-                <div>
+                <div className="min-w-0">
                   <span className="block text-[11px] font-bold uppercase tracking-wide text-astra-gray">
                     Academic Program
                   </span>
-                  <span className="mt-0.5 block text-slate-200">
+                  <span className="mt-0.5 block break-words text-slate-200">
                     {memberData.program}
                   </span>
                 </div>
-                <div>
+                <div className="min-w-0">
                   <span className="block text-[11px] font-bold uppercase tracking-wide text-astra-gray">
                     Year &amp; Role
                   </span>
-                  <span className="mt-0.5 block text-slate-200">
+                  <span className="mt-0.5 block break-words text-slate-200">
                     {memberData.yearLevel} · {memberData.roleLabel}
                   </span>
                 </div>
@@ -169,15 +171,11 @@ export const DigitalID: React.FC = () => {
 
               <div className="mt-5 border-t border-white/10 pt-3">
                 <p className="text-xs text-slate-400">
-                  <span className="font-semibold text-slate-300">
-                    Status Note:
-                  </span>{' '}
+                  <span className="font-semibold text-slate-300">Status Note:</span>{' '}
                   {memberData.statusNote}
                 </p>
                 <p className="mt-1 text-xs text-slate-400">
-                  <span className="font-semibold text-slate-300">
-                    Check-in QR:
-                  </span>{' '}
+                  <span className="font-semibold text-slate-300">Check-in QR:</span>{' '}
                   {isVerified
                     ? 'Ready to scan at ASTRA events'
                     : 'Inactive for check-in'}
