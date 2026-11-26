@@ -123,7 +123,7 @@ export const CameraScanner: React.FC<{
   return (
     <section
       aria-labelledby="scanner-title"
-      className={`group relative min-h-[322px] overflow-hidden border bg-black/60 bg-[linear-gradient(rgba(0,177,237,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(0,177,237,0.06)_1px,transparent_1px)] bg-[size:32px_32px] px-6 py-6 transition-colors ${
+      className={`group relative min-h-[280px] overflow-hidden border bg-black/60 bg-[linear-gradient(rgba(0,177,237,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(0,177,237,0.06)_1px,transparent_1px)] bg-[size:32px_32px] px-4 py-4 transition-colors sm:min-h-[322px] sm:px-6 sm:py-6 ${
         canOpen
           ? 'border-astra-white/10 hover:border-astra-primary-light/50 has-[:focus-visible]:border-astra-primary-light'
           : 'border-astra-white/10'
@@ -142,7 +142,7 @@ export const CameraScanner: React.FC<{
         <span className={status.tone}>{status.text}</span>
       </div>
 
-      <div className="relative mx-auto mt-[18px] h-[207px] w-[300px]">
+      <div className="relative mx-auto mt-[18px] h-[207px] w-full max-w-[300px]">
         {active ? (
           <video
             ref={videoRef}

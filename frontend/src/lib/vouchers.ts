@@ -10,10 +10,16 @@ export const VOUCHER_STATUS: Record<
 };
 
 export function voucherTitle(voucher: Voucher): string {
-  return voucher.reward ?? 'Perk details unavailable';
+  return voucher.reward ?? 'ASTRA partner perk';
 }
 
 const DEMO_VOUCHER_QR = /^demo-voucher\.v1\.[A-Za-z0-9]+$/;
+
+export const VOUCHER_STATE_LABELS: Record<Voucher['state'], string> = {
+  ready: 'Ready',
+  redeemed: 'Redeemed',
+  expired: 'Expired',
+};
 
 export function scannableVoucherQr(voucher: Voucher): string | null {
   if (voucher.state !== 'ready' || !voucher.qrValue) return null;

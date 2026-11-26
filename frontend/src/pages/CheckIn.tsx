@@ -25,7 +25,7 @@ type Outcome =
   | { kind: 'error'; message: string };
 
 const RosterRow: React.FC<{ record: AttendanceRecord }> = ({ record }) => (
-  <li className="grid grid-cols-[1.6fr_1fr_1fr_0.8fr_0.6fr] items-center gap-4 border border-astra-white/10 bg-black/50 px-4 py-4 text-sm">
+  <li className="grid grid-cols-2 items-center gap-x-4 gap-y-2 border border-astra-white/10 bg-black/50 px-4 py-4 text-sm lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,.8fr)_minmax(0,.6fr)]">
     <span className="flex items-center gap-3 font-bold text-astra-white">
       <CircleCheck className="h-5 w-5 text-[#4ade80]" aria-hidden="true" />
       {record.memberName}
@@ -98,6 +98,13 @@ export const CheckIn: React.FC = () => {
 
   function handleManual(formEvent: React.FormEvent<HTMLFormElement>) {
     formEvent.preventDefault();
+    if (!studentId.trim()) {
+      setOutcome({
+        kind: 'error',
+        message: 'Error: Enter the student ID.',
+      });
+      return;
+    }
     void submit('manual', {
       eventId: event.id,
       method: 'manual',
@@ -118,7 +125,7 @@ export const CheckIn: React.FC = () => {
         title="Event Check-In"
         description="Scan a member's digital ID to verify attendance."
         aside={
-          <div className="min-w-[340px] border border-astra-primary-dark bg-black/50 px-6 py-4">
+          <div className="w-full border border-astra-primary-dark bg-black/50 px-4 py-4 sm:px-6 lg:w-auto lg:min-w-[340px]">
             <p className="text-[10px] font-medium uppercase text-astra-primary-light">
               Current event / +{event.points} pts
             </p>
@@ -152,7 +159,7 @@ export const CheckIn: React.FC = () => {
           </div>
           <ul
             aria-label="Sample IDs to scan"
-            className="mt-3 grid grid-cols-4 gap-3"
+            className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4"
           >
             {samples.map((sample) => (
               <li key={sample.id}>
@@ -207,9 +214,9 @@ export const CheckIn: React.FC = () => {
 
       <form onSubmit={handleManual} noValidate>
         <label htmlFor={manualId} className="block text-base font-bold">
-          Or enter Student ID manually
+          Or enter Student ID manually:
         </label>
-        <div className="mt-4 flex gap-6">
+        <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:gap-6">
           <input
             id={manualId}
             value={studentId}

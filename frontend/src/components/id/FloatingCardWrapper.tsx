@@ -158,7 +158,7 @@ export const FloatingCardWrapper: React.FC<FloatingCardWrapperProps> = ({
 
         </div>
         {!isPreview &&
-          <div className="opacity-0 group-hover:opacity-100 pointer-events-none absolute -bottom-16 -right-16 z-20 flex items-center gap-1.5 rounded-full border border-white/20 bg-black/60 px-3 py-1 text-[11px] font-astra font-medium text-white/90  transition-opacity duration-300 shadow-lg">
+          <div className="opacity-0 group-hover:opacity-100 pointer-events-none absolute -bottom-16 right-0 z-20 flex items-center gap-1.5 rounded-full border border-white/20 bg-black/60 px-3 py-1 text-[11px] font-astra font-medium text-white/90 transition-opacity duration-300 shadow-lg sm:-right-16">
             <ZoomIn className="h-3.5 w-3.5 text-astra-primary-light" />
             <span>Click the card to enlarge</span>
           </div>

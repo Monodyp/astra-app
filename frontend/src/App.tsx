@@ -4,12 +4,6 @@ import { AuthProvider } from './context/AuthContext.js';
 import { AppShell } from './components/AppShell.js';
 import { ProtectedRoute } from './components/ProtectedRoute.js';
 import { Login } from './pages/Login.js';
-import { ViewportScreen } from './components/ViewportScreen.js';
-import { MobileCheckIn } from './features/checkin/mobile/MobileCheckIn.js';
-import { MobileDigitalID } from './features/member/mobile/MobileDigitalID.js';
-import { MobileNotValid } from './features/member/mobile/MobileNotValid.js';
-import { MobileOverview } from './features/member/mobile/MobileOverview.js';
-import { MobileGrantPoints } from './features/officer/mobile/MobileGrantPoints.js';
 import { Home } from './pages/Home.js';
 import { Overview } from './pages/Overview.js';
 import { DigitalID } from './pages/DigitalID.js';
@@ -60,7 +54,7 @@ export const App: React.FC = () => {
               path="/home"
               element={
                 <ProtectedRoute>
-                  <ViewportScreen mobile={MobileOverview} desktop={Overview} />
+                  <Overview />
                 </ProtectedRoute>
               }
             />
@@ -76,10 +70,7 @@ export const App: React.FC = () => {
               path="/id"
               element={
                 <ProtectedRoute>
-                  <ViewportScreen
-                    mobile={MobileDigitalID}
-                    desktop={DigitalID}
-                  />
+                  <DigitalID />
                 </ProtectedRoute>
               }
             />
@@ -87,10 +78,7 @@ export const App: React.FC = () => {
               path="/not-valid"
               element={
                 <ProtectedRoute>
-                  <ViewportScreen
-                    mobile={MobileNotValid}
-                    desktop={RedirectToDigitalId}
-                  />
+                  <RedirectToDigitalId />
                 </ProtectedRoute>
               }
             />
@@ -106,10 +94,7 @@ export const App: React.FC = () => {
               path="/officer/grant-points"
               element={
                 <ProtectedRoute role="officer">
-                  <ViewportScreen
-                    mobile={MobileGrantPoints}
-                    desktop={OfficerGrantPoints}
-                  />
+                  <OfficerGrantPoints />
                 </ProtectedRoute>
               }
             />
@@ -117,7 +102,7 @@ export const App: React.FC = () => {
               path="/checkin"
               element={
                 <ProtectedRoute role="officer">
-                  <ViewportScreen mobile={MobileCheckIn} desktop={CheckIn} />
+                  <CheckIn />
                 </ProtectedRoute>
               }
             />

@@ -61,9 +61,12 @@ describe('event check-in', () => {
       )
     );
 
-    fireEvent.change(screen.getByLabelText('Or enter Student ID manually'), {
+    fireEvent.change(
+      screen.getByLabelText('Or enter Student ID manually:'),
+      {
       target: { value: '99-99999' },
-    });
+      }
+    );
     fireEvent.click(screen.getByRole('button', { name: 'Verify & Check In' }));
     await waitFor(() =>
       expect(screen.getByRole('alert').textContent).toContain(
@@ -104,7 +107,7 @@ describe('event check-in', () => {
   it('checks in a member by student ID', async () => {
     await openAsOfficer('/checkin');
     fireEvent.change(
-      await screen.findByLabelText('Or enter Student ID manually'),
+      await screen.findByLabelText('Or enter Student ID manually:'),
       { target: { value: '23-90006' } }
     );
     fireEvent.click(screen.getByRole('button', { name: 'Verify & Check In' }));

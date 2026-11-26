@@ -44,7 +44,7 @@ async function select(query: string, name: RegExp) {
     target: { value: query },
   });
   const list = await screen.findByRole('list', { name: 'Search results' });
-  fireEvent.click(within(list).getByRole('button', { name }));
+  fireEvent.click(await within(list).findByRole('button', { name }));
 }
 
 function grant() {
@@ -55,7 +55,7 @@ function grant() {
   );
 }
 
-describe('mobile officer points', () => {
+describe('responsive officer points', () => {
   beforeEach(() => {
     window.sessionStorage.clear();
     usePhoneViewport();
@@ -70,9 +70,10 @@ describe('mobile officer points', () => {
     await openAsOfficer();
     grant();
     expect(
-      screen.getByText('Error: Search for and select a member.')
-    ).toBeDefined();
-    expect(screen.getByText('Error: Enter a points amount.')).toBeDefined();
+      screen
+        .getByRole('button', { name: 'Grant Points to Member' })
+        .hasAttribute('disabled')
+    ).toBe(true);
 
     await select('24-90004', /Iris Cruz/);
     expect(
@@ -85,8 +86,10 @@ describe('mobile officer points', () => {
     });
     grant();
     expect(
-      screen.getByText('Error: Points must be a whole number of at least 1.')
-    ).toBeDefined();
+      screen
+        .getByRole('button', { name: 'Grant Points to Member' })
+        .hasAttribute('disabled')
+    ).toBe(true);
     fireEvent.change(screen.getByLabelText('Points Amount'), {
       target: { value: '40' },
     });

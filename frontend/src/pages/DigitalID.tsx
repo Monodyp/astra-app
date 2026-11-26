@@ -47,6 +47,11 @@ export const DigitalID: React.FC = () => {
 
   return (
     <div className="relative font-astra text-astra-white">
+      <p className="sr-only">
+        {isVerified
+          ? 'VALID / ACTIVE DUES'
+          : 'UNVERIFIED / INACTIVE FOR CHECK-IN'}
+      </p>
       <div className="pointer-events-none fixed inset-0 z-0">
         <div className="absolute top-1/4 left-1/3 h-96 w-96 rounded-full bg-cyan-600/10 blur-[120px]" />
         <div className="absolute bottom-1/3 right-1/4 h-96 w-96 rounded-full bg-indigo-600/10 blur-[140px]" />
@@ -66,7 +71,7 @@ export const DigitalID: React.FC = () => {
           <div className="flex flex-col items-center justify-center py-6 sm:py-8">
             <FloatingCardWrapper
               isPreview={false}
-              className="w-full max-w-md sm:max-w-lg aspect-[600/378]"
+              className="w-full max-w-[340px] sm:max-w-lg aspect-[600/378]"
               glowColor={
                 isVerified
                   ? 'rgba(0, 177, 237, 0.25)'
