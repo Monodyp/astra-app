@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { ArrowUpRight } from 'lucide-react';
 import wordmark from '../assets/astra-home/wordmark.png';
 import { useAuth } from '../context/AuthContext.js';
 import { PortalBackdrop } from './portal/PortalBackdrop.js';

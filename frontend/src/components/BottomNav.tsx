@@ -7,7 +7,6 @@ import {
   Home,
   ScanLine,
   Ticket,
-  X,
 } from 'lucide-react';
 import { isActivePath, type PortalDestination } from './portal/navigation.js';
 
