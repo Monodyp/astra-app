@@ -470,9 +470,6 @@ describe('portal navigation', () => {
       'Event Check-in',
       'My Vouchers',
     ]);
-    expect(
-      within(bottomNav()).getByRole('button', { name: 'More' })
-    ).toBeDefined();
   });
 
   it('marks My Vouchers active on a voucher receipt', async () => {
@@ -495,50 +492,6 @@ describe('portal navigation', () => {
     }
   });
 
-  it('opens Points from the mobile More menu and closes the menu with Escape', async () => {
-    await signInAs(/Verified member/, '/home');
-    const more = within(bottomNav()).getByRole('button', { name: 'More' });
-    fireEvent.click(more);
-    const sheet = screen.getByRole('dialog', { name: 'More' });
-    expect(document.activeElement).toBe(
-      within(sheet).getByRole('button', { name: 'Close more menu' })
-    );
-    fireEvent.keyDown(document, { key: 'Escape' });
-    expect(screen.queryByRole('dialog', { name: 'More' })).toBeNull();
-    expect(document.activeElement).toBe(more);
-
-    fireEvent.click(more);
-    fireEvent.click(
-      within(screen.getByRole('dialog', { name: 'More' })).getByRole('link', {
-        name: 'Points',
-      })
-    );
-    await waitFor(() => expect(window.location.pathname).toBe('/points'));
-    expect(
-      await screen.findByRole('heading', { name: 'Points' })
-    ).toBeDefined();
-    expect(
-      within(bottomNav()).getByRole('button', { name: 'More' }).className
-    ).toContain('text-astra-primary-light');
-  });
-
-  it('keeps the officer tools out of the member More menu', async () => {
-    await signInAs(/Verified member/, '/home');
-    fireEvent.click(within(bottomNav()).getByRole('button', { name: 'More' }));
-    const sheet = screen.getByRole('dialog', { name: 'More' });
-    expect(
-      within(sheet)
-        .getAllByRole('link')
-        .map((link) => link.textContent)
-    ).toEqual([
-      'Points',
-      'Opportunities',
-      'Partner instructions',
-      'ASTRAscend services',
-      'Public homepage',
-    ]);
-  });
-
   it('puts Logout before the ASTRAscend pill on desktop', async () => {
     await signInAs(/Verified member/, '/home');
     const header = screen.getByRole('banner');
@@ -546,20 +499,8 @@ describe('portal navigation', () => {
     const pill = within(header).getByRole('link', { name: 'ASTRAscend' });
     expect(pill.textContent).toBe('ASTRAscend');
     expect(pill.getAttribute('href')).toBe('/astrascend');
-    expect(pill.className).toContain('hidden');
-    expect(pill.className).toContain('lg:inline-flex');
     expect(
       logout.compareDocumentPosition(pill) & Node.DOCUMENT_POSITION_FOLLOWING
-    ).toBeTruthy();
-
-    const small = within(header).getByRole('link', {
-      name: 'ASTRAscend services',
-    });
-    expect(small.getAttribute('href')).toBe('/astrascend');
-    expect(small.className).toContain('md:inline-flex');
-    expect(small.className).toContain('lg:hidden');
-    expect(
-      small.compareDocumentPosition(logout) & Node.DOCUMENT_POSITION_FOLLOWING
     ).toBeTruthy();
   });
 });

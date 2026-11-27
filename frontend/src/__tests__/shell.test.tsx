@@ -36,7 +36,13 @@ describe('portal shell', () => {
       'Perks Marketplace',
       'My Vouchers',
     ]);
-    expect(screen.getByText('Welcome back, Verified')).toBeDefined();
+    expect(
+      screen.getByText(
+        (_, element) =>
+          element?.tagName === 'P' &&
+          element.textContent === 'Hi, Welcome back, Verified'
+      )
+    ).toBeDefined();
   });
 
   it('adds officer tools for an officer', async () => {
@@ -72,7 +78,7 @@ describe('portal shell', () => {
 
   it('marks an unverified member in the header', async () => {
     await signInAs(/Unverified member/);
-    expect(screen.getByText('Unverified')).toBeDefined();
+    expect(screen.getByText('Unverified', { selector: 'span' })).toBeDefined();
   });
 
   it('signs out to the login screen', async () => {
