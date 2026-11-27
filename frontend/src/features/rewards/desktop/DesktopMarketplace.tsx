@@ -213,6 +213,13 @@ export const DesktopMarketplace: React.FC = () => {
                 <div className="flex flex-1 flex-col gap-2">
                   <h3 className="text-base font-bold">{perk.name}</h3>
                   <p className="text-lg font-bold">{perk.cost} PTS</p>
+                  <p className="text-sm text-astra-gray" aria-label="Remaining inventory">
+                    {perk.remainingStock === null
+                      ? 'Unlimited stock'
+                      : perk.remainingStock > 0
+                        ? `${perk.remainingStock} remaining`
+                        : 'Out of stock'}
+                  </p>
                 </div>
                 <button
                   type="button"

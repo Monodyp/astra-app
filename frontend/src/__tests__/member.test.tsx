@@ -465,14 +465,18 @@ describe('mobile points', () => {
 });
 
 describe('desktop rewards screens', () => {
-  const placeholders: Array<[string, string]> = [
-    ['/marketplace', 'Perks Marketplace'],
-    ['/vouchers', 'Claimed Vouchers'],
-    ['/vouchers/V-98214', 'Voucher Details'],
-    ['/points', 'Points & Ledger'],
+  const screens: Array<[string, string, string[]]> = [
+    ['/marketplace', 'Perks Marketplace', ['listPerks', 'listVouchers']],
+    ['/vouchers', 'Claimed Vouchers', ['listVouchers']],
+    [
+      '/vouchers/V-98214',
+      '15% Off at the Campus Bookstore',
+      ['listPerks', 'listVouchers', 'getVoucher'],
+    ],
+    ['/points', 'Points & Ledger', ['getPoints']],
   ];
 
-  it('shows the placeholders and loads no rewards data', async () => {
+  it('shows the desktop screens and loads their rewards data', async () => {
     useViewport(true);
     const calls: string[] = [];
     useAdapter((base) => ({
@@ -495,15 +499,16 @@ describe('desktop rewards screens', () => {
     }));
     const first = await signInAs(/Verified member/, '/home');
     first.unmount();
-    for (const [path, heading] of placeholders) {
+    for (const [path, heading, expected] of screens) {
+      calls.length = 0;
       window.history.pushState({}, '', path);
       const view = render(<App />);
       expect(
         await screen.findByRole('heading', { level: 2, name: heading })
       ).toBeDefined();
+      for (const call of expected) expect(calls).toContain(call);
       view.unmount();
     }
-    expect(calls).toEqual([]);
   });
 
   it('switches screens when the viewport crosses the breakpoint', async () => {

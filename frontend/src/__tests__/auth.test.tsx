@@ -76,7 +76,7 @@ describe('sign-in and route access', () => {
     expect(screen.queryByText('Officer access only')).toBeNull();
   });
 
-  it('opens the desktop rewards placeholders after a reload', async () => {
+  it('opens the desktop rewards screens after a reload', async () => {
     const first = renderAt('/login');
     await chooseDemoAccount(/Verified member/);
     await waitFor(() => expect(window.location.pathname).toBe('/home'));
@@ -86,7 +86,7 @@ describe('sign-in and route access', () => {
       ['/marketplace', 'Perks Marketplace'],
       ['/vouchers', 'Claimed Vouchers'],
       ['/points', 'Points & Ledger'],
-      ['/vouchers/V-98214', 'Voucher Details'],
+      ['/vouchers/V-98214', '15% Off at the Campus Bookstore'],
     ];
     for (const [path, heading] of pages) {
       const view = renderAt(path);
