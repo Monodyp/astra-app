@@ -10,8 +10,33 @@ import { useResource } from '../lib/useResource.js';
 import {
   VOUCHER_STATE_LABELS,
   scannableVoucherQr,
+  scannableVoucherBarcode,
   voucherTitle,
 } from '../lib/vouchers.js';
+import { BarcodeFigure } from '../features/rewards/BarcodeFigure.js';
+import { MerchantBadge } from '../features/rewards/MerchantBadge.js';
+
+function redemptionSteps(voucher: Voucher): string[] {
+  if (voucher.state === 'redeemed') {
+    return [
+      voucher.redeemedAt
+        ? `Redeemed on ${formatLongDate(voucher.redeemedAt)}.`
+        : 'This voucher has already been redeemed.',
+      'Keep this receipt for your records.',
+    ];
+  }
+  if (voucher.state === 'expired') {
+    return [
+      `Expired on ${formatLongDate(voucher.expiresAt)} and can no longer be redeemed.`,
+      'Browse the Perks Marketplace to claim another voucher.',
+    ];
+  }
+  return [
+    `Visit ${voucher.partnerName ?? 'the partner store'} before ${formatLongDate(voucher.expiresAt)}.`,
+    'Show this voucher and your digital ID to partner staff.',
+    `Staff can enter the voucher code ${voucher.code} manually.`,
+  ];
+}
 
 interface ReceiptState {
   from?: string;
@@ -22,7 +47,9 @@ const Receipt: React.FC<{ voucher: Voucher; claimed: boolean }> = ({
   voucher,
   claimed,
 }) => {
+  const { hash } = useLocation();
   const qr = scannableVoucherQr(voucher);
+  const barcode = scannableVoucherBarcode(voucher);
   const terms = voucher.instructions ?? [];
   return (
     <>
@@ -32,9 +59,7 @@ const Receipt: React.FC<{ voucher: Voucher; claimed: boolean }> = ({
       <h2 id="voucher-title" className="break-words text-xl font-bold">
         {voucherTitle(voucher)}
       </h2>
-      {voucher.partnerName && (
-        <p className="text-sm text-astra-gray">{voucher.partnerName}</p>
-      )}
+      <MerchantBadge name={voucher.partnerName} />
       {!voucher.reward && (
         <p className="text-sm text-astra-gray">
           The perk for this voucher is no longer listed. The code and dates
@@ -73,6 +98,15 @@ const Receipt: React.FC<{ voucher: Voucher; claimed: boolean }> = ({
           </figcaption>
         </figure>
       )}
+      {voucher.state === 'ready' && !qr && (
+        <p
+          role="status"
+          className="border border-dashed border-astra-primary-dark p-4 text-sm text-astra-gray"
+        >
+          Redemption QR unavailable. ASTRA must issue a supported credential.
+        </p>
+      )}
+      {barcode && <BarcodeFigure value={barcode} focus={hash === '#barcode'} />}
       <dl className="space-y-2 text-sm">
         <div className="flex justify-between gap-4">
           <dt className="text-astra-gray">Status</dt>
@@ -93,6 +127,12 @@ const Receipt: React.FC<{ voucher: Voucher; claimed: boolean }> = ({
           </div>
         )}
       </dl>
+      <h3 className="font-bold">Redemption Instructions</h3>
+      <ol className="list-decimal space-y-2 pl-5 text-sm text-astra-white/80">
+        {redemptionSteps(voucher).map((step) => (
+          <li key={step}>{step}</li>
+        ))}
+      </ol>
       {terms.length > 0 && (
         <>
           <h3 className="font-bold">Terms of Use</h3>
@@ -176,7 +216,7 @@ export const VoucherDetails: React.FC = () => {
         if (
           event.shiftKey &&
           (document.activeElement === first ||
-            document.activeElement === dialog)
+            !items.includes(document.activeElement as HTMLElement))
         ) {
           event.preventDefault();
           last.focus();

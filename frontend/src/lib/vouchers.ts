@@ -16,3 +16,9 @@ export function scannableVoucherQr(voucher: Voucher): string | null {
   if (voucher.state !== 'ready' || !voucher.qrValue) return null;
   return DEMO_VOUCHER_QR.test(voucher.qrValue) ? voucher.qrValue : null;
 }
+
+export function scannableVoucherBarcode(voucher: Voucher): string | null {
+  // Partner scanner support is unverified; barcodes share the demo QR restriction.
+  if (!scannableVoucherQr(voucher)) return null;
+  return /^[\x20-\x7E]{1,64}$/.test(voucher.code) ? voucher.code : null;
+}
