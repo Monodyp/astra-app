@@ -23,8 +23,11 @@ import { errorMessage } from '../lib/format.js';
 import { isUncertainFailure } from '../lib/idempotency.js';
 import { useResource } from '../lib/useResource.js';
 import { claimKeyFor, settleClaim } from '../features/rewards/claimKeys.js';
+import { MerchantBadge } from '../features/rewards/MerchantBadge.js';
+import { useAuth } from '../context/AuthContext.js';
 
 const loadCatalog = () => portalData.listPerks();
+const loadVouchers = () => portalData.listVouchers();
 
 const CATEGORY_ORDER = Object.keys(PERK_CATEGORY_LABELS) as PerkCategory[];
 
@@ -142,6 +145,7 @@ const PerkCard: React.FC<{
 
   return (
     <Panel as="article" className="flex flex-col gap-4 p-6">
+      <MerchantBadge name={perk.partner} />
       <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] font-bold uppercase tracking-wide">
         <span className="text-astra-primary-light">{perk.eyebrow}</span>
         <span className="text-astra-gray">{perk.categoryLabel}</span>
@@ -154,6 +158,16 @@ const PerkCard: React.FC<{
         <h2 className="break-words text-base font-bold">{perk.name}</h2>
         <p className="mt-1 text-sm text-astra-gray">{perk.partner}</p>
         <p className="mt-2 text-sm text-astra-white/80">{perk.description}</p>
+        <p
+          className="mt-2 text-sm text-astra-gray"
+          aria-label="Remaining inventory"
+        >
+          {perk.remainingStock === null
+            ? 'Unlimited stock'
+            : perk.remainingStock > 0
+              ? `${perk.remainingStock} remaining`
+              : 'Out of stock'}
+        </p>
       </div>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-lg font-bold">{perk.cost} PTS</p>
@@ -184,11 +198,16 @@ const PerkCard: React.FC<{
 
 export const Marketplace: React.FC = () => {
   const catalog = useResource(loadCatalog);
+  const vouchers = useResource(loadVouchers);
+  const { user } = useAuth();
+  const currentUser = useRef(user);
+  currentUser.current = user;
   const navigate = useNavigate();
   const [filter, setFilter] = useState<Filter>('all');
   const [claim, setClaim] = useState<PendingClaim | null>(null);
   const opener = useRef<HTMLButtonElement | null>(null);
   const mounted = useRef(true);
+  const submitting = useRef(false);
 
   useEffect(() => {
     mounted.current = true;
@@ -230,14 +249,16 @@ export const Marketplace: React.FC = () => {
   }
 
   async function confirm() {
-    if (!claim || claim.submitting) return;
+    if (!claim || submitting.current) return;
+    submitting.current = true;
+    const claimUser = user;
     const perk = claim.perk;
     const idempotencyKey = claimKeyFor(perk.id);
     setClaim({ ...claim, submitting: true, message: null });
     try {
       const result = await portalData.claimPerk(perk.id, { idempotencyKey });
       settleClaim(perk.id);
-      if (!mounted.current) return;
+      if (!mounted.current || currentUser.current !== claimUser) return;
       if (result.status === 'claimed') {
         navigate(`/vouchers/${result.voucher.id}`, {
           state: { from: '/marketplace', voucher: result.voucher },
@@ -253,7 +274,7 @@ export const Marketplace: React.FC = () => {
     } catch (caught) {
       const uncertain = isUncertainFailure(caught);
       if (!uncertain) settleClaim(perk.id);
-      if (!mounted.current) return;
+      if (!mounted.current || currentUser.current !== claimUser) return;
       setClaim({
         perk,
         submitting: false,
@@ -264,6 +285,8 @@ export const Marketplace: React.FC = () => {
             ? caught.message
             : errorMessage(caught),
       });
+    } finally {
+      submitting.current = false;
     }
   }
 
@@ -287,15 +310,44 @@ export const Marketplace: React.FC = () => {
           className="flex min-h-12 items-center justify-center border border-astra-primary-dark bg-black/40 px-4 text-center font-bold transition-colors hover:border-astra-primary-light"
         >
           My Vouchers
+          {vouchers.status === 'ready' && (
+            <span className="ml-1" aria-hidden="true">
+              (
+              {
+                vouchers.data.filter((voucher) => voucher.state === 'ready')
+                  .length
+              }
+              )
+            </span>
+          )}
         </Link>
       </div>
+      {vouchers.status === 'error' && (
+        <p role="status" className="text-sm text-astra-gray">
+          Your voucher count is unavailable.{' '}
+          <button
+            type="button"
+            onClick={vouchers.reload}
+            className="min-h-11 underline underline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-astra-primary-light"
+          >
+            Retry voucher count
+          </button>
+        </p>
+      )}
 
       <div
         role="group"
         aria-label="Perk categories"
         className="flex gap-1 overflow-x-auto border-b border-astra-primary-dark [scrollbar-width:none]"
       >
-        {(['all', ...CATEGORY_ORDER] as Filter[]).map((item) => (
+        {(
+          [
+            'all',
+            ...CATEGORY_ORDER.filter((category) =>
+              perks.some((perk) => perk.category === category)
+            ),
+          ] as Filter[]
+        ).map((item) => (
           <button
             key={item}
             type="button"
