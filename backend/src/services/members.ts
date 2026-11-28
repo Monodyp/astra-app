@@ -23,11 +23,20 @@ export interface MembershipResult {
   isValid: boolean;
 }
 
+export const MEMBER_SEARCH_LIMIT = 20;
+
+export interface MemberSearchPage {
+  members: (Member & { membershipStatus: 'verified' | 'unverified' })[];
+  hasMore: boolean;
+  limit: number;
+}
+
 export interface MemberService {
   findMember(srCode: string): Promise<Member | null>;
   findByControlNumber(controlNumber: string): Promise<Member | null>;
   findByQrReference(reference: string): Promise<Member | null>;
   searchMembers(query: string): Promise<Member[]>;
+  searchMemberSummaries(query: string): Promise<MemberSearchPage>;
   isPaid(srCode: string): Promise<boolean>;
   verifyMembership(srCode: string): Promise<MembershipResult>;
 }
@@ -38,6 +47,33 @@ export function normalizeSrCode(value: string): string {
 
 export function createMemberService(source: MemberSource): MemberService {
   return {
+    async searchMemberSummaries(query) {
+      const snapshot = await source.read();
+      const needle = normalizeSrCode(query);
+      const rank = (member: Member) => {
+        const identifiers = [member.srCode, member.controlNumber, member.membershipId]
+          .filter((value): value is string => typeof value === 'string')
+          .map(normalizeSrCode);
+        const fields = [...identifiers, member.fullName?.toUpperCase() ?? '', member.email?.toUpperCase() ?? ''];
+        if (identifiers.includes(needle)) return 0;
+        if (identifiers.some(value => value.startsWith(needle))) return 1;
+        if (fields.some(value => value.startsWith(needle))) return 2;
+        return fields.some(value => value.includes(needle)) ? 3 : 4;
+      };
+      const matches = snapshot.members
+        .map(member => ({ member, rank: rank(member) }))
+        .filter(match => match.rank < 4)
+        .sort((a, b) => a.rank - b.rank || normalizeSrCode(a.member.srCode).localeCompare(normalizeSrCode(b.member.srCode)));
+      const paid = new Set(snapshot.paidSrCodes.map(normalizeSrCode));
+      return {
+        members: matches.slice(0, MEMBER_SEARCH_LIMIT).map(({ member }) => ({
+          ...member,
+          membershipStatus: paid.has(normalizeSrCode(member.srCode)) ? 'verified' : 'unverified',
+        })),
+        hasMore: matches.length > MEMBER_SEARCH_LIMIT,
+        limit: MEMBER_SEARCH_LIMIT,
+      };
+    },
     async searchMembers(query) {
       const needle = normalizeSrCode(query);
       const snapshot = await source.read();

@@ -76,17 +76,25 @@ export async function searchMembersHandler(
   }
   try {
     const members = getConfiguredMemberService();
-    const matches = await members.searchMembers(parsed.data.q);
-    const summaries = await Promise.all(matches.map(async (member) => ({
+    const page = await members.searchMemberSummaries(parsed.data.q);
+    const summarize = async (member: (typeof page.members)[number]) => ({
       id: member.srCode,
       fullName: member.fullName,
       srCode: member.srCode,
       email: member.email ?? null,
       currentPoints: await getMemberPoints(member.srCode),
       membershipId: member.membershipId ?? member.controlNumber ?? member.srCode,
-      membershipStatus: (await members.verifyMembership(member.srCode)).isValid ? 'verified' : 'unverified',
-    })));
-    res.status(200).json({ members: summaries });
+      membershipStatus: member.membershipStatus,
+    });
+    const summaries: Awaited<ReturnType<typeof summarize>>[] = [];
+    let nextIndex = 0;
+    await Promise.all(Array.from({ length: Math.min(4, page.members.length) }, async () => {
+      while (nextIndex < page.members.length) {
+        const index = nextIndex++;
+        summaries[index] = await summarize(page.members[index]);
+      }
+    }));
+    res.status(200).json({ members: summaries, hasMore: page.hasMore, limit: page.limit });
   } catch (error) {
     next(error);
   }
