@@ -1,5 +1,6 @@
 import { env } from '../config/env.js';
 import { firebaseAdmin } from '../lib/firebase.js';
+import { requiredStoredDate, storedDate } from '../lib/storedDate.js';
 
 export type VoucherStatus = 'active' | 'used' | 'expired';
 
@@ -32,12 +33,12 @@ export interface VoucherRepository {
   clear(): void;
 }
 
-function normalizeVoucher(voucher: Voucher): Voucher {
+export function normalizeVoucher(voucher: Voucher): Voucher {
   return {
     ...voucher,
-    expiresAt: voucher.expiresAt ? new Date(voucher.expiresAt) : undefined,
-    redeemedAt: voucher.redeemedAt ? new Date(voucher.redeemedAt) : undefined,
-    createdAt: new Date(voucher.createdAt),
+    expiresAt: storedDate(voucher.expiresAt),
+    redeemedAt: storedDate(voucher.redeemedAt),
+    createdAt: requiredStoredDate(voucher.createdAt),
   };
 }
 
@@ -102,7 +103,7 @@ export class InMemoryVoucherRepository implements VoucherRepository {
 }
 
 export class FirestoreVoucherRepository implements VoucherRepository {
-  private readonly collection = firebaseAdmin.firestore().collection('vouchers');
+  constructor(private readonly collection = firebaseAdmin.firestore().collection('vouchers')) {}
 
   async create(voucher: Voucher): Promise<Voucher> {
     const normalized = normalizeVoucher(voucher);
