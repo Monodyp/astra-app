@@ -215,6 +215,12 @@ export interface MemberSearchResult {
   balance: number;
 }
 
+export interface MemberSearchPage {
+  members: MemberSearchResult[];
+  hasMore: boolean;
+  limit: number;
+}
+
 export interface GrantPointsInput {
   studentId: string;
   amount: number;
@@ -283,6 +289,6 @@ export interface PortalDataSource {
   listScanSamples(): Promise<ScanSample[]>;
   checkIn(input: CheckInInput): Promise<CheckInResult>;
 
-  searchMembers(query: string): Promise<MemberSearchResult[]>;
+  searchMembers(query: string): Promise<MemberSearchPage>;
   grantPoints(input: GrantPointsInput): Promise<GrantPointsResult>;
 }

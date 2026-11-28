@@ -19,7 +19,7 @@ import {
   type GrantPointsInput,
   type GrantPointsResult,
   type MemberOverview,
-  type MemberSearchResult,
+  type MemberSearchPage,
   type Perk,
   type PerkCatalog,
   type PerkCategory,
@@ -769,16 +769,16 @@ export function createLiveDataSource(
       };
     },
 
-    async searchMembers(query: string): Promise<MemberSearchResult[]> {
-      if (query.trim().length < 2) return [];
-      const res = await withAuth<{ members: { id: string; srCode: string; membershipId?: string; fullName: string | null; membershipStatus: 'verified' | 'unverified'; currentPoints: number }[] }>('/members/search', { method: 'GET', params: { q: query.trim() } });
-      return res.data.members.map(member => ({
+    async searchMembers(query: string): Promise<MemberSearchPage> {
+      if (query.trim().length < 2) return { members: [], hasMore: false, limit: 20 };
+      const res = await withAuth<{ hasMore?: boolean; limit?: number; members: { id: string; srCode: string; membershipId?: string; fullName: string | null; membershipStatus: 'verified' | 'unverified'; currentPoints: number }[] }>('/members/search', { method: 'GET', params: { q: query.trim() } });
+      return { hasMore: res.data.hasMore === true, limit: res.data.limit ?? 20, members: res.data.members.map(member => ({
         memberId: member.membershipId || member.id,
         studentId: member.srCode,
         fullName: member.fullName || member.srCode,
         membershipStatus: member.membershipStatus === 'verified' ? 'verified' : 'unverified',
         balance: member.currentPoints,
-      }));
+      })) };
     },
 
     async grantPoints(input: GrantPointsInput): Promise<GrantPointsResult> {

@@ -92,9 +92,11 @@ describe('live portal contract repairs', () => {
         ],
       },
     });
-    expect(await live.searchMembers('x')).toEqual([]);
+    expect(await live.searchMembers('x')).toEqual({ members: [], hasMore: false, limit: 20 });
     expect(request).not.toHaveBeenCalled();
-    expect(await live.searchMembers(' ASTR1D ')).toEqual([
+    const page = await live.searchMembers(' ASTR1D ');
+    expect(page).toMatchObject({ hasMore: false, limit: 20 });
+    expect(page.members).toEqual([
       {
         memberId: 'ASTR1D-0042',
         studentId: '24-90001',
@@ -114,6 +116,13 @@ describe('live portal contract repairs', () => {
       '/members/search',
       expect.objectContaining({ params: { q: 'ASTR1D' } })
     );
+  });
+
+  it('preserves search truncation metadata', async () => {
+    const { live } = liveWith({
+      '/members/search': { members: [], hasMore: true, limit: 20 },
+    });
+    expect(await live.searchMembers('member')).toEqual({ members: [], hasMore: true, limit: 20 });
   });
 
   it('does not turn a missing expiration into the claim date', async () => {

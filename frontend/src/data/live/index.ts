@@ -14,7 +14,7 @@ import type {
   ScanSample,
   CheckInInput,
   CheckInResult,
-  MemberSearchResult,
+  MemberSearchPage,
   GrantPointsInput,
   GrantPointsResult,
   Role,
@@ -175,7 +175,7 @@ export class LivePortalDataSource implements PortalDataSource {
     throw new DataError('unavailable', 'Live checkIn is being connected in FT-11');
   }
 
-  async searchMembers(_query: string): Promise<MemberSearchResult[]> {
+  async searchMembers(_query: string): Promise<MemberSearchPage> {
     throw new DataError('unavailable', 'Live searchMembers is being connected in FT-11');
   }
 

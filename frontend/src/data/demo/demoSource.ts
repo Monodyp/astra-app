@@ -13,6 +13,7 @@ import {
   type GrantPointsResult,
   type MemberOverview,
   type MemberSearchResult,
+  type MemberSearchPage,
   type Perk,
   type PerkCatalog,
   type PointsHistory,
@@ -47,7 +48,7 @@ export function demoAuthUid(member: Pick<DemoMember, 'memberId'>): string {
 }
 
 const RECENT_ACTIVITY_LIMIT = 5;
-const SEARCH_RESULT_LIMIT = 6;
+const SEARCH_RESULT_LIMIT = 20;
 const MAX_GRANT = 1000;
 
 const STATUS_LABELS: Record<ActivityEntry['kind'], string> = {
@@ -649,28 +650,31 @@ export function createDemoDataSource(
       });
     },
 
-    async searchMembers(query: string): Promise<MemberSearchResult[]> {
+    async searchMembers(query: string): Promise<MemberSearchPage> {
       await settle();
       const records = store.read();
       currentOfficer(records);
       const needle = query.trim().toLowerCase();
-      if (!needle) {
-        return [];
+      if (needle.length < 2) {
+        return { members: [], hasMore: false, limit: SEARCH_RESULT_LIMIT };
       }
       const ids = (member: DemoMember) => [
         member.memberId.toLowerCase(),
         member.studentId.toLowerCase(),
       ];
       const exact = (member: DemoMember) => ids(member).includes(needle);
-      return records.members
+      const matches = records.members
         .filter(
           (member) =>
             member.fullName.toLowerCase().includes(needle) ||
             ids(member).some((id) => id.includes(needle))
         )
-        .sort((a, b) => Number(exact(b)) - Number(exact(a)))
-        .slice(0, SEARCH_RESULT_LIMIT)
-        .map((member) => toSearchResult(records, member));
+        .sort((a, b) => Number(exact(b)) - Number(exact(a)) || a.studentId.localeCompare(b.studentId));
+      return {
+        members: matches.slice(0, SEARCH_RESULT_LIMIT).map(member => toSearchResult(records, member)),
+        hasMore: matches.length > SEARCH_RESULT_LIMIT,
+        limit: SEARCH_RESULT_LIMIT,
+      };
     },
 
     async grantPoints(input: GrantPointsInput): Promise<GrantPointsResult> {
