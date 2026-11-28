@@ -73,7 +73,7 @@ export const _store = {
     srCode: string;
     amount: number;
     reason: string;
-    type?: 'event_attendance';
+    type?: 'attendance' | 'event_attendance';
     metadata?: Record<string, unknown>;
   }>,
 };
@@ -279,7 +279,7 @@ export async function checkInMember(
             memberId: normalizedCode,
             amount: attendancePoints,
             reason: `Event attendance: ${eventRef.id}`,
-            type: 'event_attendance',
+            type: 'attendance',
             referenceId: attendanceId,
             createdBy: actorId,
             createdAt: now,
@@ -346,7 +346,7 @@ export async function checkInMember(
     srCode: normalizedCode,
     amount: attendancePoints,
     reason: `Event attendance: ${eventId}`,
-    type: 'event_attendance',
+    type: 'attendance',
     metadata: {
       type: 'event_attendance',
       eventId,
