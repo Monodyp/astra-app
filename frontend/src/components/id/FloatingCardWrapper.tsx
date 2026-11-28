@@ -1,8 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { X, ZoomIn } from 'lucide-react';
+import React, { useState, useCallback } from 'react';
+import { ZoomIn } from 'lucide-react';
+import { Modal } from '../portal/Modal.js';
 
 type FloatingCardWrapperProps = {
-  children: React.ReactNode | ((props: { isZoomed: boolean }) => React.ReactNode);
+  children:
+    React.ReactNode | ((props: { isZoomed: boolean }) => React.ReactNode);
   zoomedContent?: React.ReactNode;
   className?: string;
   glowColor?: string;
@@ -19,48 +21,26 @@ export const FloatingCardWrapper: React.FC<FloatingCardWrapperProps> = ({
   glowColor = 'rgba(0, 177, 237, 0.22)',
   disabled = false,
   animationSpeed = 0.5,
-  isPreview = true
+  isPreview = true,
 }) => {
   // Base durations (prime-ish so layers never phase-sync). Divided by animationSpeed.
   const s = (base: number) => `${(base / animationSpeed).toFixed(2)}s`;
   const [isZoomed, setIsZoomed] = useState(false);
 
-  const renderedChildren = typeof children === 'function' ? children({ isZoomed: false }) : children;
-  const renderedZoomed = zoomedContent ?? (typeof children === 'function' ? children({ isZoomed: true }) : children);
+  const renderedChildren =
+    typeof children === 'function' ? children({ isZoomed: false }) : children;
+  const renderedZoomed =
+    zoomedContent ??
+    (typeof children === 'function' ? children({ isZoomed: true }) : children);
 
   const handleOpenZoom = useCallback(() => {
-    if (isPreview) return
+    if (isPreview || disabled) return;
     setIsZoomed(true);
-  }, []);
+  }, [isPreview, disabled]);
 
   const handleCloseZoom = useCallback(() => {
     setIsZoomed(false);
   }, []);
-
-  // Handle ESC key to dismiss the zoom overlay
-  useEffect(() => {
-    if (!isZoomed) return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        handleCloseZoom();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isZoomed, handleCloseZoom]);
-
-  // Lock body scroll while zoomed
-  useEffect(() => {
-    if (isZoomed) {
-      const originalOverflow = document.body.style.overflow;
-      document.body.style.overflow = 'hidden';
-      return () => {
-        document.body.style.overflow = originalOverflow;
-      };
-    }
-  }, [isZoomed]);
 
   return (
     <>
@@ -125,44 +105,49 @@ export const FloatingCardWrapper: React.FC<FloatingCardWrapperProps> = ({
 
       {/* Main Container */}
       <div
-        className={`group relative ${className} ${!disabled ? 'astra-active' : ''} ${isZoomed ? 'astra-paused' : ''
-          }`}
+        className={`group relative ${className} ${!disabled ? 'astra-active' : ''} ${
+          isZoomed ? 'astra-paused' : ''
+        }`}
       >
         <div className="astra-card relative">
-
           {React.isValidElement(renderedChildren)
             ? React.cloneElement(
-              renderedChildren as React.ReactElement<{
-                onClick?: () => void;
-                onKeyDown?: (e: React.KeyboardEvent<HTMLDivElement>) => void;
-                role?: React.AriaRole;
-                tabIndex?: number;
-                'aria-label'?: string;
-                cursorClass?: string;
-              }>,
-              {
-                onClick: handleOpenZoom,
-                onKeyDown: (e: React.KeyboardEvent<HTMLDivElement>) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    handleOpenZoom();
-                  }
-                },
-                role: 'button' as React.AriaRole,
-                tabIndex: 0,
-                'aria-label': 'Click to zoom in ID card',
-                cursorClass: `${!isPreview ? 'cursor-zoom-in' : 'cursor-default'}`,
-              },
-            )
+                renderedChildren as React.ReactElement<{
+                  onClick?: () => void;
+                  onKeyDown?: (e: React.KeyboardEvent<HTMLDivElement>) => void;
+                  role?: React.AriaRole;
+                  tabIndex?: number;
+                  'aria-label'?: string;
+                  cursorClass?: string;
+                }>,
+                {
+                  onClick: !isPreview && !disabled ? handleOpenZoom : undefined,
+                  onKeyDown: (e: React.KeyboardEvent<HTMLDivElement>) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleOpenZoom();
+                    }
+                  },
+                  role:
+                    !isPreview && !disabled
+                      ? ('button' as React.AriaRole)
+                      : undefined,
+                  tabIndex: !isPreview && !disabled ? 0 : undefined,
+                  'aria-label':
+                    !isPreview && !disabled
+                      ? 'Click to zoom in ID card'
+                      : undefined,
+                  cursorClass: `${!isPreview ? 'cursor-zoom-in' : 'cursor-default'}`,
+                }
+              )
             : renderedChildren}
-
         </div>
-        {!isPreview &&
+        {!isPreview && (
           <div className="opacity-0 group-hover:opacity-100 pointer-events-none absolute -bottom-16 right-0 z-20 flex items-center gap-1.5 rounded-full border border-white/20 bg-black/60 px-3 py-1 text-[11px] font-astra font-medium text-white/90 transition-opacity duration-300 shadow-lg sm:-right-16">
             <ZoomIn className="h-3.5 w-3.5 text-astra-primary-light" />
             <span>Click the card to enlarge</span>
           </div>
-        }
+        )}
 
         {/* Shadow */}
         <div
@@ -172,51 +157,10 @@ export const FloatingCardWrapper: React.FC<FloatingCardWrapperProps> = ({
         />
       </div>
 
-      {/* Zoom Lightbox Modal Overlay */}
       {isZoomed && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4 sm:p-8 animate-in fade-in duration-200"
-          onClick={handleCloseZoom}
-          role="dialog"
-          aria-modal="true"
-          aria-label="Enlarged Digital ID"
-        >
-          {/* Top Bar with Dismiss and Instructions */}
-          <div className="absolute top-5 left-0 right-0 mx-auto flex max-w-4xl items-center justify-between px-6 z-10">
-            <span className="font-astra text-xs tracking-widest text-slate-400 uppercase">
-              ASTRA / IDENTIFICATION OVERLAY · PRESS ESC TO CLOSE
-            </span>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleCloseZoom();
-              }}
-              className="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white transition-all hover:bg-white/20 hover:scale-105 focus:outline-none"
-              aria-label="Close enlarged ID"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          </div>
-
-          {/* Centered Enlarged Card Showcase */}
-          <div
-            className="relative w-full max-w-2xl backdrop-blur-md transform transition-all animate-in zoom-in-95 duration-200 cursor-zoom-out"
-            onClick={(e) => {
-              // Click on card also closes or stops bubbling
-              e.stopPropagation();
-              handleCloseZoom();
-            }}
-          >
-            <div className="relative rounded-3xl shadow-[0_0_90px_rgba(0,177,237,0.35)]">
-              {renderedZoomed}
-            </div>
-
-            <p className="mt-4 text-center font-astra text-xs text-slate-400">
-              Click anywhere on the card or background to dismiss
-            </p>
-          </div>
-        </div>
+        <Modal label="Enlarged Digital ID" onClose={handleCloseZoom}>
+          {renderedZoomed}
+        </Modal>
       )}
     </>
   );

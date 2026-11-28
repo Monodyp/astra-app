@@ -1,15 +1,20 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { QRCodeSVG } from 'qrcode.react';
 import { MemberIdCard } from '../components/id/MemberIdCard';
 import { TiltCard } from '@/components/id/tilt-wrapper';
 import { FloatingCardWrapper } from '@/components/id/FloatingCardWrapper';
 import { technicalCorners } from '@/components/home/ui-util';
 import { CheckCircle2, AlertCircle } from 'lucide-react';
 import { ErrorState, LoadingState } from '../components/portal/StatusViews.js';
-import { portalData, type DigitalId } from '../data/index.js';
+import { type DigitalId } from '../data/index.js';
 import { errorMessage } from '../lib/format.js';
-import { useResource } from '../lib/useResource.js';
-
-const loadDigitalId = () => portalData.getDigitalId();
+import { useDigitalId } from '../features/member/useDigitalId.js';
+import { useAuth } from '../context/AuthContext.js';
+import { Modal } from '../components/portal/Modal.js';
+import {
+  primaryButton,
+  secondaryButton,
+} from '../components/portal/buttons.js';
 
 const IdCard: React.FC<{ id: DigitalId }> = ({ id }) => {
   const isVerified = id.membershipStatus === 'verified';
@@ -28,12 +33,14 @@ const IdCard: React.FC<{ id: DigitalId }> = ({ id }) => {
 };
 
 export const DigitalID: React.FC = () => {
-  const digitalId = useResource(loadDigitalId);
+  const { user } = useAuth();
+  const digitalId = useDigitalId(user?.memberId);
+  const [showQr, setShowQr] = useState(false);
 
-  if (digitalId.status === 'loading') {
+  if (!digitalId.data && !digitalId.error) {
     return <LoadingState label="Loading your digital ID" />;
   }
-  if (digitalId.status === 'error') {
+  if (!digitalId.data) {
     return (
       <ErrorState
         message={errorMessage(digitalId.error)}
@@ -44,6 +51,51 @@ export const DigitalID: React.FC = () => {
 
   const memberData = digitalId.data;
   const isVerified = memberData.membershipStatus === 'verified';
+  const readiness = !isVerified
+    ? 'Inactive for check-in'
+    : memberData.qrStatus === 'provisioning_required'
+      ? 'QR unavailable: ask an officer to assign your control number.'
+      : digitalId.qrReady
+        ? 'Ready to scan at ASTRA events'
+        : 'QR unavailable or expired. Refresh it before check-in.';
+  const credential = (
+    <div className="space-y-4 text-center">
+      <h2 className="break-words text-xl font-bold">{memberData.fullName}</h2>
+      <p className="text-sm text-astra-gray">{memberData.membershipId}</p>
+      {digitalId.qrReady && (
+        <QRCodeSVG
+          value={memberData.qrValue}
+          size={320}
+          marginSize={4}
+          role="img"
+          aria-label="Member check-in QR"
+          className="mx-auto h-auto w-full max-w-[320px] bg-white"
+        />
+      )}
+      <p role="status" className="text-sm">
+        {readiness}
+      </p>
+      {digitalId.qrReady && (
+        <p className="text-sm text-astra-gray">
+          Expires {new Date(memberData.qrExpiresAt!).toLocaleTimeString()}. Keep
+          this screen open for renewal.
+        </p>
+      )}
+      {!!digitalId.error && (
+        <p role="alert" className="text-sm text-amber-300">
+          {errorMessage(digitalId.error)} Refresh the QR to retry.
+        </p>
+      )}
+      <button
+        type="button"
+        onClick={digitalId.reload}
+        disabled={digitalId.refreshing}
+        className={secondaryButton}
+      >
+        {digitalId.refreshing ? 'Refreshing QR…' : 'Refresh QR'}
+      </button>
+    </div>
+  );
 
   return (
     <div className="relative overflow-x-clip font-astra text-astra-white">
@@ -79,11 +131,7 @@ export const DigitalID: React.FC = () => {
                   ? 'rgba(0, 177, 237, 0.25)'
                   : 'rgba(100, 116, 139, 0.18)'
               }
-              zoomedContent={
-                <div className="w-full aspect-[600/378] select-none">
-                  <IdCard id={memberData} />
-                </div>
-              }
+              zoomedContent={credential}
             >
               <TiltCard
                 className="w-full aspect-[600/378]"
@@ -92,9 +140,34 @@ export const DigitalID: React.FC = () => {
                 rotateZ={-16}
                 intensity={8}
               >
-                <IdCard id={memberData} />
+                <IdCard
+                  id={{
+                    ...memberData,
+                    qrValue: digitalId.qrReady ? memberData.qrValue : '',
+                  }}
+                />
               </TiltCard>
             </FloatingCardWrapper>
+          </div>
+
+          <div className="w-full space-y-3 text-center">
+            <p role="status" className="text-sm">
+              {readiness}
+            </p>
+            {isVerified && (
+              <button
+                type="button"
+                className={primaryButton}
+                onClick={() => setShowQr(true)}
+              >
+                Show check-in QR
+              </button>
+            )}
+            {!showQr && !!digitalId.error && (
+              <p role="alert" className="text-sm text-amber-300">
+                {errorMessage(digitalId.error)}
+              </p>
+            )}
           </div>
 
           <div className="w-full space-y-6">
@@ -113,10 +186,11 @@ export const DigitalID: React.FC = () => {
                 </div>
 
                 <span
-                  className={`inline-flex shrink-0 items-center gap-1.5 self-start whitespace-nowrap rounded-full px-3 py-1 text-xs font-bold ${isVerified
+                  className={`inline-flex shrink-0 items-center gap-1.5 self-start whitespace-nowrap rounded-full px-3 py-1 text-xs font-bold ${
+                    isVerified
                       ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
                       : 'bg-slate-700/60 text-slate-300 border border-slate-600'
-                    }`}
+                  }`}
                 >
                   {isVerified ? (
                     <CheckCircle2
@@ -171,20 +245,27 @@ export const DigitalID: React.FC = () => {
 
               <div className="mt-5 border-t border-white/10 pt-3">
                 <p className="text-xs text-slate-400">
-                  <span className="font-semibold text-slate-300">Status Note:</span>{' '}
+                  <span className="font-semibold text-slate-300">
+                    Status Note:
+                  </span>{' '}
                   {memberData.statusNote}
                 </p>
                 <p className="mt-1 text-xs text-slate-400">
-                  <span className="font-semibold text-slate-300">Check-in QR:</span>{' '}
-                  {isVerified
-                    ? 'Ready to scan at ASTRA events'
-                    : 'Inactive for check-in'}
+                  <span className="font-semibold text-slate-300">
+                    Check-in QR:
+                  </span>{' '}
+                  {readiness}
                 </p>
               </div>
             </div>
           </div>
         </div>
       </div>
+      {showQr && (
+        <Modal label="Check-in QR" onClose={() => setShowQr(false)}>
+          {credential}
+        </Modal>
+      )}
     </div>
   );
 };
