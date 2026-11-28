@@ -14,7 +14,7 @@ describe('upcoming events', () => {
       render(<UpcomingEvents events={events} />);
 
       expect(screen.getByRole('status').textContent).toContain('No upcoming events yet');
-      expect(screen.queryByRole('link', { name: 'Register Now' })).toBeNull();
+      expect(screen.queryByRole('link', { name: 'Event details' })).toBeNull();
     },
   );
 
@@ -27,7 +27,7 @@ describe('upcoming events', () => {
 
     expect(screen.queryByRole('status')).toBeNull();
     expect(screen.getByRole('heading', { name: 'Frontend Workshop' })).toBeDefined();
-    expect(screen.getByRole('link', { name: 'Register Now' }).getAttribute('href'))
+    expect(screen.getByRole('link', { name: 'Event details' }).getAttribute('href'))
       .toBe('/events/frontend-workshop');
   });
 });

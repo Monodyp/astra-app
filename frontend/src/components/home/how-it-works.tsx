@@ -13,6 +13,7 @@ import howId from '@/assets/astra-home/how-scan.jpg';
 import howEvents from '@/assets/astra-home/how-work.jpg';
 import howPerks from '@/assets/astra-home/how-rewards.jpeg';
 import { ActionLink, technicalCorners } from "./ui-util";
+import { usePortalEntry } from './usePortalEntry.js';
 
 const workflowSlides = [
   {
@@ -44,6 +45,7 @@ const workflowSlides = [
 ];
 
 export default function HowItWorks() {
+  const entry = usePortalEntry();
   const autoplay = useRef(
     Autoplay({ delay: 4000, stopOnInteraction: true })
   );
@@ -80,7 +82,7 @@ export default function HowItWorks() {
             {technicalCorners}
             <h3 className="font-astra text-base font-bold text-astra-white">{index + 1}. {slide.eyebrow}</h3>
             <p className="mt-3 font-astra text-base leading-6 text-astra-gray">{slide.description}</p>
-            <ActionLink className="mt-3" href={slide.href}>{slide.action}</ActionLink>
+            <ActionLink className="mt-3" href={slide.href === '/login' && entry.authenticated ? '/id' : slide.href}>{slide.href === '/login' && entry.authenticated ? 'Show your ID' : slide.action}</ActionLink>
           </li>
         ))}
       </ol>
@@ -104,9 +106,9 @@ export default function HowItWorks() {
                   <p className="font-astra text-sm font-bold text-astra-white">{slide.eyebrow}</p>
                   <h3 className="mt-2 font-astra text-2xl font-medium leading-8 text-astra-white">{slide.title}</h3>
                   <p className="mt-3 max-w-sm font-astra text-base leading-6 text-astra-gray">{slide.description}</p>
-                  <ActionLink className="mt-8" href={slide.href}>{slide.action}</ActionLink>
+                  <ActionLink className="mt-8" href={slide.href === '/login' && entry.authenticated ? '/id' : slide.href}>{slide.href === '/login' && entry.authenticated ? 'Show your ID' : slide.action}</ActionLink>
                 </div>
-                <img src={slide.image} alt="" className="aspect-[4/3] w-full rounded-2xl object-cover shadow-[0_4px_26px_3px_rgba(133,133,133,0.25)]" />
+                <img src={slide.image} alt="" loading="lazy" decoding="async" className="aspect-[4/3] w-full rounded-2xl object-cover shadow-[0_4px_26px_3px_rgba(133,133,133,0.25)]" />
               </div>
             </CarouselItem>
           ))}

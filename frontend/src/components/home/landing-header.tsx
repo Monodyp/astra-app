@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ExternalLink, Menu, X } from "lucide-react";
 import wordmark from '@/assets/astra-home/wordmark.png';
+import { usePortalEntry } from './usePortalEntry.js';
 
 const NAV_LINKS = [
   { label: "Home", id: "home" },
@@ -57,6 +58,7 @@ function useScrollSpy(ids: string[]) {
 }
 
 export default function LandingHeader() {
+  const entry = usePortalEntry();
   const activeId = useScrollSpy(SECTION_IDS);
   const [menuOpen, setMenuOpen] = useState(false);
   const toggleRef = useRef<HTMLButtonElement>(null);
@@ -80,7 +82,7 @@ export default function LandingHeader() {
     <header className="fixed z-[100] mx-auto w-full bg-astra-black/80 px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3 shadow-[0_0_16px_rgba(0,140,204,0.07)] backdrop-blur sm:px-8 flex items-center justify-between gap-3 lg:gap-6 lg:bg-astra-black/30 lg:px-8 lg:py-8 xl:px-[112px] lg:backdrop-blur-none">
       <div className="contents">
         <a href="#home" aria-label="ASTRA Developers home" className="mr-auto inline-flex min-h-11 items-center lg:mr-0">
-          <img src={wordmark} alt="ASTRA Developers" className="h-auto w-36 sm:w-44 lg:w-48" />
+          <img src={wordmark} alt="ASTRA Developers" className="h-auto w-28 min-[360px]:w-36 sm:w-44 lg:w-48" />
         </a>
         <button
           ref={toggleRef}
@@ -109,8 +111,8 @@ export default function LandingHeader() {
         ))}
       </nav>
       <div className="order-2 flex items-center gap-4 font-astra text-sm font-medium">
-        <a className="flex min-h-11 items-center justify-center whitespace-nowrap border border-astra-primary-light px-5 text-astra-white transition-colors hover:text-astra-primary-light lg:inline lg:min-h-0 lg:w-auto lg:border-0 lg:px-0 lg:py-3" href="/login">Log In</a>
-        <a className="hidden items-center gap-2 rounded-full bg-astra-primary-light px-4 py-2 font-bold text-astra-white transition-transform hover:scale-105 lg:inline-flex" href="/astrascend">
+        <a className="flex min-h-11 items-center justify-center whitespace-nowrap border border-astra-primary-light px-3 text-astra-white transition-colors hover:text-astra-primary-light lg:inline lg:min-h-0 lg:w-auto lg:border-0 lg:px-0 lg:py-3" href={entry.href}>{entry.label}</a>
+        <a className="hidden items-center gap-2 rounded-full bg-astra-primary-light px-4 py-2 font-bold text-astra-black transition-transform hover:scale-105 lg:inline-flex" href="/astrascend">
           ASTRAscend
           <ExternalLink className="h-4 w-4" aria-hidden="true" />
         </a>
