@@ -32,7 +32,7 @@ export const AppShell: React.FC = () => {
       <PortalBackdrop />
       <a
         href="#portal-main"
-        className="fixed left-4 top-3 z-50 -translate-y-[200%] bg-astra-primary-light px-4 py-2 text-sm font-bold text-astra-white focus:translate-y-0"
+        className="fixed left-4 top-3 z-50 -translate-y-[200%] bg-astra-primary-light px-4 py-2 text-sm font-bold text-astra-black focus:translate-y-0"
       >
         Skip to content
       </a>
@@ -92,7 +92,7 @@ export const AppShell: React.FC = () => {
           {/* CTA */}
           <Link
             to="/astrascend"
-            className={`col-start-2 row-start-1 inline-flex items-center justify-self-end whitespace-nowrap rounded-full bg-astra-primary-light px-4 py-2 text-sm font-bold text-astra-white transition-transform hover:scale-105 sm:px-8 sm:py-3 sm:text-lg ${user ? 'lg:ml-0' : 'lg:ml-auto'
+            className={`col-start-2 row-start-1 inline-flex items-center justify-self-end whitespace-nowrap rounded-full bg-astra-primary-light px-4 py-2 text-sm font-bold text-astra-black transition-transform hover:scale-105 sm:px-8 sm:py-3 sm:text-lg ${user ? 'lg:ml-0' : 'lg:ml-auto'
               }`}
           >
             ASTRAscend

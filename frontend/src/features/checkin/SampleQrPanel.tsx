@@ -36,7 +36,7 @@ export const SampleQrPanel: React.FC<{
           type="button"
           onClick={onSimulate}
           disabled={busy}
-          className="inline-flex items-center gap-2 rounded-full bg-astra-primary-light px-5 py-2 text-sm font-bold text-astra-white transition-colors hover:bg-[#19c0f7] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-astra-white disabled:cursor-not-allowed disabled:bg-astra-disabled disabled:text-astra-gray"
+          className="inline-flex items-center gap-2 rounded-full bg-astra-primary-light px-5 py-2 text-sm font-bold text-astra-black transition-colors hover:bg-[#19c0f7] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-astra-white disabled:cursor-not-allowed disabled:bg-astra-disabled disabled:text-astra-gray"
         >
           <ScanLine className="h-4 w-4" aria-hidden="true" />
           {scanning ? 'Scanning…' : 'Simulate scan'}
