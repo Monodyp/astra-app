@@ -173,8 +173,26 @@ describe('BatStateU email extraction and member auth endpoints', () => {
         yearLevel: null,
         isPaid: false,
         qrToken: '',
+        qrExpiresAt: null,
+        qrStatus: 'inactive',
       },
     });
+  });
+
+  it('returns expiry for an assigned ID and keeps paid membership when provisioning is missing', async () => {
+    await fixture.replaceMembers('sr_code,full_name,control_number\n24-02282,Juan Dela Cruz,ASTR1D-0042\n');
+    await fixture.replacePaid('sr_code\n24-02282\n');
+    vi.spyOn(firebaseAdmin.auth(), 'verifyIdToken').mockResolvedValue(fakeDecodedToken({ srCode: '24-02282', email_verified: true }));
+    const issued = await request(app).get('/members/me/id').set('Authorization', 'Bearer paid-token');
+    expect(issued.status).toBe(200);
+    expect(issued.body.card).toMatchObject({ isPaid: true, qrStatus: 'ready' });
+    expect(Date.parse(issued.body.card.qrExpiresAt)).toBeGreaterThan(Date.now());
+    expect(issued.body.card.qrToken.split('.')).toHaveLength(2);
+    await fixture.replaceMembers('sr_code,full_name\n24-02282,Juan Dela Cruz\n');
+    const unprovisioned = await request(app).get('/members/me/id').set('Authorization', 'Bearer paid-token');
+    expect(unprovisioned.status).toBe(200);
+    expect(unprovisioned.body.card).toMatchObject({ isPaid: true, qrStatus: 'provisioning_required', qrToken: '', qrExpiresAt: null });
+    expect(unprovisioned.headers['cache-control']).toContain('no-store');
   });
 
   it('rejects an unknown non-BatStateU account with 404 Member not found', async () => {
