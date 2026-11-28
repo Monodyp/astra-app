@@ -47,6 +47,7 @@ function normalizeEntry(entry: CreateLedgerEntry): LedgerEntry {
   return {
     ...entry,
     memberId: normalizeSrCode(entry.memberId),
+    type: entry.type === 'event_attendance' ? 'attendance' : entry.type,
     createdAt: entry.createdAt ?? new Date(),
   };
 }
@@ -137,7 +138,7 @@ export class FirestoreLedgerRepository implements LedgerRepository {
           memberId: data.memberId,
           amount: data.amount,
           reason: data.reason,
-          type: data.type,
+          type: data.type === 'event_attendance' ? 'attendance' : data.type,
           referenceId: data.referenceId,
           createdBy: data.createdBy,
           createdAt,

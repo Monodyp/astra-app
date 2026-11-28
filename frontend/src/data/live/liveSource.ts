@@ -19,7 +19,7 @@ import {
   type GrantPointsInput,
   type GrantPointsResult,
   type MemberOverview,
-  type MemberSearchResult,
+  type MemberSearchPage,
   type Perk,
   type PerkCatalog,
   type PerkCategory,
@@ -91,6 +91,8 @@ interface BackendCardResponse {
     yearLevel?: string | null;
     isPaid: boolean;
     qrToken: string;
+    qrExpiresAt?: string | null;
+    qrStatus?: DigitalId['qrStatus'];
   };
 }
 
@@ -99,7 +101,7 @@ interface BackendLedgerEntry {
   memberId: string;
   amount: number;
   reason: string;
-  type: PointsEntryType;
+  type: PointsEntryType | 'event_attendance';
   referenceId: string;
   createdBy: string;
   createdAt: string;
@@ -291,7 +293,7 @@ function toSessionUser(
 function mapLedgerEntry(entry: BackendLedgerEntry): PointsEntry {
   return {
     id: entry.id,
-    type: entry.type,
+    type: entry.type === 'event_attendance' ? 'attendance' : entry.type,
     amount: entry.amount,
     reason: entry.reason,
     reference: entry.referenceId,
@@ -301,7 +303,7 @@ function mapLedgerEntry(entry: BackendLedgerEntry): PointsEntry {
 
 function mapActivityEntry(entry: BackendLedgerEntry): ActivityEntry {
   const kind =
-    entry.type === 'attendance'
+    entry.type === 'attendance' || entry.type === 'event_attendance'
       ? 'event_checked_in'
       : entry.type === 'redemption'
         ? 'voucher_claimed'
@@ -347,7 +349,7 @@ function mapVoucher(voucher: BackendVoucher): Voucher {
     bannerLabel: null,
     state: mapVoucherState(voucher),
     claimedAt: voucher.createdAt,
-    expiresAt: voucher.expiresAt ?? voucher.createdAt,
+    expiresAt: voucher.expiresAt ?? null,
     redeemedAt: voucher.redeemedAt ?? null,
     qrValue: null,
   };
@@ -543,7 +545,7 @@ export function createLiveDataSource(
       const authUser = auth.currentUser!;
       const sessionUser = toSessionUser(backendMember, authUser);
       const history = historyRes.data.history ?? [];
-      const attendanceEntries = history.filter((entry) => entry.type === 'attendance');
+      const attendanceEntries = history.filter((entry) => entry.type === 'attendance' || entry.type === 'event_attendance');
       const vouchers = (vouchersRes.data.vouchers ?? []).map(mapVoucher);
       const activeVouchers = vouchers.filter((voucher) => voucher.state === 'ready');
 
@@ -581,7 +583,9 @@ export function createLiveDataSource(
           roleLabel: verified ? 'Verified' : 'Unverified',
           membershipStatus: verified ? 'verified' : 'unverified',
           qrValue: verified ? card.qrToken : '',
-          statusNote: verified ? 'Active for check-in' : 'Membership inactive',
+          qrExpiresAt: verified ? card.qrExpiresAt ?? null : null,
+          qrStatus: verified ? card.qrStatus ?? (card.qrToken ? 'ready' : 'provisioning_required') : 'inactive',
+          statusNote: !verified ? 'Membership inactive' : card.qrToken ? 'Annual dues paid' : 'Control number needed for QR issuance',
         };
       } catch (error) {
         if (error instanceof DataError && error.code === 'invalid_input') {
@@ -598,6 +602,8 @@ export function createLiveDataSource(
             roleLabel: member.isPaid ? 'Verified' : 'Unverified',
             membershipStatus: member.isPaid ? 'verified' : 'unverified',
             qrValue: '',
+            qrExpiresAt: null,
+            qrStatus: member.isPaid ? 'provisioning_required' : 'inactive',
             statusNote: member.isPaid
               ? 'Control number needed for QR issuance'
               : 'Membership inactive',
@@ -647,6 +653,7 @@ export function createLiveDataSource(
           {
             method: 'POST',
             body: JSON.stringify({ idempotencyKey: claimOptions.idempotencyKey }),
+            signal: claimOptions.signal,
           }
         );
         return {
@@ -763,11 +770,16 @@ export function createLiveDataSource(
       };
     },
 
-    async searchMembers(_query: string): Promise<MemberSearchResult[]> {
-      throw new DataError(
-        'unsupported',
-        'Live member search endpoint is not available yet.'
-      );
+    async searchMembers(query: string): Promise<MemberSearchPage> {
+      if (query.trim().length < 2) return { members: [], hasMore: false, limit: 20 };
+      const res = await withAuth<{ hasMore?: boolean; limit?: number; members: { id: string; srCode: string; membershipId?: string; fullName: string | null; membershipStatus: 'verified' | 'unverified'; currentPoints: number }[] }>('/members/search', { method: 'GET', params: { q: query.trim() } });
+      return { hasMore: res.data.hasMore === true, limit: res.data.limit ?? 20, members: res.data.members.map(member => ({
+        memberId: member.membershipId || member.id,
+        studentId: member.srCode,
+        fullName: member.fullName || member.srCode,
+        membershipStatus: member.membershipStatus === 'verified' ? 'verified' : 'unverified',
+        balance: member.currentPoints,
+      })) };
     },
 
     async grantPoints(input: GrantPointsInput): Promise<GrantPointsResult> {

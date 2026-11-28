@@ -1,5 +1,7 @@
 # ASTRA mobile and tablet handoff notice
 
+**Current follow-up, 28 November 2026:** this document records the historical responsive-port handoff. Later integration repairs are described in [integration-repair-handoff.md](./integration-repair-handoff.md), including the supported demo switch, renewable ID credentials and production acceptance gaps.
+
 **Audience:** the web team that wrote `astra-mobile-handoff.md`, and whoever reviews the `mobile/responsive-portal` pull request.
 **Purpose:** tell you exactly what we built against that handoff, and, more importantly, every place where we went beyond it, changed something it said to keep, or made a choice it did not cover. Nothing here was hidden on purpose, but several changes touch files you own, so please read the deviations before merging.
 

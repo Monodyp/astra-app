@@ -118,7 +118,7 @@ export const Login: React.FC = () => {
     event.preventDefault();
     const errors: { identifier?: string; password?: string } = {};
     if (!identifier.trim()) {
-      errors.identifier = 'Enter your student ID or email address.';
+      errors.identifier = 'Enter your registered email address.';
     }
     if (!password) {
       errors.password = 'Enter your password.';
@@ -156,7 +156,7 @@ export const Login: React.FC = () => {
         <nav aria-label="Account" className="flex items-center gap-4 sm:gap-8">
           <a
             href="/astrascend"
-            className="inline-flex items-center gap-2 rounded-full bg-astra-primary-light px-5 py-3 text-sm sm:px-8 font-bold text-astra-white transition-transform hover:scale-105"
+            className="inline-flex items-center gap-2 rounded-full bg-astra-primary-light px-5 py-3 text-sm sm:px-8 font-bold text-astra-black transition-transform hover:scale-105"
           >
             ASTRAscend
             <ExternalLink className="h-3.5 w-3.5 sm:h-4 sm:w-4" aria-hidden="true" />
@@ -250,11 +250,13 @@ export const Login: React.FC = () => {
               htmlFor={identifierId}
               className="block text-sm font-bold text-astra-white"
             >
-              Student ID or Email Address
+              Email Address
             </label>
             <input
               id={identifierId}
               name="identifier"
+              type="email"
+              inputMode="email"
               autoComplete="username"
               value={identifier}
               onChange={(event) => {
@@ -263,7 +265,7 @@ export const Login: React.FC = () => {
                   setFieldErrors((prev) => ({ ...prev, identifier: undefined }));
                 }
               }}
-              placeholder="2X-XXXXX or name@astra.example"
+              placeholder="name@astra.example"
               aria-describedby={error ? errorId : undefined}
               className={`${fieldClass} mt-3`}
             />

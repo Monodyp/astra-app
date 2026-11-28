@@ -11,7 +11,7 @@ import {
   DataError,
   portalData,
   type GrantPointsInput,
-  type MemberSearchResult,
+  type MemberSearchPage,
 } from '../data/index.js';
 
 const SEARCH_LABEL = 'Search by ASTRA ID, student ID, or name';
@@ -195,7 +195,7 @@ describe('officer points', () => {
     let fail: (reason: Error) => void = () => undefined;
     vi.spyOn(portalData, 'searchMembers').mockImplementation(
       () =>
-        new Promise<MemberSearchResult[]>((_, reject) => {
+        new Promise<MemberSearchPage>((_, reject) => {
           fail = reject;
         })
     );
@@ -210,10 +210,10 @@ describe('officer points', () => {
   });
 
   it('ignores results from an older search', async () => {
-    const pending: Array<(results: MemberSearchResult[]) => void> = [];
+    const pending: Array<(results: MemberSearchPage) => void> = [];
     vi.spyOn(portalData, 'searchMembers').mockImplementation(
       () =>
-        new Promise<MemberSearchResult[]>((resolve) => {
+        new Promise<MemberSearchPage>((resolve) => {
           pending.push(resolve);
         })
     );
@@ -230,9 +230,10 @@ describe('officer points', () => {
     await search('Officer');
     await waitFor(() => expect(pending).toHaveLength(2));
 
-    pending[1]([member('Officer Doe', 'ASTR1D-0003')]);
+    pending[1]({ members: [member('Officer Doe', 'ASTR1D-0003')], hasMore: true, limit: 20 });
     expect(await memberOption(/Officer Doe/)).toBeDefined();
-    pending[0]([member('Verified Doe', 'ASTR1D-0001')]);
+    expect(await screen.findByText(/Showing the first 20 matches/)).toBeDefined();
+    pending[0]({ members: [member('Verified Doe', 'ASTR1D-0001')], hasMore: false, limit: 20 });
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(await optionTexts()).toEqual([
       'Officer DoeASTRA ID ASTR1D-0003 · Student ID 00-00000',
@@ -277,7 +278,7 @@ describe('officer points', () => {
       amount: 100,
       referenceId: 'Booth shift',
     });
-    const [iris] = await portalData.searchMembers('24-90004');
+    const [iris] = (await portalData.searchMembers('24-90004')).members;
     expect(iris.balance).toBe(450);
     expect(within(preview()).getByText('450 pts')).toBeDefined();
     view.unmount();

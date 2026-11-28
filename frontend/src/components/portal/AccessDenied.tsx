@@ -24,7 +24,7 @@ export const AccessDenied: React.FC = () => (
     </p>
     <Link
       to={DEFAULT_PORTAL_PATH}
-      className="mt-6 inline-flex rounded-full bg-astra-primary-light px-6 py-2.5 text-sm font-bold text-astra-white transition-transform hover:scale-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-astra-white"
+      className="mt-6 inline-flex rounded-full bg-astra-primary-light px-6 py-2.5 text-sm font-bold text-astra-black transition-transform hover:scale-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-astra-white"
     >
       Back to Overview
     </Link>

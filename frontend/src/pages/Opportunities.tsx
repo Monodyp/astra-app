@@ -1,8 +1,8 @@
 import React from 'react';
 
 const serviceRequestUrl = import.meta.env.VITE_FORM_REQUEST_SERVICE_URL || '/astrascend/request';
-const partnershipUrl = import.meta.env.VITE_FORM_PARTNERSHIP_URL || '#';
-const opportunitiesUrl = import.meta.env.VITE_FORM_OPPORTUNITIES_URL || '#';
+const partnershipUrl = import.meta.env.VITE_FORM_PARTNERSHIP_URL?.trim();
+const opportunitiesUrl = import.meta.env.VITE_FORM_OPPORTUNITIES_URL?.trim();
 
 export const Opportunities: React.FC = () => {
   return (
@@ -21,24 +21,22 @@ export const Opportunities: React.FC = () => {
         >
           Request ASTRA Service
         </a>
-        {partnershipUrl === '#' && <p className="text-xs text-amber-300">The partnership form link has not been configured yet.</p>}
-        <a
+        {partnershipUrl && partnershipUrl !== '#' ? <a
           href={partnershipUrl}
           target="_blank"
           rel="noopener noreferrer"
           className="w-full py-2.5 px-4 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-center text-xs font-semibold text-slate-200 transition-colors"
         >
           Partner With ASTRA
-        </a>
-        {opportunitiesUrl === '#' && <p className="text-xs text-amber-300">The opportunities form link has not been configured yet.</p>}
-        <a
+        </a> : <p role="status" className="text-sm text-astra-gray">The partnership form is not available yet.</p>}
+        {opportunitiesUrl && opportunitiesUrl !== '#' ? <a
           href={opportunitiesUrl}
           target="_blank"
           rel="noopener noreferrer"
           className="w-full py-2.5 px-4 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-center text-xs font-semibold text-slate-200 transition-colors"
         >
           Apply for Opportunities
-        </a>
+        </a> : <p role="status" className="text-sm text-astra-gray">The opportunities form is not available yet.</p>}
       </div>
 
     </div>

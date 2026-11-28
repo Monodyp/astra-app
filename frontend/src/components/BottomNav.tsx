@@ -41,7 +41,7 @@ export const BottomNav: React.FC<{
           const Icon = ICONS[item.path] ?? Home;
           const active = isActivePath(pathname, item.path);
           return (
-            <li key={item.path} className="flex min-w-0 flex-auto">
+            <li key={item.path} className="flex min-w-11 flex-1">
               <Link
                 to={item.path}
                 aria-label={item.label}

@@ -1,5 +1,7 @@
 # ASTRA backend handoff
 
+**Current follow-up, 28 November 2026:** the baseline below is historical. Current voucher date normalization, attendance compatibility, live search and ID expiry/readiness contracts are recorded in [integration-repair-handoff.md](./integration-repair-handoff.md). Outstanding partner and registration work remains explicit there.
+
 **Baseline:** `main` at `6324dfc` (PR #24 merged on top of the desktop portal, PR #15). The previous version was written against `16b69f9` and predated PR #24.
 
 **How to read this.** The backend's login system and current routes are the contract. The frontend will write the live adapter (`frontend/src/data/live/`) against the routes as they are today and adapt wherever it can. This document only asks the backend to change where the portal cannot work otherwise, or where a route is unsafe. Everything the frontend will handle on its own is listed in section 3 so you don't spend time on it.

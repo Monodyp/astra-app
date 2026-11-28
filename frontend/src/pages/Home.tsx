@@ -16,8 +16,10 @@ import EventsCalendar from '@/components/home/events-calendar';
 import LandingFooter from '@/components/home/landing-footer';
 import Starfield from '@/components/star-field';
 import { FloatingCardWrapper } from '@/components/id/FloatingCardWrapper';
+import { usePortalEntry } from '../components/home/usePortalEntry.js';
 
 export const Home: React.FC = () => {
+  const entry = usePortalEntry();
   return (
     <div
       id="home"
@@ -56,19 +58,19 @@ export const Home: React.FC = () => {
                 </p>
                 <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:gap-6">
                   <a
-                    href="/login"
+                    href={entry.href}
                     className="order-1 flex min-h-12 items-center justify-center border-2 border-astra-primary-light font-astra text-sm font-bold text-astra-white sm:hidden"
                   >
-                    Join ASTRA / Login
+                    {entry.label}
                   </a>
                   <a
                     href="#features"
-                    className="order-2 flex min-h-12 items-center justify-center rounded-full border border-astra-primary-dark px-7 py-3 font-astra text-sm font-bold text-astra-white sm:order-none sm:inline-flex sm:min-h-0 sm:border-0 sm:bg-astra-primary-light sm:text-white sm:transition-transform sm:hover:scale-105"
+                    className="order-2 flex min-h-12 items-center justify-center rounded-full border border-astra-primary-dark px-7 py-3 font-astra text-sm font-bold text-astra-white sm:order-none sm:inline-flex sm:min-h-0 sm:border-0 sm:bg-astra-primary-light sm:text-astra-black sm:transition-transform sm:hover:scale-105"
                   >
                     Explore Features
                   </a>
-                  <ActionLink href="/login" className="hidden sm:inline-flex">
-                    Join ASTRA
+                  <ActionLink href={entry.href} className="hidden sm:inline-flex">
+                    {entry.label}
                   </ActionLink>
                 </div>
               </div>
@@ -105,10 +107,10 @@ export const Home: React.FC = () => {
             </p>
             <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
               <a
-                href="/login"
-                className="rounded-full bg-astra-primary-light px-7 py-3 font-astra text-base font-bold text-white transition-transform hover:scale-105"
+                href={entry.href}
+                className="rounded-full bg-astra-primary-light px-7 py-3 font-astra text-base font-bold text-astra-black transition-transform hover:scale-105"
               >
-                Login to Portal
+                {entry.label}
               </a>
               <ActionLink href="https://discord.gg/NRvkKxkNxG">
                 Join Discord Community

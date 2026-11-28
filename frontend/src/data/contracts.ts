@@ -89,6 +89,8 @@ export interface DigitalId {
   roleLabel: string;
   membershipStatus: MembershipStatus;
   qrValue: string;
+  qrExpiresAt?: string | null;
+  qrStatus?: 'ready' | 'inactive' | 'provisioning_required';
   statusNote: string;
 }
 
@@ -136,7 +138,7 @@ export interface Voucher {
   bannerLabel: string | null;
   state: VoucherState;
   claimedAt: string;
-  expiresAt: string;
+  expiresAt: string | null;
   redeemedAt: string | null;
   qrValue: string | null;
 }
@@ -149,6 +151,7 @@ export type ClaimDeclineReason =
 
 export interface ClaimPerkOptions {
   idempotencyKey: string;
+  signal?: AbortSignal;
 }
 
 export type ClaimResult =
@@ -211,6 +214,12 @@ export interface MemberSearchResult {
   studentId: string;
   membershipStatus: MembershipStatus;
   balance: number;
+}
+
+export interface MemberSearchPage {
+  members: MemberSearchResult[];
+  hasMore: boolean;
+  limit: number;
 }
 
 export interface GrantPointsInput {
@@ -281,6 +290,6 @@ export interface PortalDataSource {
   listScanSamples(): Promise<ScanSample[]>;
   checkIn(input: CheckInInput): Promise<CheckInResult>;
 
-  searchMembers(query: string): Promise<MemberSearchResult[]>;
+  searchMembers(query: string): Promise<MemberSearchPage>;
   grantPoints(input: GrantPointsInput): Promise<GrantPointsResult>;
 }

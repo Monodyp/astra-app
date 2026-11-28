@@ -31,11 +31,11 @@ describe('sign-in and route access', () => {
     expect(window.location.search).toBe('?from=link');
   });
 
-  it('signs in with a typed student ID', async () => {
+  it('signs in with a typed email address', async () => {
     renderAt('/login');
     fireEvent.change(
-      await screen.findByLabelText('Student ID or Email Address'),
-      { target: { value: '24-90001' } }
+      await screen.findByLabelText('Email Address'),
+      { target: { value: 'verified.doe@astra.example' } }
     );
     fireEvent.change(screen.getByLabelText('Password'), {
       target: { value: 'any-password' },

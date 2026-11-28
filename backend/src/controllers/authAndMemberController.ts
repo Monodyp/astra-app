@@ -4,7 +4,7 @@ import { firebaseAdmin } from '../lib/firebase.js';
 import { userFromDecodedToken } from '../lib/authUser.js';
 import { getConfiguredMemberService } from '../config/members.js';
 import {
-  generateMemberQrToken,
+  generateMemberQrTokenWithExpiry,
   InvalidQrTokenError,
   verifyQrToken,
 } from '../services/qrService.js';
@@ -140,11 +140,12 @@ export async function getMemberIdCardStub(req: Request, res: Response): Promise<
       return;
     }
 
-    const qrIdentifier =
-      account.controlNumber ?? account.membershipId ?? account.srCode;
-    const qrToken = account.isPaid
-      ? await generateMemberQrToken(qrIdentifier)
-      : '';
+    const qrIdentifier = [account.controlNumber, account.membershipId]
+      .map(value => value?.trim().toUpperCase())
+      .find(value => value && /^ASTR1D-\d{4}$/.test(value) && Number(value.slice(7)) > 0);
+    const credential = account.isPaid && qrIdentifier
+      ? await generateMemberQrTokenWithExpiry(qrIdentifier)
+      : { qrToken: '', qrExpiresAt: null };
 
     res.set({
       'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
@@ -157,7 +158,8 @@ export async function getMemberIdCardStub(req: Request, res: Response): Promise<
         program: account.program,
         yearLevel: account.yearLevel,
         isPaid: account.isPaid,
-        qrToken,
+        ...credential,
+        qrStatus: !account.isPaid ? 'inactive' : qrIdentifier ? 'ready' : 'provisioning_required',
       },
     });
   } catch (error) {

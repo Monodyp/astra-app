@@ -3,10 +3,12 @@
 **Baseline:** `main` (`b97c56c`, after PR #27 `feat/authentication`).  
 See also: [`astra-frontend-handoff.md`](./astra-frontend-handoff.md), [`astra-backend-handoff.md`](./astra-backend-handoff.md), and [`astra-mobile-handoff.md`](./astra-mobile-handoff.md).
 
+**Repair update, 28 November 2026:** runtime and workflow notes below reflect the integration repairs. See [integration-repair-handoff.md](./integration-repair-handoff.md) for outstanding production acceptance gates.
+
 ## 1. Current Architecture Summary
 
 - **Frontend (`https://astra-app-gray.vercel.app`):**
-  - `frontend/src/data/index.ts` unconditionally initializes `createLiveDataSource()` (`frontend/src/data/live/liveSource.ts`). Demo mode has been removed from runtime/production builds (`frontend/src/data/demo/` is retained strictly in `frontend/src/test-setup.ts` for offline Vitest runs).
+  - `frontend/src/data/index.ts` selects live data by default. `VITE_PORTAL_DATA_SOURCE=demo` explicitly selects the offline demo adapter; Vitest also uses demo data. Omit that flag or set it to `live` for production. Demo verification does not verify the deployed backend.
   - `frontend/src/lib/firebase.ts` lazily initializes Firebase Auth (`getFirebaseAuth()` / `hasFirebaseConfig()`).
   - `frontend/src/lib/apiClient.ts` scopes `Authorization: Bearer <idToken>` requests to `VITE_API_URL` and preserves HTTP status codes via `requestApi()` / `ApiError`.
 - **Backend (`https://astra-app-backend.vercel.app`):**
@@ -68,9 +70,9 @@ Add under **Settings -> Environment Variables** (**Production**):
 
 ## 5. Known Remaining Integration Gaps
 
-- **Officer member search (`searchMembers`):** Throws `'unsupported'` in `liveSource.ts`; requires a backend officer member-search endpoint.
-- **Digital ID QR signing (`backend/src/services/qrService.ts`):** Expects an `ASTR1D-NNNN` control number; `liveSource.ts` falls back to displaying an un-QR'd card if `GET /members/me/id` returns `400`.
-- **Partner voucher redemption (`backend/src/services/redemptionService.ts`):** Uses an in-memory `_voucherStore` rather than Firestore repositories.
+- **Officer member search:** The adapter uses `GET /members/search`. The API returns authoritative membership status and supports SR code, assigned ASTRA identifiers, name and email. Verify the deployed roster and officer access before sign-off.
+- **Digital ID QR signing:** Issuance still requires an assigned `ASTR1D-NNNN` identifier. The ID response includes `qrExpiresAt` and `qrStatus`. Paid members without provisioning retain their membership status but have no QR. The frontend renews credentials and hides expired ones.
+- **Partner voucher redemption:** Validate/apply use Firestore in production and an in-memory store in tests or memory mode. A production partner workspace, approved staff instructions and a production voucher scanner contract remain outstanding. Live voucher QR remains unavailable.
 
 ## 6. Deployment Verification Checklist
 

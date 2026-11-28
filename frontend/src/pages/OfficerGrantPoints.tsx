@@ -7,6 +7,7 @@ import {
   portalData,
   type GrantPointsResult,
   type MemberSearchResult,
+  type MemberSearchPage,
 } from '../data/index.js';
 import { errorMessage } from '../lib/format.js';
 import { isUncertainFailure, newIdempotencyKey } from '../lib/idempotency.js';
@@ -21,7 +22,7 @@ const fieldClass =
 type Search =
   | { status: 'idle' }
   | { status: 'loading' }
-  | { status: 'ready'; results: MemberSearchResult[] }
+  | ({ status: 'ready' } & MemberSearchPage)
   | { status: 'error'; message: string };
 
 interface FrozenGrant {
@@ -104,7 +105,7 @@ export const OfficerGrantPoints: React.FC = () => {
 
   useEffect(() => {
     setActiveIndex(-1);
-    if (selected || query.trim() === '') {
+    if (selected || query.trim().length < 2) {
       setSearch({ status: 'idle' });
       return;
     }
@@ -113,8 +114,8 @@ export const OfficerGrantPoints: React.FC = () => {
     const timer = window.setTimeout(() => {
       portalData
         .searchMembers(query)
-        .then((results) => {
-          if (active) setSearch({ status: 'ready', results });
+        .then((page) => {
+          if (active) setSearch({ status: 'ready', ...page });
         })
         .catch((caught: unknown) => {
           if (active) {
@@ -137,7 +138,7 @@ export const OfficerGrantPoints: React.FC = () => {
     !submitting &&
     (frozen || (selected !== null && recipientActive && amountValid));
 
-  const results = search.status === 'ready' ? search.results : [];
+  const results = search.status === 'ready' ? search.members : [];
   const showList = listOpen && search.status !== 'idle';
   const optionId = (index: number) => `${listId}-option-${index}`;
 
@@ -191,8 +192,8 @@ export const OfficerGrantPoints: React.FC = () => {
     }
     portalData
       .searchMembers(recipient.studentId)
-      .then((matches) => {
-        const match = matches.find(
+      .then((page) => {
+        const match = page.members.find(
           (item) => item.memberId === recipient.memberId
         );
         if (match) replace(match);
@@ -395,6 +396,12 @@ export const OfficerGrantPoints: React.FC = () => {
               )}
             </div>
           </div>
+
+          {search.status === 'ready' && search.hasMore && !selected && (
+            <p role="status" className="text-sm text-astra-gray">
+              Showing the first {search.limit} matches. Refine the name, SR code or ASTRA ID to find your member.
+            </p>
+          )}
 
           {selected && (
             <div
