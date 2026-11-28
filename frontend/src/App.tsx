@@ -4,6 +4,7 @@ import { AuthProvider } from './context/AuthContext.js';
 import { AppShell } from './components/AppShell.js';
 import { ProtectedRoute } from './components/ProtectedRoute.js';
 import { LoadingState } from './components/portal/StatusViews.js';
+import { CheckInBoundary } from './features/checkin/CheckInBoundary.js';
 import { Login } from './pages/Login.js';
 import { Home } from './pages/Home.js';
 import { Overview } from './pages/Overview.js';
@@ -104,9 +105,11 @@ export const App: React.FC = () => {
               path="/checkin"
               element={
                 <ProtectedRoute role="officer">
-                  <React.Suspense fallback={<LoadingState label="Opening the check-in station" />}>
-                    <CheckIn />
-                  </React.Suspense>
+                  <CheckInBoundary>
+                    <React.Suspense fallback={<LoadingState label="Opening the check-in station" />}>
+                      <CheckIn />
+                    </React.Suspense>
+                  </CheckInBoundary>
                 </ProtectedRoute>
               }
             />
