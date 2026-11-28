@@ -75,13 +75,16 @@ export async function searchMembersHandler(
     return;
   }
   try {
-    const matches = await getConfiguredMemberService().searchMembers(parsed.data.q);
+    const members = getConfiguredMemberService();
+    const matches = await members.searchMembers(parsed.data.q);
     const summaries = await Promise.all(matches.map(async (member) => ({
       id: member.srCode,
       fullName: member.fullName,
       srCode: member.srCode,
       email: member.email ?? null,
       currentPoints: await getMemberPoints(member.srCode),
+      membershipId: member.membershipId ?? member.controlNumber ?? member.srCode,
+      membershipStatus: (await members.verifyMembership(member.srCode)).isValid ? 'verified' : 'unverified',
     })));
     res.status(200).json({ members: summaries });
   } catch (error) {

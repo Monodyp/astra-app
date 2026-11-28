@@ -46,6 +46,7 @@ export function createMemberService(source: MemberSource): MemberService {
         const email = member.email?.toUpperCase() ?? '';
         return (
           normalizeSrCode(member.srCode).includes(needle) ||
+          [member.membershipId, member.controlNumber].some(value => value && normalizeSrCode(value).includes(needle)) ||
           name.includes(needle) ||
           email.includes(needle)
         );
