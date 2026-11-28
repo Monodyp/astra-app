@@ -3,13 +3,13 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext.js';
 import { AppShell } from './components/AppShell.js';
 import { ProtectedRoute } from './components/ProtectedRoute.js';
+import { LoadingState } from './components/portal/StatusViews.js';
 import { Login } from './pages/Login.js';
 import { Home } from './pages/Home.js';
 import { Overview } from './pages/Overview.js';
 import { DigitalID } from './pages/DigitalID.js';
 import { Points } from './pages/Points.js';
 import { OfficerGrantPoints } from './pages/OfficerGrantPoints.js';
-import { CheckIn } from './pages/CheckIn.js';
 import { Marketplace } from './pages/Marketplace.js';
 import { VoucherDetails } from './pages/VoucherDetails.js';
 import { Vouchers } from './pages/Vouchers.js';
@@ -26,6 +26,10 @@ import { Opportunities } from './pages/Opportunities.js';
 // DevTools is only imported here; the route is registered only in DEV mode.
 // Vite strips the branch in production builds via import.meta.env.DEV dead-code elimination.
 import { DevTools } from './pages/DevTools.js';
+
+const CheckIn = React.lazy(() =>
+  import('./pages/CheckIn.js').then((page) => ({ default: page.CheckIn }))
+);
 
 export const App: React.FC = () => {
   return (
@@ -100,7 +104,9 @@ export const App: React.FC = () => {
               path="/checkin"
               element={
                 <ProtectedRoute role="officer">
-                  <CheckIn />
+                  <React.Suspense fallback={<LoadingState label="Opening the check-in station" />}>
+                    <CheckIn />
+                  </React.Suspense>
                 </ProtectedRoute>
               }
             />
