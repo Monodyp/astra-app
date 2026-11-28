@@ -104,7 +104,7 @@ export const OfficerGrantPoints: React.FC = () => {
 
   useEffect(() => {
     setActiveIndex(-1);
-    if (selected || query.trim() === '') {
+    if (selected || query.trim().length < 2) {
       setSearch({ status: 'idle' });
       return;
     }

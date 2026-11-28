@@ -386,6 +386,8 @@ export function createDemoDataSource(
           : 'Unverified',
         membershipStatus: verified ? 'verified' : 'unverified',
         qrValue: member.qrToken,
+        qrExpiresAt: verified ? new Date(now().getTime() + 300_000).toISOString() : null,
+        qrStatus: verified ? 'ready' : 'inactive',
         statusNote: verified ? 'Annual dues paid' : 'Membership inactive',
       };
     },

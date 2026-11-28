@@ -52,7 +52,7 @@ const VoucherCard: React.FC<{ voucher: Voucher }> = ({ voucher }) => (
       <p className="mt-1 text-xs text-astra-gray">
         {voucher.state === 'redeemed' && voucher.redeemedAt
           ? `Redeemed ${formatShortDate(voucher.redeemedAt)}`
-          : `${voucher.state === 'expired' ? 'Expired' : 'Expires'} ${formatShortDate(voucher.expiresAt)}`}
+          : voucher.expiresAt ? `${voucher.state === 'expired' ? 'Expired' : 'Expires'} ${formatShortDate(voucher.expiresAt)}` : 'Expiration date unavailable'}
       </p>
     </div>
     {scannableVoucherBarcode(voucher) && (

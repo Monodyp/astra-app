@@ -24,11 +24,13 @@ export function formatTime(iso: string): string {
   return timeFormat.format(new Date(iso));
 }
 
-export function formatShortDate(iso: string): string {
+export function formatShortDate(iso: string | null | undefined): string {
+  if (!iso || !Number.isFinite(Date.parse(iso))) return 'Date unavailable';
   return shortDateFormat.format(new Date(iso));
 }
 
-export function formatLongDate(iso: string): string {
+export function formatLongDate(iso: string | null | undefined): string {
+  if (!iso || !Number.isFinite(Date.parse(iso))) return 'Date unavailable';
   return longDateFormat.format(new Date(iso));
 }
 

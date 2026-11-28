@@ -89,6 +89,8 @@ export interface DigitalId {
   roleLabel: string;
   membershipStatus: MembershipStatus;
   qrValue: string;
+  qrExpiresAt?: string | null;
+  qrStatus?: 'ready' | 'inactive' | 'provisioning_required';
   statusNote: string;
 }
 
@@ -136,7 +138,7 @@ export interface Voucher {
   bannerLabel: string | null;
   state: VoucherState;
   claimedAt: string;
-  expiresAt: string;
+  expiresAt: string | null;
   redeemedAt: string | null;
   qrValue: string | null;
 }

@@ -27,12 +27,12 @@ function redemptionSteps(voucher: Voucher): string[] {
   }
   if (voucher.state === 'expired') {
     return [
-      `Expired on ${formatLongDate(voucher.expiresAt)} and can no longer be redeemed.`,
+      voucher.expiresAt ? `Expired on ${formatLongDate(voucher.expiresAt)} and can no longer be redeemed.` : 'This voucher has expired and can no longer be redeemed.',
       'Browse the Perks Marketplace to claim another voucher.',
     ];
   }
   return [
-    `Visit ${voucher.partnerName ?? 'the partner store'} before ${formatLongDate(voucher.expiresAt)}.`,
+    voucher.expiresAt ? `Visit ${voucher.partnerName ?? 'the partner store'} before ${formatLongDate(voucher.expiresAt)}.` : `Visit ${voucher.partnerName ?? 'the partner store'}. No expiration date was provided.`,
     'Show this voucher and your digital ID to partner staff.',
     `Staff can enter the voucher code ${voucher.code} manually.`,
   ];
