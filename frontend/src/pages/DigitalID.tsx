@@ -70,6 +70,7 @@ export const DigitalID: React.FC = () => {
           role="img"
           aria-label="Member check-in QR"
           className="mx-auto h-auto w-full max-w-[320px] bg-white"
+          style={{ width: 'min(100%, 320px, calc(100dvh - 6rem))' }}
         />
       )}
       <p role="status" className="text-sm">
