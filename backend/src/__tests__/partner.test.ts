@@ -182,6 +182,7 @@ describe('Partner Redemption API', () => {
     expect(res.status).toBe(200);
     expect(res.body.valid).toBe(false);
     expect(res.body.reason).toBe('expired');
+    expect(res.body.error).toBe('Voucher has expired');
   });
 
   it('validate used voucher → already_used', async () => {
@@ -255,6 +256,7 @@ describe('Partner Redemption API', () => {
     expect(res.status).toBe(200);
     expect(res.body.applied).toBe(false);
     expect(res.body.reason).toBe('expired');
+    expect(res.body.error).toBe('Voucher has expired');
   });
 
   it('two simultaneous applies → exactly one succeeds', async () => {

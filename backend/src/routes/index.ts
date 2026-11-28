@@ -11,6 +11,8 @@ import {
   getPointsMe,
   getPointsHistoryHandler,
   grantPointsHandler,
+  searchMembersHandler,
+  getMemberOverviewHandler,
 } from '../controllers/pointsController.js';
 import {
   getEvents,
@@ -27,6 +29,7 @@ import {
 import {
   checkInHandler,
   getAttendanceHandler,
+  getEventRosterHandler,
 } from '../controllers/attendanceController.js';
 import {
   getOpportunitiesStub,
@@ -57,6 +60,13 @@ router.get(
   authMiddleware,
   getPointsHistoryHandler
 );
+router.get(
+  '/members/search',
+  authMiddleware,
+  requireRole('officer'),
+  searchMembersHandler
+);
+router.get('/members/me/overview', authMiddleware, getMemberOverviewHandler);
 router.post(
   '/points/grant',
   authMiddleware,
@@ -66,7 +76,18 @@ router.post(
 
 // Events routes
 router.get('/events', authMiddleware, getEvents);
-router.post('/events/:id/checkin', authMiddleware, checkInEvent);
+router.get(
+  '/events/:id/roster',
+  authMiddleware,
+  requireRole('officer'),
+  getEventRosterHandler
+);
+router.post(
+  '/events/:id/checkin',
+  authMiddleware,
+  requireRole('officer'),
+  checkInEvent
+);
 
 // Perks & Vouchers routes
 router.get('/perks', authMiddleware, getPerks);

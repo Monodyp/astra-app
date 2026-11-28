@@ -3,20 +3,14 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext.js';
 import { AppShell } from './components/AppShell.js';
 import { ProtectedRoute } from './components/ProtectedRoute.js';
+import { LoadingState } from './components/portal/StatusViews.js';
+import { CheckInBoundary } from './features/checkin/CheckInBoundary.js';
 import { Login } from './pages/Login.js';
-import { ViewportScreen } from './components/ViewportScreen.js';
-import { MobileLogin } from './features/auth/mobile/MobileLogin.js';
-import { MobileCheckIn } from './features/checkin/mobile/MobileCheckIn.js';
-import { MobileDigitalID } from './features/member/mobile/MobileDigitalID.js';
-import { MobileNotValid } from './features/member/mobile/MobileNotValid.js';
-import { MobileOverview } from './features/member/mobile/MobileOverview.js';
-import { MobileGrantPoints } from './features/officer/mobile/MobileGrantPoints.js';
 import { Home } from './pages/Home.js';
 import { Overview } from './pages/Overview.js';
 import { DigitalID } from './pages/DigitalID.js';
 import { Points } from './pages/Points.js';
 import { OfficerGrantPoints } from './pages/OfficerGrantPoints.js';
-import { CheckIn } from './pages/CheckIn.js';
 import { Marketplace } from './pages/Marketplace.js';
 import { VoucherDetails } from './pages/VoucherDetails.js';
 import { Vouchers } from './pages/Vouchers.js';
@@ -34,17 +28,16 @@ import { Opportunities } from './pages/Opportunities.js';
 // Vite strips the branch in production builds via import.meta.env.DEV dead-code elimination.
 import { DevTools } from './pages/DevTools.js';
 
-const RedirectToDigitalId: React.FC = () => <Navigate to="/id" replace />;
+const CheckIn = React.lazy(() =>
+  import('./pages/CheckIn.js').then((page) => ({ default: page.CheckIn }))
+);
 
 export const App: React.FC = () => {
   return (
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          <Route
-            path="/login"
-            element={<ViewportScreen mobile={MobileLogin} desktop={Login} />}
-          />
+          <Route path="/login" element={<Login />} />
           <Route path="/events/:id" element={<EventDetail />} />
           <Route path="/astrascend" element={<AstrascendLayout />}>
             <Route index element={<LandingPage />} />
@@ -64,7 +57,7 @@ export const App: React.FC = () => {
               path="/home"
               element={
                 <ProtectedRoute>
-                  <ViewportScreen mobile={MobileOverview} desktop={Overview} />
+                  <Overview />
                 </ProtectedRoute>
               }
             />
@@ -80,10 +73,7 @@ export const App: React.FC = () => {
               path="/id"
               element={
                 <ProtectedRoute>
-                  <ViewportScreen
-                    mobile={MobileDigitalID}
-                    desktop={DigitalID}
-                  />
+                  <DigitalID />
                 </ProtectedRoute>
               }
             />
@@ -91,10 +81,7 @@ export const App: React.FC = () => {
               path="/not-valid"
               element={
                 <ProtectedRoute>
-                  <ViewportScreen
-                    mobile={MobileNotValid}
-                    desktop={RedirectToDigitalId}
-                  />
+                  <Navigate to="/id" replace />
                 </ProtectedRoute>
               }
             />
@@ -110,10 +97,7 @@ export const App: React.FC = () => {
               path="/officer/grant-points"
               element={
                 <ProtectedRoute role="officer">
-                  <ViewportScreen
-                    mobile={MobileGrantPoints}
-                    desktop={OfficerGrantPoints}
-                  />
+                  <OfficerGrantPoints />
                 </ProtectedRoute>
               }
             />
@@ -121,7 +105,11 @@ export const App: React.FC = () => {
               path="/checkin"
               element={
                 <ProtectedRoute role="officer">
-                  <ViewportScreen mobile={MobileCheckIn} desktop={CheckIn} />
+                  <CheckInBoundary>
+                    <React.Suspense fallback={<LoadingState label="Opening the check-in station" />}>
+                      <CheckIn />
+                    </React.Suspense>
+                  </CheckInBoundary>
                 </ProtectedRoute>
               }
             />

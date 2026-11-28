@@ -25,17 +25,17 @@ type Outcome =
   | { kind: 'error'; message: string };
 
 const RosterRow: React.FC<{ record: AttendanceRecord }> = ({ record }) => (
-  <li className="grid grid-cols-[1.6fr_1fr_1fr_0.8fr_0.6fr] items-center gap-4 border border-astra-white/10 bg-black/50 px-4 py-4 text-sm">
-    <span className="flex items-center gap-3 font-bold text-astra-white">
+  <li className="grid grid-cols-2 items-center gap-x-4 gap-y-2 border border-astra-white/10 bg-black/50 px-4 py-4 text-sm md:grid-cols-[1.6fr_1fr_1fr_0.8fr_0.6fr] md:gap-4">
+    <span className="order-1 flex min-w-0 items-center gap-3 break-words font-bold text-astra-white md:order-none">
       <CircleCheck className="h-5 w-5 text-[#4ade80]" aria-hidden="true" />
       {record.memberName}
     </span>
-    <span className="text-xs text-astra-gray">{record.studentId}</span>
-    <span className="text-astra-gray">Checked in</span>
-    <span className="font-bold text-[#4ade80]">
+    <span className="order-3 text-xs text-astra-gray md:order-none">{record.studentId}</span>
+    <span className="order-5 col-span-2 text-astra-gray md:order-none md:col-span-1">Checked in</span>
+    <span className="order-2 text-right font-bold text-[#4ade80] md:order-none md:text-left">
       {formatPointsDelta(record.pointsAwarded)}
     </span>
-    <span className="text-right text-xs text-astra-gray">
+    <span className="order-4 text-right text-xs text-astra-gray md:order-none">
       {formatTime(record.checkedInAt)}
     </span>
   </li>
@@ -98,6 +98,13 @@ export const CheckIn: React.FC = () => {
 
   function handleManual(formEvent: React.FormEvent<HTMLFormElement>) {
     formEvent.preventDefault();
+    if (!studentId.trim()) {
+      setOutcome({
+        kind: 'error',
+        message: 'Error: Enter the student ID.',
+      });
+      return;
+    }
     void submit('manual', {
       eventId: event.id,
       method: 'manual',
@@ -118,7 +125,7 @@ export const CheckIn: React.FC = () => {
         title="Event Check-In"
         description="Scan a member's digital ID to verify attendance."
         aside={
-          <div className="min-w-[340px] border border-astra-primary-dark bg-black/50 px-6 py-4">
+          <div className="w-full border border-astra-primary-dark bg-black/50 px-6 py-4 md:w-auto md:min-w-[340px]">
             <p className="text-[10px] font-medium uppercase text-astra-primary-light">
               Current event / +{event.points} pts
             </p>
@@ -142,7 +149,7 @@ export const CheckIn: React.FC = () => {
 
       {samples.length > 0 && (
         <section aria-labelledby="samples-title">
-          <div className="flex items-end justify-between">
+          <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-1">
             <h2 id="samples-title" className="text-sm font-bold">
               Demo IDs
             </h2>
@@ -152,7 +159,7 @@ export const CheckIn: React.FC = () => {
           </div>
           <ul
             aria-label="Sample IDs to scan"
-            className="mt-3 grid grid-cols-4 gap-3"
+            className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-4"
           >
             {samples.map((sample) => (
               <li key={sample.id}>
@@ -207,21 +214,21 @@ export const CheckIn: React.FC = () => {
 
       <form onSubmit={handleManual} noValidate>
         <label htmlFor={manualId} className="block text-base font-bold">
-          Or enter Student ID manually
+          Or enter Student ID manually:
         </label>
-        <div className="mt-4 flex gap-6">
+        <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:gap-6">
           <input
             id={manualId}
             value={studentId}
             onChange={(changeEvent) => setStudentId(changeEvent.target.value)}
             placeholder="2X-XXXXX"
             autoComplete="off"
-            className="h-11 flex-1 border border-astra-white/15 bg-black/50 px-4 text-sm text-astra-white placeholder:text-astra-gray/70 focus:border-astra-primary-light focus:outline-none"
+            className="h-11 min-w-0 flex-1 border border-astra-white/15 bg-black/50 px-4 text-base sm:text-sm text-astra-white placeholder:text-astra-gray/70 focus:border-astra-primary-light focus:outline-none"
           />
           <button
             type="submit"
             disabled={busy || studentId.trim() === ''}
-            className="rounded-full bg-astra-primary-light px-6 text-base font-bold text-astra-white transition-colors hover:bg-[#19c0f7] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-astra-white disabled:cursor-not-allowed disabled:bg-astra-disabled disabled:text-astra-gray"
+            className="min-h-11 rounded-full bg-astra-primary-light px-6 text-base font-bold text-astra-white transition-colors hover:bg-[#19c0f7] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-astra-white disabled:cursor-not-allowed disabled:bg-astra-disabled disabled:text-astra-gray"
           >
             {pending === 'manual' ? 'Verifying…' : 'Verify & Check In'}
           </button>
@@ -256,7 +263,7 @@ export const CheckIn: React.FC = () => {
       )}
 
       <section aria-labelledby="roster-title">
-        <div className="flex items-end justify-between">
+        <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-1">
           <h2 id="roster-title" className="text-lg font-bold">
             Recent Scans
           </h2>

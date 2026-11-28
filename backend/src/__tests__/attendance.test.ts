@@ -81,6 +81,7 @@ describe('Attendance Check-In API', () => {
   it('POST /attendance/checkin → 400 for an invalid QR token', async () => {
     const res = await request(app)
       .post(`${BASE}/checkin`)
+      .set('x-test-user', asUser())
       .send({ qrToken: 'invalid-token', eventId: 'EVT-001' });
 
     expect(res.status).toBe(400);
@@ -218,5 +219,24 @@ describe('Attendance Check-In API', () => {
       .set('x-test-user', asUser());
     expect(res.status).toBe(200);
     expect(res.body.attendance).toEqual([]);
+  });
+
+  it('GET /events/:id/roster returns the real-time attendee roster', async () => {
+    _seedMember('S1001', 'Jane Doe');
+    await request(app)
+      .post('/attendance/checkin')
+      .set('x-test-user', asUser())
+      .send({ srCode: 'S1001', eventId: 'EVT-ROSTER' });
+
+    const res = await request(app)
+      .get('/events/EVT-ROSTER/roster')
+      .set('x-test-user', asUser());
+    expect(res.status).toBe(200);
+    expect(res.body.eventId).toBe('EVT-ROSTER');
+    expect(res.body.totalAttendees).toBe(1);
+    expect(res.body.roster[0]).toMatchObject({
+      srCode: 'S1001',
+      fullName: 'Jane Doe',
+    });
   });
 });

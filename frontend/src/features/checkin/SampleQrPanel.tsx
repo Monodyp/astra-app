@@ -12,7 +12,7 @@ export const SampleQrPanel: React.FC<{
 }> = ({ sample, busy, scanning, onSimulate, onClose }) => (
   <section
     aria-label={`Sample QR for ${sample.label}`}
-    className="mt-6 flex items-center gap-8 border border-astra-primary-dark bg-black/70 px-6 py-6"
+    className="mt-6 flex flex-col items-start gap-5 border border-astra-primary-dark bg-black/70 px-4 py-6 sm:flex-row sm:items-center sm:gap-8 sm:px-6"
   >
     <div className="shrink-0 bg-astra-white p-3">
       <QRCodeSVG
@@ -22,7 +22,7 @@ export const SampleQrPanel: React.FC<{
         aria-label={`QR code for ${sample.label}`}
       />
     </div>
-    <div className="flex-1">
+    <div className="min-w-0 flex-1">
       <p className="text-[10px] font-medium uppercase text-astra-primary-light">
         Sample ID
       </p>
@@ -36,7 +36,7 @@ export const SampleQrPanel: React.FC<{
           type="button"
           onClick={onSimulate}
           disabled={busy}
-          className="inline-flex items-center gap-2 rounded-full bg-astra-primary-light px-5 py-2 text-sm font-bold text-astra-white transition-colors hover:bg-[#19c0f7] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-astra-white disabled:cursor-not-allowed disabled:bg-astra-disabled disabled:text-astra-gray"
+          className="inline-flex items-center gap-2 rounded-full bg-astra-primary-light px-5 py-2 text-sm font-bold text-astra-black transition-colors hover:bg-[#19c0f7] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-astra-white disabled:cursor-not-allowed disabled:bg-astra-disabled disabled:text-astra-gray"
         >
           <ScanLine className="h-4 w-4" aria-hidden="true" />
           {scanning ? 'Scanning…' : 'Simulate scan'}

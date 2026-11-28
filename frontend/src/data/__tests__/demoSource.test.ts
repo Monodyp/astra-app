@@ -232,7 +232,7 @@ describe('demo data source', () => {
       });
       expect(duplicate.roster).toHaveLength(station.roster.length + 1);
 
-      const [match] = await data.searchMembers('24-90001');
+      const [match] = (await data.searchMembers('24-90001')).members;
       expect(match.balance).toBe(550);
     });
 
@@ -252,7 +252,7 @@ describe('demo data source', () => {
         reason: 'membership_inactive',
       });
       expect(result.roster).toEqual(station.roster);
-      const [match] = await data.searchMembers('Unverified Doe');
+      const [match] = (await data.searchMembers('Unverified Doe')).members;
       expect(match.balance).toBe(50);
     });
 
@@ -281,7 +281,7 @@ describe('demo data source', () => {
     });
 
     async function searchIds(query: string) {
-      return (await data.searchMembers(query)).map((item) => item.memberId);
+      return (await data.searchMembers(query)).members.map((item) => item.memberId);
     }
 
     it('finds a member by ASTRA ID, student ID, or name', async () => {
@@ -305,7 +305,7 @@ describe('demo data source', () => {
       expect(await searchIds('Zed Unknown')).toEqual([]);
     });
 
-    it('ranks exact ID matches first and limits the results', async () => {
+    it('ranks exact ID matches first', async () => {
       const records = createSeedRecords();
       const [mara] = records.members;
       records.members.unshift({
@@ -322,7 +322,20 @@ describe('demo data source', () => {
         'ASTR1D-0001',
         'ASTR1D-00012',
       ]);
-      expect(await searchIds('ASTR1D')).toHaveLength(6);
+      expect(await searchIds('ASTR1D')).toHaveLength(7);
+    });
+
+    it('reports when the bounded roster search needs refinement', async () => {
+      const records = createSeedRecords();
+      const template = records.members[0];
+      records.members.push(...Array.from({ length: 25 }, (_, index) => ({
+        ...template, memberId: `ASTR1D-${1000 + index}`, studentId: `24-${80000 + index}`,
+      })));
+      storage.setItem(RECORDS_KEY, JSON.stringify(records));
+      const page = await data.searchMembers('ASTR1D');
+      expect(page).toMatchObject({ hasMore: true, limit: 20 });
+      expect(page.members).toHaveLength(20);
+      expect((await data.searchMembers('ASTR1D-1024')).members[0].memberId).toBe('ASTR1D-1024');
     });
   });
 
@@ -364,7 +377,7 @@ describe('demo data source', () => {
     await expectDataError(grant('99-99999'), 'not_found');
     await expectDataError(grant('24-90010'), 'not_found');
     await expectDataError(grant('ASTR1D-0001'), 'not_found');
-    const [unverified] = await data.searchMembers('Unverified Doe');
+    const [unverified] = (await data.searchMembers('Unverified Doe')).members;
     expect(unverified.balance).toBe(50);
   });
 

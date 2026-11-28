@@ -1,7 +1,9 @@
 import { Sparkles } from "lucide-react";
 import { ActionLink, SectionHeading, technicalCorners } from "./ui-util";
+import { usePortalEntry } from './usePortalEntry.js';
 
 export default function MemberConsole() {
+  const entry = usePortalEntry();
   const activities = [
     ['+ 100 Points', 'Workshop Participation'],
     ['+ 100 Points', 'Project Contribution'],
@@ -9,7 +11,7 @@ export default function MemberConsole() {
   ];
 
   return (
-    <section id="console" className="scroll-mt-[150px] lg:scroll-mt-[120px] space-y-8">
+    <section id="console" className="scroll-mt-24 lg:scroll-mt-[120px] space-y-8">
       <SectionHeading title="Your Member Console" subtitle="Your progress. Your next opportunity." />
       <div className="mx-0 sm:mx-6 lg:mx-12 grid gap-6 sm:gap-8 xl:grid-cols-[1.15fr_1fr]">
         <div className="relative border border-astra-primary-dark bg-black/30 p-4 shadow-[0_0_16px_rgba(0,140,204,0.07)] sm:p-8">
@@ -37,7 +39,7 @@ export default function MemberConsole() {
               </div>
             ))}
           </div>
-          <ActionLink className="mt-8" href="/login">Join Now to Start Earning</ActionLink>
+          <ActionLink className="mt-8" href={entry.href}>{entry.label}</ActionLink>
         </div>
         <div className="relative border border-astra-primary-dark bg-black/30 p-4 shadow-[0_0_16px_rgba(0,140,204,0.07)] sm:p-8">
           {technicalCorners}

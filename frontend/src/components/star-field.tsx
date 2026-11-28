@@ -208,7 +208,7 @@ export default function Starfield({
         }
         const px = cx + (s.x / prevZ) * scale;
         const py = cy + (s.y / prevZ) * scale;
-        const bi = Math.min(NUM_BUCKETS - 1, Math.floor((1 - s.z) * NUM_BUCKETS));
+        const bi = Math.max(0, Math.min(NUM_BUCKETS - 1, Math.floor((1 - s.z) * NUM_BUCKETS)));
         const buf = s.warm ? warmBuf[bi] : coolBuf[bi];
         const counts = s.warm ? warmN : coolN;
         const k = counts[bi];

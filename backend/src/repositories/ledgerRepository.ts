@@ -2,7 +2,7 @@ import { env } from '../config/env.js';
 import { firebaseAdmin } from '../lib/firebase.js';
 import { normalizeSrCode } from '../services/members.js';
 
-export type LedgerEntryType = 'attendance' | 'grant' | 'redemption' | 'adjustment';
+export type LedgerEntryType = 'attendance' | 'event_attendance' | 'grant' | 'redemption' | 'adjustment';
 
 export interface LedgerEntry {
   id: string;
@@ -13,6 +13,7 @@ export interface LedgerEntry {
   referenceId: string;
   createdBy: string;
   createdAt: Date;
+  metadata?: Record<string, unknown>;
 }
 
 export interface CreateLedgerEntry {
@@ -24,6 +25,7 @@ export interface CreateLedgerEntry {
   referenceId: string;
   createdBy: string;
   createdAt?: Date;
+  metadata?: Record<string, unknown>;
 }
 
 export class DuplicateLedgerEntryError extends Error {
@@ -45,6 +47,7 @@ function normalizeEntry(entry: CreateLedgerEntry): LedgerEntry {
   return {
     ...entry,
     memberId: normalizeSrCode(entry.memberId),
+    type: entry.type === 'event_attendance' ? 'attendance' : entry.type,
     createdAt: entry.createdAt ?? new Date(),
   };
 }
@@ -111,6 +114,7 @@ export class FirestoreLedgerRepository implements LedgerRepository {
         referenceId: entry.referenceId,
         createdBy: entry.createdBy,
         createdAt: entry.createdAt,
+        metadata: entry.metadata,
       });
     } catch (error) {
       if ((error as { code?: number }).code === 6) {
@@ -134,10 +138,11 @@ export class FirestoreLedgerRepository implements LedgerRepository {
           memberId: data.memberId,
           amount: data.amount,
           reason: data.reason,
-          type: data.type,
+          type: data.type === 'event_attendance' ? 'attendance' : data.type,
           referenceId: data.referenceId,
           createdBy: data.createdBy,
           createdAt,
+          metadata: data.metadata,
         } satisfies LedgerEntry;
       })
       .sort((a, b) => {

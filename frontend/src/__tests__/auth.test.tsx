@@ -31,11 +31,11 @@ describe('sign-in and route access', () => {
     expect(window.location.search).toBe('?from=link');
   });
 
-  it('signs in with a typed student ID', async () => {
+  it('signs in with a typed email address', async () => {
     renderAt('/login');
     fireEvent.change(
-      await screen.findByLabelText('Student ID or Email Address'),
-      { target: { value: '24-90001' } }
+      await screen.findByLabelText('Email Address'),
+      { target: { value: 'verified.doe@astra.example' } }
     );
     fireEvent.change(screen.getByLabelText('Password'), {
       target: { value: 'any-password' },
@@ -76,26 +76,34 @@ describe('sign-in and route access', () => {
     expect(screen.queryByText('Officer access only')).toBeNull();
   });
 
-  it('opens the desktop rewards placeholders after a reload', async () => {
+  it('opens the rewards pages after a reload', async () => {
     const first = renderAt('/login');
     await chooseDemoAccount(/Verified member/);
     await waitFor(() => expect(window.location.pathname).toBe('/home'));
     first.unmount();
 
-    const pages = [
+    const pages: Array<[string, string]> = [
       ['/marketplace', 'Perks Marketplace'],
       ['/vouchers', 'Claimed Vouchers'],
-      ['/points', 'Points & Ledger'],
-      ['/vouchers/V-98214', 'Voucher Details'],
+      ['/points', 'Points'],
     ];
     for (const [path, heading] of pages) {
       const view = renderAt(path);
       expect(
-        await screen.findByRole('heading', { level: 2, name: heading })
+        await screen.findByRole('heading', { level: 1, name: heading })
       ).toBeDefined();
       expect(window.location.pathname).toBe(path);
       view.unmount();
     }
+
+    const receipt = renderAt('/vouchers/V-98214');
+    expect(
+      await screen.findByRole('dialog', {
+        name: '15% Off at the Campus Bookstore',
+      })
+    ).toBeDefined();
+    expect(window.location.pathname).toBe('/vouchers/V-98214');
+    receipt.unmount();
   });
 
   it('restores the session after a reload', async () => {

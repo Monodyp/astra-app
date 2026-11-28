@@ -44,7 +44,7 @@ export default function EventsCalendar({
     "inline-flex h-11 w-11 items-center justify-center border border-astra-primary-dark text-astra-white hover:bg-astra-primary-dark";
 
   return (
-    <section id="events-calendar" className="scroll-mt-[150px] space-y-8 lg:scroll-mt-[120px]" aria-labelledby="events-calendar-heading">
+    <section id="events-calendar" className="scroll-mt-24 space-y-8 lg:scroll-mt-[120px]" aria-labelledby="events-calendar-heading">
       <div className="mx-0 flex flex-col gap-2 sm:mx-6 sm:flex-row sm:items-end sm:justify-between lg:mx-12">
         <h2 id="events-calendar-heading" className="font-astra text-3xl font-bold tracking-tight text-astra-white sm:text-4xl">Events Calendar</h2>
         <p className="font-astra text-sm text-astra-gray">Plan your semester.</p>

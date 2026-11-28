@@ -58,7 +58,7 @@ export default function UpcomingEvents({ events }: { events?: UpcomingEvent[] })
   const hasEvents = !!visibleEvents?.length;
 
   return (
-    <section id="events" className="scroll-mt-[150px] lg:scroll-mt-[120px] space-y-8">
+    <section id="events" className="scroll-mt-24 lg:scroll-mt-[120px] space-y-8">
       <SectionHeading title="Upcoming Events" subtitle="Connect. Create. Collaborate" />
       {!hasEvents ? (
         <NoEvents />
@@ -76,7 +76,7 @@ export default function UpcomingEvents({ events }: { events?: UpcomingEvent[] })
                   <h3 className="mt-2 font-astra text-2xl font-bold text-astra-white">{event.title}</h3>
                   <p className="mt-4 max-w-sm font-astra text-base leading-6 text-astra-white">{event.description}</p>
                 </div>
-                <a href={`/events/${event.id}`} className="inline-flex min-h-11 items-center self-end rounded-full bg-astra-primary-light px-6 py-2 font-astra text-sm font-bold text-white transition-transform hover:scale-105">Register Now</a>
+                <a href={`/events/${event.id}`} className="inline-flex min-h-11 items-center self-end rounded-full bg-astra-primary-light px-6 py-2 font-astra text-sm font-bold text-astra-black transition-transform hover:scale-105">Event details</a>
               </div>
             </article>
           ))}

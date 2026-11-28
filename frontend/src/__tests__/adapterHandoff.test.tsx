@@ -117,7 +117,13 @@ describe('replacing the data adapter', () => {
     expect(await screen.findByText('Adapter Hack Night')).toBeDefined();
     expect(screen.getByText('Current event / +40 pts')).toBeDefined();
     expect(screen.getByText('Adapter Attendee')).toBeDefined();
-    expect(screen.getByText('Welcome back, Adapter')).toBeDefined();
+    expect(
+      screen.getByText(
+        (_, element) =>
+          element?.tagName === 'P' &&
+          element.textContent === 'Hi, Welcome back, Adapter'
+      )
+    ).toBeDefined();
   });
 
   it('shows an error and retries the operation', async () => {

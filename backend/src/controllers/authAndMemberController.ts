@@ -4,7 +4,7 @@ import { firebaseAdmin } from '../lib/firebase.js';
 import { userFromDecodedToken } from '../lib/authUser.js';
 import { getConfiguredMemberService } from '../config/members.js';
 import {
-  generateMemberQrToken,
+  generateMemberQrTokenWithExpiry,
   InvalidQrTokenError,
   verifyQrToken,
 } from '../services/qrService.js';
@@ -43,11 +43,19 @@ interface ResolvedMemberAccount {
   srCode: string;
   fullName: string | null;
   isPaid: boolean;
+  controlNumber: string | null;
+  membershipId: string | null;
+  program: string | null;
+  yearLevel: string | null;
+  email: string | null;
 }
 
 async function resolveMemberAccount(
   user: NonNullable<Request['user']>
 ): Promise<ResolvedMemberAccount | null> {
+  if (!user.srCode) {
+    return null;
+  }
   const members = getConfiguredMemberService();
   const member = await members.findMember(user.srCode);
   const hasResolvedSrCode = user.srCode !== user.uid;
@@ -59,6 +67,11 @@ async function resolveMemberAccount(
     srCode: member?.srCode ?? user.srCode,
     fullName: member?.fullName ?? user.displayName ?? null,
     isPaid: member ? await members.isPaid(member.srCode) : false,
+    controlNumber: member?.controlNumber ?? null,
+    membershipId: member?.membershipId ?? member?.controlNumber ?? null,
+    program: member?.program ?? null,
+    yearLevel: member?.yearLevel ?? null,
+    email: member?.email ?? user.email ?? null,
   };
 }
 
@@ -76,7 +89,12 @@ export async function getAuthMeStub(req: Request, res: Response): Promise<void> 
           member: {
             uid: req.user.uid,
             srCode: req.user.srCode,
-            fullName: null,
+            fullName: req.user.displayName ?? null,
+            membershipId: null,
+            controlNumber: null,
+            program: null,
+            yearLevel: null,
+            email: req.user.email ?? null,
             isPaid: false,
             role: 'officer',
           },
@@ -92,6 +110,11 @@ export async function getAuthMeStub(req: Request, res: Response): Promise<void> 
         uid: req.user.uid,
         srCode: account.srCode,
         fullName: account.fullName,
+        membershipId: account.membershipId,
+        controlNumber: account.controlNumber,
+        program: account.program,
+        yearLevel: account.yearLevel,
+        email: account.email,
         isPaid: account.isPaid,
         role: req.user.role,
       },
@@ -110,23 +133,40 @@ export async function getMemberIdCardStub(req: Request, res: Response): Promise<
   try {
     const account = await resolveMemberAccount(req.user);
     if (!account) {
-      res.status(404).json({ error: 'Member not found' });
+      res.set({
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        'Pragma': 'no-cache',
+      }).status(404).json({ error: 'Member not found' });
       return;
     }
 
-    const qrToken = account.isPaid
-      ? await generateMemberQrToken(account.srCode)
-      : '';
+    const qrIdentifier = [account.controlNumber, account.membershipId]
+      .map(value => value?.trim().toUpperCase())
+      .find(value => value && /^ASTR1D-\d{4}$/.test(value) && Number(value.slice(7)) > 0);
+    const credential = account.isPaid && qrIdentifier
+      ? await generateMemberQrTokenWithExpiry(qrIdentifier)
+      : { qrToken: '', qrExpiresAt: null };
 
-    res.status(200).json({
+    res.set({
+      'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+      'Pragma': 'no-cache',
+    }).status(200).json({
       card: {
         studentId: account.srCode,
         fullName: account.fullName,
+        membershipId: account.membershipId,
+        program: account.program,
+        yearLevel: account.yearLevel,
         isPaid: account.isPaid,
-        qrToken,
+        ...credential,
+        qrStatus: !account.isPaid ? 'inactive' : qrIdentifier ? 'ready' : 'provisioning_required',
       },
     });
   } catch (error) {
+    res.set({
+      'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+      'Pragma': 'no-cache',
+    });
     if (error instanceof TypeError) {
       res.status(400).json({ error: 'Member ID cannot generate a QR token' });
       return;

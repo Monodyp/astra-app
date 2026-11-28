@@ -48,6 +48,26 @@ describe('Points Ledger API', () => {
     expect(response.status).toBe(401);
   });
 
+  it('searches members for officers by name or SR code', async () => {
+    const response = await request(testApp)
+      .get('/members/search?q=24-90001')
+      .set('x-test-user', asUser());
+    expect(response.status).toBe(200);
+    expect(response.body.members[0]).toMatchObject({
+      srCode: '24-90001',
+      fullName: 'Demo Member 01',
+    });
+  });
+
+  it('searches assigned ASTRA identifiers and returns authoritative membership status', async () => {
+    await fixture.replaceMembers('sr_code,full_name,membership_id,control_number\n24-90001,Demo Member 01,ASTR1D-0042,ASTR1D-0042\n24-90002,Unpaid Member,ASTR1D-0043,ASTR1D-0043\n');
+    const paid = await request(testApp).get('/members/search?q=astr1d-0042').set('x-test-user', asUser());
+    expect(paid.body.members).toEqual([expect.objectContaining({ srCode: '24-90001', membershipId: 'ASTR1D-0042', membershipStatus: 'verified', currentPoints: 0 })]);
+    const unpaid = await request(testApp).get('/members/search?q=0043').set('x-test-user', asUser());
+    expect(unpaid.body.members[0].membershipStatus).toBe('unverified');
+    expect((await request(testApp).get('/members/search?q=24').set('x-test-user', asUser({ ...member, role: 'member' }))).status).toBe(403);
+  });
+
   it('rejects non-officers with 403', async () => {
     const response = await request(testApp)
       .post('/points/grant')

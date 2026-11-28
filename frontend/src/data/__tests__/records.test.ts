@@ -343,7 +343,7 @@ describe('demo records', () => {
   it('shows an officer grant to the recipient after sign-in', async () => {
     await data.signIn({ method: 'shortcut', shortcutId: 'officer' });
     for (const query of ['ASTR1D-0001', '24-90001', 'Verified Doe']) {
-      const [match] = await data.searchMembers(query);
+      const [match] = (await data.searchMembers(query)).members;
       expect(match.memberId).toBe('ASTR1D-0001');
     }
     const grant = await data.grantPoints({

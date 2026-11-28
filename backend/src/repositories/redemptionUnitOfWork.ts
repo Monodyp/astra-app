@@ -15,6 +15,7 @@ import {
 } from './perkRepository.js';
 import {
   InMemoryVoucherRepository,
+  normalizeVoucher,
   voucherRepository,
   type MarkUsedResult,
   type Voucher,
@@ -224,7 +225,7 @@ class FirestoreRedemptionUnitOfWork implements RedemptionUnitOfWork {
           getById: async (id) => {
             const snapshot = await firestoreTx.get(db.collection('vouchers').doc(id));
             if (!snapshot.exists) return null;
-            return { id: snapshot.id, ...snapshot.data() } as Voucher;
+            return normalizeVoucher({ id: snapshot.id, ...snapshot.data() } as Voucher);
           },
           getByCode: async (code) => {
             const snapshot = await firestoreTx.get(
@@ -232,14 +233,14 @@ class FirestoreRedemptionUnitOfWork implements RedemptionUnitOfWork {
             );
             if (snapshot.empty) return null;
             const doc = snapshot.docs[0];
-            return { id: doc.id, ...doc.data() } as Voucher;
+            return normalizeVoucher({ id: doc.id, ...doc.data() } as Voucher);
           },
           listByMember: async (memberId) => {
             const snapshot = await firestoreTx.get(
               db.collection('vouchers').where('memberId', '==', normalizeSrCode(memberId))
             );
             return snapshot.docs
-              .map((doc) => ({ id: doc.id, ...doc.data() } as Voucher))
+              .map((doc) => normalizeVoucher({ id: doc.id, ...doc.data() } as Voucher))
               .sort((a, b) =>
                 new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
               );
@@ -248,7 +249,7 @@ class FirestoreRedemptionUnitOfWork implements RedemptionUnitOfWork {
             const ref = db.collection('vouchers').doc(id);
             const snapshot = await firestoreTx.get(ref);
             if (!snapshot.exists) return { ok: false, reason: 'not_found' };
-            const voucher = { id: snapshot.id, ...snapshot.data() } as Voucher;
+            const voucher = normalizeVoucher({ id: snapshot.id, ...snapshot.data() } as Voucher);
             if (voucher.partnerName.toLowerCase() !== partnerName.toLowerCase()) {
               return { ok: false, reason: 'wrong_partner' };
             }
@@ -257,7 +258,11 @@ class FirestoreRedemptionUnitOfWork implements RedemptionUnitOfWork {
               return { ok: false, reason: 'expired' };
             }
             if (voucher.status !== 'active') return { ok: false, reason: 'already_used' };
-            firestoreTx.update(ref, { status: 'used', redeemedAt: new Date() });
+            firestoreTx.update(ref, {
+              status: 'used',
+              isRedeemed: true,
+              redeemedAt: firebaseAdmin.firestore.FieldValue.serverTimestamp(),
+            });
             return { ok: true };
           },
         },

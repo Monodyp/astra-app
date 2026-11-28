@@ -19,7 +19,7 @@ import {
   type GrantPointsInput,
   type GrantPointsResult,
   type MemberOverview,
-  type MemberSearchResult,
+  type MemberSearchPage,
   type Perk,
   type PerkCatalog,
   type PerkCategory,
@@ -72,6 +72,11 @@ interface BackendMemberResponse {
     uid: string;
     srCode: string;
     fullName: string | null;
+    membershipId?: string | null;
+    controlNumber?: string | null;
+    program?: string | null;
+    yearLevel?: string | null;
+    email?: string | null;
     isPaid: boolean;
     role: string;
   };
@@ -81,8 +86,13 @@ interface BackendCardResponse {
   card: {
     studentId: string;
     fullName: string | null;
+    membershipId?: string | null;
+    program?: string | null;
+    yearLevel?: string | null;
     isPaid: boolean;
     qrToken: string;
+    qrExpiresAt?: string | null;
+    qrStatus?: DigitalId['qrStatus'];
   };
 }
 
@@ -91,7 +101,7 @@ interface BackendLedgerEntry {
   memberId: string;
   amount: number;
   reason: string;
-  type: PointsEntryType;
+  type: PointsEntryType | 'event_attendance';
   referenceId: string;
   createdBy: string;
   createdAt: string;
@@ -270,11 +280,11 @@ function toSessionUser(
   const fullName = member.fullName?.trim() || authUser.displayName?.trim() || member.srCode;
   const displayName = fullName.split(/\s+/)[0] || member.srCode;
   return {
-    memberId: member.srCode,
+    memberId: member.membershipId?.trim() || member.controlNumber?.trim() || member.srCode,
     studentId: member.srCode,
     fullName,
     displayName,
-    email: authUser.email ?? '',
+    email: member.email?.trim() || authUser.email || '',
     role: normalizeRole(member.role),
     membershipStatus: member.isPaid ? 'verified' : 'unverified',
   };
@@ -283,7 +293,7 @@ function toSessionUser(
 function mapLedgerEntry(entry: BackendLedgerEntry): PointsEntry {
   return {
     id: entry.id,
-    type: entry.type,
+    type: entry.type === 'event_attendance' ? 'attendance' : entry.type,
     amount: entry.amount,
     reason: entry.reason,
     reference: entry.referenceId,
@@ -293,7 +303,7 @@ function mapLedgerEntry(entry: BackendLedgerEntry): PointsEntry {
 
 function mapActivityEntry(entry: BackendLedgerEntry): ActivityEntry {
   const kind =
-    entry.type === 'attendance'
+    entry.type === 'attendance' || entry.type === 'event_attendance'
       ? 'event_checked_in'
       : entry.type === 'redemption'
         ? 'voucher_claimed'
@@ -339,7 +349,7 @@ function mapVoucher(voucher: BackendVoucher): Voucher {
     bannerLabel: null,
     state: mapVoucherState(voucher),
     claimedAt: voucher.createdAt,
-    expiresAt: voucher.expiresAt ?? voucher.createdAt,
+    expiresAt: voucher.expiresAt ?? null,
     redeemedAt: voucher.redeemedAt ?? null,
     qrValue: null,
   };
@@ -531,10 +541,11 @@ export function createLiveDataSource(
         withAuth<{ vouchers: BackendVoucher[] }>('/vouchers/me', { method: 'GET' }),
       ]);
 
+      const backendMember = memberRes.data.member;
       const authUser = auth.currentUser!;
-      const sessionUser = toSessionUser(memberRes.data.member, authUser);
+      const sessionUser = toSessionUser(backendMember, authUser);
       const history = historyRes.data.history ?? [];
-      const attendanceEntries = history.filter((entry) => entry.type === 'attendance');
+      const attendanceEntries = history.filter((entry) => entry.type === 'attendance' || entry.type === 'event_attendance');
       const vouchers = (vouchersRes.data.vouchers ?? []).map(mapVoucher);
       const activeVouchers = vouchers.filter((voucher) => voucher.state === 'ready');
 
@@ -543,7 +554,7 @@ export function createLiveDataSource(
           fullName: sessionUser.fullName,
           membershipId: sessionUser.memberId,
           studentId: sessionUser.studentId,
-          program: 'ASTRA Member',
+          program: backendMember.program?.trim() || 'Not specified',
           membershipStatus: sessionUser.membershipStatus,
         },
         points: pointsRes.data.points ?? 0,
@@ -566,13 +577,15 @@ export function createLiveDataSource(
         return {
           fullName: card.fullName ?? card.studentId,
           studentId: card.studentId,
-          membershipId: card.studentId,
-          program: 'ASTRA Member',
-          yearLevel: 'Member',
+          membershipId: card.membershipId?.trim() || card.studentId,
+          program: card.program?.trim() || 'Not specified',
+          yearLevel: card.yearLevel?.trim() || 'Member',
           roleLabel: verified ? 'Verified' : 'Unverified',
           membershipStatus: verified ? 'verified' : 'unverified',
           qrValue: verified ? card.qrToken : '',
-          statusNote: verified ? 'Active for check-in' : 'Membership inactive',
+          qrExpiresAt: verified ? card.qrExpiresAt ?? null : null,
+          qrStatus: verified ? card.qrStatus ?? (card.qrToken ? 'ready' : 'provisioning_required') : 'inactive',
+          statusNote: !verified ? 'Membership inactive' : card.qrToken ? 'Annual dues paid' : 'Control number needed for QR issuance',
         };
       } catch (error) {
         if (error instanceof DataError && error.code === 'invalid_input') {
@@ -580,12 +593,17 @@ export function createLiveDataSource(
           return {
             fullName: member.fullName ?? member.srCode,
             studentId: member.srCode,
-            membershipId: member.srCode,
-            program: 'ASTRA Member',
-            yearLevel: 'Member',
+            membershipId:
+              member.membershipId?.trim() ||
+              member.controlNumber?.trim() ||
+              member.srCode,
+            program: member.program?.trim() || 'Not specified',
+            yearLevel: member.yearLevel?.trim() || 'Member',
             roleLabel: member.isPaid ? 'Verified' : 'Unverified',
             membershipStatus: member.isPaid ? 'verified' : 'unverified',
             qrValue: '',
+            qrExpiresAt: null,
+            qrStatus: member.isPaid ? 'provisioning_required' : 'inactive',
             statusNote: member.isPaid
               ? 'Control number needed for QR issuance'
               : 'Membership inactive',
@@ -635,6 +653,7 @@ export function createLiveDataSource(
           {
             method: 'POST',
             body: JSON.stringify({ idempotencyKey: claimOptions.idempotencyKey }),
+            signal: claimOptions.signal,
           }
         );
         return {
@@ -751,11 +770,16 @@ export function createLiveDataSource(
       };
     },
 
-    async searchMembers(_query: string): Promise<MemberSearchResult[]> {
-      throw new DataError(
-        'unsupported',
-        'Live member search endpoint is not available yet.'
-      );
+    async searchMembers(query: string): Promise<MemberSearchPage> {
+      if (query.trim().length < 2) return { members: [], hasMore: false, limit: 20 };
+      const res = await withAuth<{ hasMore?: boolean; limit?: number; members: { id: string; srCode: string; membershipId?: string; fullName: string | null; membershipStatus: 'verified' | 'unverified'; currentPoints: number }[] }>('/members/search', { method: 'GET', params: { q: query.trim() } });
+      return { hasMore: res.data.hasMore === true, limit: res.data.limit ?? 20, members: res.data.members.map(member => ({
+        memberId: member.membershipId || member.id,
+        studentId: member.srCode,
+        fullName: member.fullName || member.srCode,
+        membershipStatus: member.membershipStatus === 'verified' ? 'verified' : 'unverified',
+        balance: member.currentPoints,
+      })) };
     },
 
     async grantPoints(input: GrantPointsInput): Promise<GrantPointsResult> {

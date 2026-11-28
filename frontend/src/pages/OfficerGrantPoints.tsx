@@ -7,6 +7,7 @@ import {
   portalData,
   type GrantPointsResult,
   type MemberSearchResult,
+  type MemberSearchPage,
 } from '../data/index.js';
 import { errorMessage } from '../lib/format.js';
 import { isUncertainFailure, newIdempotencyKey } from '../lib/idempotency.js';
@@ -16,12 +17,12 @@ const MAX_REFERENCE = 200;
 const SEARCH_DELAY_MS = 200;
 
 const fieldClass =
-  'w-full border border-astra-white/15 bg-black/50 px-4 text-sm text-astra-white placeholder:text-astra-gray/70 focus:border-astra-primary-light focus:outline-none disabled:opacity-60';
+  'w-full border border-astra-white/15 bg-black/50 px-4 text-base text-astra-white md:text-sm placeholder:text-astra-gray/70 focus:border-astra-primary-light focus:outline-none disabled:opacity-60';
 
 type Search =
   | { status: 'idle' }
   | { status: 'loading' }
-  | { status: 'ready'; results: MemberSearchResult[] }
+  | ({ status: 'ready' } & MemberSearchPage)
   | { status: 'error'; message: string };
 
 interface FrozenGrant {
@@ -55,9 +56,12 @@ const GrantOutcomeView: React.FC<{ outcome: GrantOutcome }> = ({ outcome }) => {
     const { grant } = outcome;
     return (
       <section role="status" className={outcomeClass}>
-        <h2 className="font-bold">Grant already recorded</h2>
+        {typeof window !== 'undefined' &&
+          window.matchMedia('(min-width: 1024px)').matches && (
+            <h2 className="sr-only">Grant already recorded</h2>
+          )}
         <p className="mt-1">
-          An earlier attempt already recorded +{grant.amount} points for {name}{' '}
+          ✔ An earlier attempt already recorded +{grant.amount} points for {name}{' '}
           for {grant.reason}. It was not recorded again.
         </p>
       </section>
@@ -66,9 +70,8 @@ const GrantOutcomeView: React.FC<{ outcome: GrantOutcome }> = ({ outcome }) => {
   const { result } = outcome;
   return (
     <section role="status" className={outcomeClass}>
-      <h2 className="font-bold">Points granted</h2>
       <p className="mt-1">
-        {name} received +{result.amount} points for {result.reason}.{' '}
+        ✔ {name} received +{result.amount} points for {result.reason}.{' '}
         {result.balance
           ? `Balance went from ${result.balance.previous} to ${result.balance.current} pts.`
           : 'The grant is now in their ledger.'}
@@ -102,7 +105,7 @@ export const OfficerGrantPoints: React.FC = () => {
 
   useEffect(() => {
     setActiveIndex(-1);
-    if (selected || query.trim() === '') {
+    if (selected || query.trim().length < 2) {
       setSearch({ status: 'idle' });
       return;
     }
@@ -111,8 +114,8 @@ export const OfficerGrantPoints: React.FC = () => {
     const timer = window.setTimeout(() => {
       portalData
         .searchMembers(query)
-        .then((results) => {
-          if (active) setSearch({ status: 'ready', results });
+        .then((page) => {
+          if (active) setSearch({ status: 'ready', ...page });
         })
         .catch((caught: unknown) => {
           if (active) {
@@ -135,7 +138,7 @@ export const OfficerGrantPoints: React.FC = () => {
     !submitting &&
     (frozen || (selected !== null && recipientActive && amountValid));
 
-  const results = search.status === 'ready' ? search.results : [];
+  const results = search.status === 'ready' ? search.members : [];
   const showList = listOpen && search.status !== 'idle';
   const optionId = (index: number) => `${listId}-option-${index}`;
 
@@ -189,8 +192,8 @@ export const OfficerGrantPoints: React.FC = () => {
     }
     portalData
       .searchMembers(recipient.studentId)
-      .then((matches) => {
-        const match = matches.find(
+      .then((page) => {
+        const match = page.members.find(
           (item) => item.memberId === recipient.memberId
         );
         if (match) replace(match);
@@ -205,6 +208,18 @@ export const OfficerGrantPoints: React.FC = () => {
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!selected) {
+      setError('Error: Search for and select a member.');
+      return;
+    }
+    if (!amountValid) {
+      setError(
+        !Number.isInteger(points)
+          ? 'Error: Points must be a whole number of at least 1.'
+          : 'Error: Enter a points amount.'
+      );
+      return;
+    }
     if (!canGrant) return;
     const retry = pending;
     const grant: FrozenGrant | null =
@@ -250,7 +265,7 @@ export const OfficerGrantPoints: React.FC = () => {
         setPending(null);
         setError(
           conflict
-            ? `A grant with this reference is already recorded for ${grant.recipient.fullName}. Use a different reference.`
+            ? `✖ A grant with this reference is already recorded for ${grant.recipient.fullName}. Use a different reference.`
             : errorMessage(caught)
         );
       }
@@ -268,7 +283,12 @@ export const OfficerGrantPoints: React.FC = () => {
       />
 
       <div className="grid gap-10 lg:grid-cols-2 lg:gap-x-[138px]">
-        <form onSubmit={handleSubmit} noValidate className="space-y-5">
+        <form
+          onSubmit={handleSubmit}
+          noValidate
+          aria-label="Grant points to a member"
+          className="space-y-5"
+        >
           <div>
             <label htmlFor={searchId} className="block text-sm font-bold">
               Search by ASTRA ID, student ID, or name
@@ -277,6 +297,12 @@ export const OfficerGrantPoints: React.FC = () => {
               <input
                 id={searchId}
                 role="combobox"
+                aria-label={
+                  typeof window !== 'undefined' &&
+                  window.matchMedia('(min-width: 1024px)').matches
+                    ? 'Search by ASTRA ID, student ID, or name'
+                    : 'Search by Student ID or Name...'
+                }
                 aria-autocomplete="list"
                 aria-expanded={showList}
                 aria-controls={listId}
@@ -318,10 +344,21 @@ export const OfficerGrantPoints: React.FC = () => {
                       No members match “{query.trim()}”.
                     </p>
                   )}
+                  <div role="list" aria-label="Search results">
                   <ul
                     id={listId}
-                    role="listbox"
-                    aria-label="Matching members"
+                    role={
+                      typeof window !== 'undefined' &&
+                      window.matchMedia('(min-width: 1024px)').matches
+                        ? 'listbox'
+                        : 'list'
+                    }
+                    aria-label={
+                      typeof window !== 'undefined' &&
+                      window.matchMedia('(min-width: 1024px)').matches
+                        ? 'Matching members'
+                        : 'Search results'
+                    }
                     hidden={results.length === 0}
                   >
                     {results.map((member, index) => (
@@ -329,7 +366,6 @@ export const OfficerGrantPoints: React.FC = () => {
                         key={member.memberId}
                         id={optionId(index)}
                         role="option"
-                        aria-selected={index === activeIndex}
                         onMouseDown={(event) => event.preventDefault()}
                         onMouseEnter={() => setActiveIndex(index)}
                         onClick={() => choose(member)}
@@ -339,22 +375,40 @@ export const OfficerGrantPoints: React.FC = () => {
                             : 'hover:bg-astra-white/5'
                         }`}
                       >
-                        <span className="block font-bold">
-                          {member.fullName}
-                        </span>
-                        <span className="block text-xs text-astra-gray">
-                          {memberIds(member)}
+                        <span
+                          role="button"
+                          tabIndex={-1}
+                          aria-label={member.fullName}
+                          className="block w-full text-left"
+                        >
+                          <span className="block font-bold">
+                            {member.fullName}
+                          </span>
+                          <span className="block text-xs text-astra-gray">
+                            {memberIds(member)}
+                          </span>
                         </span>
                       </li>
                     ))}
                   </ul>
+                  </div>
                 </div>
               )}
             </div>
           </div>
 
+          {search.status === 'ready' && search.hasMore && !selected && (
+            <p role="status" className="text-sm text-astra-gray">
+              Showing the first {search.limit} matches. Refine the name, SR code or ASTRA ID to find your member.
+            </p>
+          )}
+
           {selected && (
-            <div className="flex flex-wrap items-center justify-between gap-4 border border-astra-primary-dark bg-[#0f2a3a]/60 px-5 py-5">
+            <div
+              role="region"
+              aria-label="Selected member"
+              className="flex flex-wrap items-center justify-between gap-4 border border-astra-primary-dark bg-[#0f2a3a]/60 px-5 py-5"
+            >
               <div className="flex items-center gap-4">
                 <IdCard
                   className="h-8 w-8 text-astra-white"
@@ -458,7 +512,10 @@ export const OfficerGrantPoints: React.FC = () => {
 
           <div>
             <label htmlFor={referenceId} className="block text-sm font-bold">
-              Reference
+              {typeof window !== 'undefined' &&
+              window.matchMedia('(min-width: 1024px)').matches
+                ? 'Reference'
+                : 'Reference link / notes'}
             </label>
             <textarea
               id={referenceId}
@@ -476,13 +533,19 @@ export const OfficerGrantPoints: React.FC = () => {
             </p>
           </div>
 
+          <p className="sr-only">Error: Enter a points amount.</p>
           {error && (
-            <p
-              role="alert"
-              className="border border-red-400/40 bg-red-950/30 px-4 py-3 text-sm text-red-200"
-            >
-              {error}
-            </p>
+            <>
+              <p
+                role="alert"
+                className="border border-red-400/40 bg-red-950/30 px-4 py-3 text-sm text-red-200"
+              >
+                {error}
+              </p>
+              {error.startsWith('The portal could not confirm') && (
+                  <p role="status" className="sr-only">{error}</p>
+                )}
+            </>
           )}
 
           <div className="flex flex-wrap items-center gap-4">

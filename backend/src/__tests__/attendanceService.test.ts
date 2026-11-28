@@ -25,4 +25,11 @@ describe('attendance identity resolution', () => {
 
     await expect(resolveCheckInIdentity({ qrToken: token })).resolves.toBe('');
   });
+
+  it('maps a control number QR reference back to the member SR code', async () => {
+    _seedMember('24-90001', 'Mapped Member', 'ASTR1D-0004');
+    const token = await generateMemberQrToken('ASTR1D-0004');
+
+    await expect(resolveCheckInIdentity({ qrToken: token })).resolves.toBe('24-90001');
+  });
 });

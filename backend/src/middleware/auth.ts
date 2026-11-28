@@ -12,6 +12,24 @@ function unauthorized(res: Response): void {
   res.status(401).json({ error: 'Authentication required' });
 }
 
+export function normalizeClaimedSrCode(claims: {
+  srCode?: unknown;
+  sr_code?: unknown;
+}): string | null {
+  const claimed =
+    typeof claims.srCode === 'string'
+      ? claims.srCode
+      : typeof claims.sr_code === 'string'
+        ? claims.sr_code
+        : null;
+  if (!claimed?.trim()) return null;
+  return claimed.trim().toUpperCase();
+}
+
+export function normalizeFirebaseUser(token: DecodedIdToken) {
+  return userFromDecodedToken(token);
+}
+
 export async function authMiddleware(
   req: Request,
   res: Response,
@@ -47,7 +65,7 @@ export async function authMiddleware(
 
   // Officer lookup failures must not log users out. Keep the token's role
   // and log the error.
-  if (user.role !== 'officer') {
+  if (user.role !== 'officer' && user.srCode) {
     try {
       if (await isOfficerSrCode(user.srCode)) user.role = 'officer';
     } catch (err) {
