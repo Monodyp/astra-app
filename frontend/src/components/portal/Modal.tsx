@@ -7,11 +7,12 @@ export const Modal: React.FC<{
   onClose: () => void;
   children: React.ReactNode;
   className?: string;
-}> = ({ label, onClose, children, className = '' }) => {
+  busy?: boolean;
+}> = ({ label, onClose, children, className = '', busy = false }) => {
   const overlay = useRef<HTMLDivElement>(null);
   const dialog = useRef<HTMLDivElement>(null);
   const close = useRef(onClose);
-  close.current = onClose;
+  close.current = () => { if (!busy) onClose(); };
 
   useEffect(() => {
     const opener = document.activeElement;
@@ -30,7 +31,7 @@ export const Modal: React.FC<{
       element.setAttribute('aria-hidden', 'true');
     }
     document.body.style.overflow = 'hidden';
-    dialog.current?.querySelector<HTMLButtonElement>('button')?.focus();
+    (dialog.current?.querySelector<HTMLButtonElement>('button:not([disabled])') ?? dialog.current)?.focus();
     const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         event.preventDefault();
@@ -78,13 +79,22 @@ export const Modal: React.FC<{
     };
   }, []);
 
+  useEffect(() => {
+    const element = dialog.current;
+    if (!element) return;
+    if (busy) element.focus();
+    else if (document.activeElement === element) {
+      element.querySelector<HTMLButtonElement>('button:not([disabled])')?.focus();
+    }
+  }, [busy]);
+
   return createPortal(
     <div
       ref={overlay}
       className="fixed inset-0 z-[120] flex items-center justify-center bg-black/85 p-4"
       style={{ paddingTop: 'max(1rem, env(safe-area-inset-top))', paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
       onClick={(event) => {
-        if (event.target === event.currentTarget) onClose();
+        if (event.target === event.currentTarget) close.current();
       }}
     >
       <div
@@ -92,13 +102,15 @@ export const Modal: React.FC<{
         tabIndex={-1}
         role="dialog"
         aria-modal="true"
+        aria-busy={busy || undefined}
         aria-label={label}
         className={`max-h-[calc(100dvh-2rem)] w-full max-w-2xl space-y-4 overflow-y-auto border border-astra-primary-dark bg-astra-black p-4 font-astra text-astra-white sm:p-6 ${className}`}
         style={{ maxHeight: 'calc(100dvh - max(1rem, env(safe-area-inset-top)) - max(1rem, env(safe-area-inset-bottom)))' }}
       >
         <button
           type="button"
-          onClick={onClose}
+          onClick={() => close.current()}
+          disabled={busy}
           className={`${secondaryButton} ml-auto flex min-w-11`}
           aria-label={`Close ${label.toLowerCase()}`}
         >

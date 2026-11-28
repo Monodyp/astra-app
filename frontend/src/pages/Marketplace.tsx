@@ -1,5 +1,4 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
 import { Link, useNavigate } from 'react-router-dom';
 import { PageHeading } from '../components/portal/PageHeading.js';
 import { Panel } from '../components/portal/Panel.js';
@@ -25,6 +24,8 @@ import { useResource } from '../lib/useResource.js';
 import { claimKeyFor, settleClaim } from '../features/rewards/claimKeys.js';
 import { MerchantBadge } from '../features/rewards/MerchantBadge.js';
 import { useAuth } from '../context/AuthContext.js';
+import { Modal } from '../components/portal/Modal.js';
+import { beginClaim } from '../features/rewards/claimRequest.js';
 
 const loadCatalog = () => portalData.listPerks();
 const loadVouchers = () => portalData.listVouchers();
@@ -46,43 +47,9 @@ const ConfirmClaim: React.FC<{
   onConfirm: () => void;
   onCancel: () => void;
 }> = ({ claim, balance, onConfirm, onCancel }) => {
-  const ref = useRef<HTMLDivElement>(null);
   const { perk, submitting, uncertain, message } = claim;
-
-  useEffect(() => {
-    const dialog = ref.current;
-    dialog?.querySelector<HTMLElement>('button')?.focus();
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && !submitting) onCancel();
-      if (event.key === 'Tab' && dialog) {
-        const buttons = Array.from(
-          dialog.querySelectorAll<HTMLButtonElement>('button:not([disabled])')
-        );
-        if (buttons.length === 0) return;
-        const first = buttons[0];
-        const last = buttons[buttons.length - 1];
-        if (event.shiftKey && document.activeElement === first) {
-          event.preventDefault();
-          last.focus();
-        } else if (!event.shiftKey && document.activeElement === last) {
-          event.preventDefault();
-          first.focus();
-        }
-      }
-    };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [submitting, onCancel]);
-
-  return createPortal(
-    <div className="fixed inset-0 z-[70] flex items-end justify-center bg-black/70 p-4 sm:items-center">
-      <div
-        ref={ref}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="claim-title"
-        className="max-h-[90dvh] w-full max-w-md space-y-4 overflow-y-auto border border-astra-primary-dark bg-astra-black p-6 font-astra"
-      >
+  return (
+    <Modal label="Claim this voucher?" onClose={onCancel} busy={submitting} className="max-w-md">
         <h2 id="claim-title" className="text-lg font-bold">
           Claim this voucher?
         </h2>
@@ -90,6 +57,7 @@ const ConfirmClaim: React.FC<{
         <p className="text-sm text-astra-gray">
           Cost: {perk.cost} PTS · Balance after: {balance - perk.cost} PTS
         </p>
+        {submitting && <p role="status" className="text-sm text-astra-gray">Claiming your voucher…</p>}
         {message && (
           <p
             role="alert"
@@ -120,9 +88,7 @@ const ConfirmClaim: React.FC<{
             Cancel
           </button>
         </div>
-      </div>
-    </div>,
-    document.body
+    </Modal>
   );
 };
 
@@ -205,7 +171,7 @@ export const Marketplace: React.FC = () => {
   const navigate = useNavigate();
   const [filter, setFilter] = useState<Filter>('all');
   const [claim, setClaim] = useState<PendingClaim | null>(null);
-  const opener = useRef<HTMLButtonElement | null>(null);
+  const request = useRef<ReturnType<typeof beginClaim> | null>(null);
   const mounted = useRef(true);
   const submitting = useRef(false);
 
@@ -215,6 +181,8 @@ export const Marketplace: React.FC = () => {
       mounted.current = false;
     };
   }, []);
+
+  useEffect(() => () => { request.current?.cancel(); }, [user]);
 
   if (catalog.status === 'loading') {
     return <LoadingState label="Loading perks" />;
@@ -234,7 +202,7 @@ export const Marketplace: React.FC = () => {
   );
 
   function open(perk: Perk, button: HTMLButtonElement) {
-    opener.current = button;
+    button.focus();
     setClaim({
       perk,
       submitting: false,
@@ -245,7 +213,6 @@ export const Marketplace: React.FC = () => {
 
   function cancel() {
     setClaim(null);
-    window.setTimeout(() => opener.current?.focus(), 0);
   }
 
   async function confirm() {
@@ -254,11 +221,13 @@ export const Marketplace: React.FC = () => {
     const claimUser = user;
     const perk = claim.perk;
     const idempotencyKey = claimKeyFor(perk.id);
+    const task = beginClaim(perk.id, idempotencyKey);
+    request.current = task;
     setClaim({ ...claim, submitting: true, message: null });
     try {
-      const result = await portalData.claimPerk(perk.id, { idempotencyKey });
-      settleClaim(perk.id);
+      const result = await task.result;
       if (!mounted.current || currentUser.current !== claimUser) return;
+      settleClaim(perk.id);
       if (result.status === 'claimed') {
         navigate(`/vouchers/${result.voucher.id}`, {
           state: { from: '/marketplace', voucher: result.voucher },
@@ -273,8 +242,8 @@ export const Marketplace: React.FC = () => {
       });
     } catch (caught) {
       const uncertain = isUncertainFailure(caught);
-      if (!uncertain) settleClaim(perk.id);
       if (!mounted.current || currentUser.current !== claimUser) return;
+      if (!uncertain) settleClaim(perk.id);
       setClaim({
         perk,
         submitting: false,
@@ -286,7 +255,10 @@ export const Marketplace: React.FC = () => {
             : errorMessage(caught),
       });
     } finally {
-      submitting.current = false;
+      if (request.current === task) {
+        request.current = null;
+        submitting.current = false;
+      }
     }
   }
 

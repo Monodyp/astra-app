@@ -151,6 +151,7 @@ export type ClaimDeclineReason =
 
 export interface ClaimPerkOptions {
   idempotencyKey: string;
+  signal?: AbortSignal;
 }
 
 export type ClaimResult =

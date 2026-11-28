@@ -653,6 +653,7 @@ export function createLiveDataSource(
           {
             method: 'POST',
             body: JSON.stringify({ idempotencyKey: claimOptions.idempotencyKey }),
+            signal: claimOptions.signal,
           }
         );
         return {

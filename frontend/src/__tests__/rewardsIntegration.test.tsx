@@ -17,6 +17,7 @@ import {
   type PortalDataSource,
 } from '../data/index.js';
 import { createDemoDataSource } from '../data/demo/demoSource.js';
+import { CLAIM_TIMEOUT_MS } from '../features/rewards/claimRequest.js';
 
 let previous: PortalDataSource;
 
@@ -26,6 +27,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.useRealTimers();
   setPortalDataSource(previous);
   vi.restoreAllMocks();
 });
@@ -67,6 +69,54 @@ async function confirmClaim() {
 }
 
 describe('marketplace integration', () => {
+  it('recovers a timed-out committed claim with its original key and ignores the late reply', async () => {
+    let finish!: () => void;
+    const base = createDemoDataSource({ latencyMs: 0 });
+    const send = vi.fn<PortalDataSource['claimPerk']>()
+      .mockImplementationOnce(async (id, options) => {
+        const result = await base.claimPerk(id, options);
+        await new Promise<void>(resolve => { finish = resolve; });
+        return result;
+      })
+      .mockImplementation((id, options) => base.claimPerk(id, options));
+    setPortalDataSource({ ...base, claimPerk: send });
+    await open();
+    const initialCount = (await base.listVouchers()).length;
+    const opener = await screen.findByRole('button', { name: 'Claim Campus Cafe Free Beverage' });
+    fireEvent.click(opener);
+    const dialog = screen.getByRole('dialog', { name: 'Claim this voucher?' });
+    vi.useFakeTimers();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Confirm claim' }));
+    expect(dialog).toHaveFocus();
+    fireEvent.keyDown(document, { key: 'Tab' });
+    fireEvent.keyDown(document, { key: 'Tab', shiftKey: true });
+    expect(dialog).toHaveFocus();
+    await act(async () => { await vi.advanceTimersByTimeAsync(CLAIM_TIMEOUT_MS); });
+    expect(within(dialog).getByRole('button', { name: 'Retry claim' })).toBeEnabled();
+    expect(send.mock.calls[0][1].signal?.aborted).toBe(true);
+    await act(async () => finish());
+    expect(window.location.pathname).toBe('/marketplace');
+    vi.useRealTimers();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Retry claim' }));
+    await screen.findByRole('dialog', { name: 'Campus Cafe Free Beverage' });
+    expect(send).toHaveBeenCalledTimes(2);
+    expect(send.mock.calls[1][1].idempotencyKey).toBe(send.mock.calls[0][1].idempotencyKey);
+    expect((await base.getPoints()).balance).toBe(400);
+    expect(await base.listVouchers()).toHaveLength(initialCount + 1);
+  });
+
+  it('restores the opener and background after cancelling before submission', async () => {
+    const previousOverflow = document.body.style.overflow;
+    await open();
+    const opener = await screen.findByRole('button', { name: 'Claim Campus Cafe Free Beverage' });
+    fireEvent.click(opener);
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(opener).toHaveFocus();
+    expect(opener.closest('[aria-hidden="true"]')).toBeNull();
+    expect(document.body.style.overflow).toBe(previousOverflow);
+  });
+
   it('uses the returned catalog, merchant, inventory and wallet count', async () => {
     useAdapter((base) => ({
       listPerks: async () => {
@@ -173,10 +223,12 @@ describe('marketplace integration', () => {
     }
   });
 
-  it('does not reopen a receipt after the member signs out', async () => {
+  it('ignores a late receipt after a programmatic sign-out', async () => {
     let finish!: () => void;
+    let signal: AbortSignal | undefined;
     useAdapter((base) => ({
       claimPerk: async (perkId, options) => {
+        signal = options.signal;
         const result = await base.claimPerk(perkId, options);
         await new Promise<void>((resolve) => {
           finish = resolve;
@@ -187,8 +239,10 @@ describe('marketplace integration', () => {
     await open();
     await confirmClaim();
     await waitFor(() => expect(finish).toBeDefined());
-    fireEvent.click(screen.getByRole('button', { name: 'Logout' }));
+    // Trigger a session change while background controls are inert.
+    fireEvent.click(screen.getByRole('button', { name: 'Logout', hidden: true }));
     await waitFor(() => expect(window.location.pathname).toBe('/login'));
+    expect(signal?.aborted).toBe(true);
     await act(async () => finish());
     expect(window.location.pathname).toBe('/login');
     expect(screen.queryByRole('dialog')).toBeNull();

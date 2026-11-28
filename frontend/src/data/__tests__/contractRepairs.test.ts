@@ -125,6 +125,15 @@ describe('live portal contract repairs', () => {
     expect(await live.searchMembers('member')).toEqual({ members: [], hasMore: true, limit: 20 });
   });
 
+  it('forwards claim cancellation to the transport', async () => {
+    const { live, request } = liveWith({
+      '/perks/perk/redeem': { voucher: { id: 'issued', code: 'CODE', status: 'active', createdAt: '2026-11-28T00:00:00Z' } },
+    });
+    const controller = new AbortController();
+    await live.claimPerk('perk', { idempotencyKey: 'key', signal: controller.signal });
+    expect(request).toHaveBeenCalledWith('/perks/perk/redeem', expect.objectContaining({ signal: controller.signal }));
+  });
+
   it('does not turn a missing expiration into the claim date', async () => {
     const { live } = liveWith({
       '/vouchers/legacy': {
